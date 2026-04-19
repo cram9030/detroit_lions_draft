@@ -59,5 +59,9 @@ cookies.json
 outputs/figures/*.png
 outputs/figures/*.jpg
 outputs/figures/*.svg
+outputs/figures/*.html
 outputs/reports/*.html
 outputs/reports/*.pdf
+
+# Troubleshooting
+*.log

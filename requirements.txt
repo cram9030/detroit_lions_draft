@@ -11,3 +11,5 @@ plotly
 beautifulsoup4
 lxml
 pyarrow
+scipy
+kaleido
