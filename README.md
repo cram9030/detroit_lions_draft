@@ -18,7 +18,30 @@ detroit_lions_draft/
 └── README.md
 ```
 
-## Setup
+## Requirements
+
+- Python **3.10+** (required by `nflreadpy`)
+- Recommended: use the Dev Container (see below) to avoid managing Python versions locally
+
+---
+
+## Option 1: Dev Container (recommended)
+
+The easiest way to get a fully isolated, correctly versioned environment.
+
+**Prerequisites:** [Docker](https://www.docker.com/products/docker-desktop) and [VS Code](https://code.visualstudio.com/) with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
+
+1. Open the repo in VS Code
+2. When prompted, click **Reopen in Container** (or run `Dev Containers: Reopen in Container` from the command palette)
+3. The container builds with Python 3.11 and installs all dependencies automatically
+
+Jupyter runs on port **8888** and will open in your browser automatically.
+
+---
+
+## Option 2: Local virtual environment
+
+Requires Python 3.10+ installed locally. Check your version with `python3 --version`.
 
 ### 1. Create a virtual environment
 
@@ -44,7 +67,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Register the kernel for Jupyter (optional, for notebook use)
+### 4. Register the kernel for Jupyter
 
 ```bash
 python -m ipykernel install --user --name detroit-lions-draft --display-name "Detroit Lions Draft"
@@ -58,7 +81,7 @@ jupyter notebook
 
 Select the **Detroit Lions Draft** kernel when creating or opening a notebook.
 
-## Deactivating the virtual environment
+### Deactivating the virtual environment
 
 ```bash
 deactivate

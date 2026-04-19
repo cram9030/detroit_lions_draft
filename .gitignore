@@ -25,7 +25,6 @@ data/raw/
 *.csv
 *.xlsx
 *.xls
-*.json
 *.parquet
 *.db
 *.sqlite
