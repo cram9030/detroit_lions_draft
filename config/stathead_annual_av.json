@@ -1,0 +1,27 @@
+{
+  "output_dir": "data/raw/stathead/annual_av",
+
+  "draft_year_start": 1970,
+  "draft_year_end": 2021,
+
+  "seasons_after_draft": 4,
+
+  "fixed_params": {
+    "request":         "1",
+    "season_start":    "1",
+    "season_end":      "-1",
+    "match":           "player_season",
+    "draft_pick_type": "overall",
+    "weight_max":      "500",
+    "order_by":        "av",
+    "order_by_asc":    "1",
+    "rookie":          "N",
+    "comp_type":       "reg",
+    "draft_status":    "drafted"
+  },
+
+  "page_size": 200,
+  "sleep_between_requests": 3.0,
+  "max_retries": 3,
+  "retry_backoff": 10.0
+}

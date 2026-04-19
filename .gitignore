@@ -43,9 +43,17 @@ Thumbs.db
 *.swp
 *.swo
 
+# Credentials / secrets
+secrets/
+!secrets/README.md
+cookies.json
+
 # Environment variables
 .env
 .env.*
+
+# Downloader progress tracking
+.progress.json
 
 # Outputs
 outputs/figures/*.png
