@@ -75,6 +75,7 @@ def _aggregate_player_av(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
         - ``Player`` (String): Player name.
         - ``Pick`` (Int64): Overall pick number.
         - ``Draft Year`` (Int64): Year the player was drafted.
+        - ``Draft Team`` (String): Team that drafted the player.
         - ``AV.1`` (Float64): Season-level Approximate Value.
 
     Args:
@@ -83,10 +84,11 @@ def _aggregate_player_av(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
     Returns:
         LazyFrame with one row per unique (Player, Pick, Draft Year)
         combination. Output columns: ``Player`` (String), ``Pick`` (Int64),
-        ``Draft Year`` (Int64), ``rookie_contract_av`` (Float64).
+        ``Draft Year`` (Int64), ``Draft Team`` (String),
+        ``rookie_contract_av`` (Float64).
         Negative values are valid and must not be filtered.
     """
-    return lazy_frame.group_by(["Player", "Pick", "Draft Year"]).agg(
+    return lazy_frame.group_by(["Player", "Pick", "Draft Year", "Draft Team"]).agg(
         pl.col("AV.1").sum().alias("rookie_contract_av")
     )
 
