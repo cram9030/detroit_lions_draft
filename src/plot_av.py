@@ -547,6 +547,7 @@ def plot_position_career_av(
     positions: list | None = None,
     show_percentile: bool = False,
     group_col: str = "Pos",
+    max_years: int = 10,
     export_path: str | Path | None = None,
     export_format: Literal["html", "png", "svg"] | None = None,
 ) -> go.Figure:
@@ -581,6 +582,9 @@ def plot_position_career_av(
             behind each mean line. Default ``False``.
         group_col: Name of the column in ``stats_df`` that identifies each
             group (line). Default ``"Pos"``.
+        max_years: Maximum ``years_from_draft`` value to plot (inclusive).
+            Default ``10`` shows career years 0–9. Pass ``None`` to include
+            all available years.
         export_path: If provided, the figure is saved to this path.
         export_format: Required when ``export_path`` is set. One of
             ``"html"``, ``"png"``, or ``"svg"``.
@@ -607,10 +611,10 @@ def plot_position_career_av(
     fig = go.Figure()
 
     for group_val, color in zip(positions, colors):
-        group_df = (
-            stats_df.filter(pl.col(group_col) == group_val)
-            .sort("years_from_draft")
-        )
+        mask = pl.col(group_col) == group_val
+        if max_years is not None:
+            mask = mask & (pl.col("years_from_draft") < max_years)
+        group_df = stats_df.filter(mask).sort("years_from_draft")
         if group_df.is_empty():
             continue
 
