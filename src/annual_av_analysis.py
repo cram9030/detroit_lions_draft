@@ -30,13 +30,14 @@ from src.data_ingest import load_parquets_from_dir
 # ---------------------------------------------------------------------------
 
 _POSITION_GROUPS: dict[str, str] = {
-    "FB": "RB",
+    "FL":"WR",
+    "FB": "RB", "RH":"RB", "LH":"RB",
     "LDE": "DE", "RDE": "DE",
-    "NT": "DT",
-    "LG": "OL", "RG": "OL", "C": "OL", "G": "OL", "T": "OL", "LT": "OL", "RT": "OL",
-    "LCB": "CB", "RCB": "CB", "DB": "CB",
-    "LILB": "LB", "RILB": "LB", "LOLB": "LB", "ROLB": "LB", "LLB": "LB",
-    "FS": "S", "SS": "S",
+    "NT": "DT", "LDT":"DT", "RDT":"DT",
+    "LG": "G", "RG": "G", "LT": "OT", "RT": "OT", "T":"OT",
+    "LCB": "CB", "RCB": "CB",
+    "LILB": "LB", "RILB": "LB", "LOLB": "LB", "ROLB": "LB", "LLB": "LB", "ILB":"LB", "OLB":"LB", "RLB":"LB","MLB":"LB",
+    "FS": "S", "SS": "S", "DB": "S",
 }
 """Maps raw ``Pos`` variants to 12 standard position groups.
 
@@ -44,6 +45,8 @@ Positions absent from this dict are left unchanged (e.g. QB, WR, TE, DE,
 DT, LB, CB, K, P stay as-is).
 """
 
+_SPECALIST: list[str] = ['K', 'KR', 'P', 'PR', 'LS']
+"""Specialist positions excluded from normalized position-group analysis."""
 
 # ---------------------------------------------------------------------------
 # Private helpers
@@ -449,8 +452,10 @@ def _aggregate_career_av_by_position(
 
     Args:
         lazy_frame: LazyFrame already processed through :func:`_prepare_av_data`.
-        normalize: If ``True``, split compound positions and map components
-            through :data:`_POSITION_GROUPS`. If ``False``, keep ``Pos`` as-is.
+        normalize: If ``True``, split compound positions, map components
+            through :data:`_POSITION_GROUPS`, and remove any positions in
+            :data:`_SPECALIST` (K, KR, P, PR, LS). If ``False``, keep
+            ``Pos`` as-is with no filtering.
 
     Returns:
         LazyFrame with columns ``Player``, ``Pos``, ``Draft Year``,
@@ -478,6 +483,7 @@ def _aggregate_career_av_by_position(
             )
             .explode("Pos")
             .unique(subset=["Player", "Draft Year", "years_from_draft", "Pos"])
+            .filter(~pl.col("Pos").is_in(_SPECALIST))
         )
 
     return lf.select(["Player", "Pos", "Draft Year", "years_from_draft", "AV.1"])
