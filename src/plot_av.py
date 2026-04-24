@@ -545,21 +545,23 @@ def plot_position_career_av(
     stats_df: pl.DataFrame,
     title: str,
     positions: list[str] | None = None,
+    show_percentile: bool = False,
     export_path: str | Path | None = None,
     export_format: Literal["html", "png", "svg"] | None = None,
 ) -> go.Figure:
     """Create a multi-line chart of annual AV by career year, one line per position.
 
-    Each position is rendered as a mean line with a shaded 25th–75th percentile
-    band. Positions are color-coded using the Viridis palette spread across the
-    full number of positions plotted.
+    Positions are color-coded using the Viridis palette spread across the
+    number of positions plotted. The 25th–75th percentile band is off by
+    default; enable it with ``show_percentile=True`` (most useful when
+    plotting a single position for a detailed view).
 
     Input DataFrame columns required:
         - ``Pos`` (String): Position label.
         - ``years_from_draft`` (Int64): Career year (0 = rookie season).
         - ``mean`` (Float64): Mean annual AV at this position/year.
-        - ``25%`` (Float64): 25th percentile; may be null for sparse years.
-        - ``75%`` (Float64): 75th percentile; may be null for sparse years.
+        - ``25%`` (Float64): 25th percentile; used when ``show_percentile=True``.
+        - ``75%`` (Float64): 75th percentile; used when ``show_percentile=True``.
 
     Args:
         stats_df: Output of
@@ -570,6 +572,8 @@ def plot_position_career_av(
             all positions present in ``stats_df`` are plotted (sorted
             alphabetically). When provided, positions are plotted in the order
             given, which also controls color assignment.
+        show_percentile: If ``True``, draw a shaded 25th–75th percentile band
+            behind each mean line. Default ``False``.
         export_path: If provided, the figure is saved to this path.
         export_format: Required when ``export_path`` is set. One of
             ``"html"``, ``"png"``, or ``"svg"``.
@@ -587,7 +591,11 @@ def plot_position_career_av(
     if positions is None:
         positions = sorted(stats_df["Pos"].unique().to_list())
 
-    colors = px.colors.sample_colorscale("Viridis", len(positions))
+    # sample_colorscale requires at least 2 points; fall back to a single color for n=1
+    if len(positions) == 1:
+        colors = [_VIRIDIS[0]]
+    else:
+        colors = px.colors.sample_colorscale("Viridis", len(positions))
 
     fig = go.Figure()
 
@@ -601,27 +609,32 @@ def plot_position_career_av(
 
         x = pos_df["years_from_draft"].to_list()
         y_mean = pos_df["mean"].to_list()
-        y_q25 = pos_df["25%"].to_list()
-        y_q75 = pos_df["75%"].to_list()
 
-        # sample_colorscale returns "rgb(r, g, b)" strings; convert to rgba
-        rgb_vals = color.replace("rgb(", "").replace(")", "").split(",")
-        band_color = f"rgba({rgb_vals[0].strip()},{rgb_vals[1].strip()},{rgb_vals[2].strip()},0.2)"
+        # Normalise color to rgba: sample_colorscale → "rgb(...)", _VIRIDIS → "#rrggbb"
+        if color.startswith("#"):
+            band_color = _hex_to_rgba(color, 0.2)
+            line_color = color
+        else:
+            rgb_vals = color.replace("rgb(", "").replace(")", "").split(",")
+            band_color = f"rgba({rgb_vals[0].strip()},{rgb_vals[1].strip()},{rgb_vals[2].strip()},0.2)"
+            line_color = color
 
-        # IQR band — rendered beneath the mean line
-        x_band = x + x[::-1]
-        y_band = y_q75 + y_q25[::-1]
-        fig.add_trace(
-            go.Scatter(
-                x=x_band,
-                y=y_band,
-                fill="toself",
-                fillcolor=band_color,
-                line=dict(color="rgba(0,0,0,0)"),
-                hoverinfo="skip",
-                showlegend=False,
+        if show_percentile:
+            y_q25 = pos_df["25%"].to_list()
+            y_q75 = pos_df["75%"].to_list()
+            x_band = x + x[::-1]
+            y_band = y_q75 + y_q25[::-1]
+            fig.add_trace(
+                go.Scatter(
+                    x=x_band,
+                    y=y_band,
+                    fill="toself",
+                    fillcolor=band_color,
+                    line=dict(color="rgba(0,0,0,0)"),
+                    hoverinfo="skip",
+                    showlegend=False,
+                )
             )
-        )
 
         # Mean line
         fig.add_trace(
@@ -629,7 +642,7 @@ def plot_position_career_av(
                 x=x,
                 y=y_mean,
                 mode="lines",
-                line=dict(color=color, width=2),
+                line=dict(color=line_color, width=2),
                 name=pos,
             )
         )
