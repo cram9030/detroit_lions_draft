@@ -34,7 +34,7 @@ _POSITION_GROUPS: dict[str, str] = {
     "FB": "RB", "RH":"RB", "LH":"RB",
     "LDE": "DE", "RDE": "DE",
     "NT": "DT", "LDT":"DT", "RDT":"DT",
-    "LG": "G", "RG": "G", "LT": "OT", "RT": "OT", "T":"OT",
+    "LG": "OG", "RG": "OG", "LT": "OT", "RT": "OT", "T":"OT", "G":"OG", "C":"OC",
     "LCB": "CB", "RCB": "CB",
     "LILB": "LB", "RILB": "LB", "LOLB": "LB", "ROLB": "LB", "LLB": "LB", "ILB":"LB", "OLB":"LB", "RLB":"LB","MLB":"LB",
     "FS": "S", "SS": "S", "DB": "S",
@@ -47,6 +47,9 @@ DT, LB, CB, K, P stay as-is).
 
 _SPECALIST: list[str] = ['K', 'KR', 'P', 'PR', 'LS']
 """Specialist positions excluded from normalized position-group analysis."""
+
+_GENERALIST: list[str] = ['DL', 'OL']
+"""Generalist for a line group positions excluded from normalized position-group analysis because they don't ever play in the first year."""
 
 # ---------------------------------------------------------------------------
 # Private helpers
@@ -454,7 +457,7 @@ def _aggregate_career_av_by_position(
         lazy_frame: LazyFrame already processed through :func:`_prepare_av_data`.
         normalize: If ``True``, split compound positions, map components
             through :data:`_POSITION_GROUPS`, and remove any positions in
-            :data:`_SPECALIST` (K, KR, P, PR, LS). If ``False``, keep
+            :data:`_SPECALIST` (K, KR, P, PR, LS) and '_GENERALIST' (DL, OL). If ``False``, keep
             ``Pos`` as-is with no filtering.
 
     Returns:
@@ -483,33 +486,30 @@ def _aggregate_career_av_by_position(
             )
             .explode("Pos")
             .unique(subset=["Player", "Draft Year", "years_from_draft", "Pos"])
-            .filter(~pl.col("Pos").is_in(_SPECALIST))
+            .filter(~pl.col("Pos").is_in(_SPECALIST)).filter(~pl.col("Pos").is_in(_GENERALIST))
         )
 
     return lf.select(["Player", "Pos", "Draft Year", "years_from_draft", "AV.1"])
 
 
-def _compute_position_year_describe(df: pl.DataFrame) -> pl.DataFrame:
-    """Compute descriptive statistics of ``AV.1`` grouped by position and career year.
-
-    Input columns required:
-        - ``Pos`` (String): Player position.
-        - ``years_from_draft`` (Int64): Career year (0 = rookie season).
-        - ``AV.1`` (Float64): Season-level Approximate Value.
+def _compute_group_year_describe(df: pl.DataFrame, group_col: str) -> pl.DataFrame:
+    """Compute descriptive statistics of ``AV.1`` grouped by an arbitrary column and career year.
 
     Args:
-        df: Eager DataFrame with one row per player-season, output of
-            :func:`_aggregate_career_av_by_position` after ``.collect()``.
+        df: Eager DataFrame with one row per player-season containing
+            ``group_col``, ``years_from_draft`` (Int64), and ``AV.1`` (Float64).
+        group_col: Name of the column to group by alongside ``years_from_draft``
+            (e.g. ``"Pos"`` or ``"Round"``).
 
     Returns:
-        Eager DataFrame sorted by ``(Pos, years_from_draft)`` ascending with
-        columns: ``Pos`` (String), ``years_from_draft`` (Int64),
+        Eager DataFrame sorted by ``(group_col, years_from_draft)`` ascending
+        with columns: ``group_col``, ``years_from_draft`` (Int64),
         ``count`` (UInt32), ``mean`` (Float64), ``std`` (Float64),
         ``min`` (Float64), ``25%`` (Float64), ``50%`` (Float64),
         ``75%`` (Float64), ``max`` (Float64).
     """
     return (
-        df.group_by(["Pos", "years_from_draft"])
+        df.group_by([group_col, "years_from_draft"])
         .agg(
             [
                 pl.col("AV.1").count().alias("count"),
@@ -522,8 +522,13 @@ def _compute_position_year_describe(df: pl.DataFrame) -> pl.DataFrame:
                 pl.col("AV.1").max().alias("max"),
             ]
         )
-        .sort(["Pos", "years_from_draft"])
+        .sort([group_col, "years_from_draft"])
     )
+
+
+def _compute_position_year_describe(df: pl.DataFrame) -> pl.DataFrame:
+    """Compute descriptive statistics of ``AV.1`` grouped by position and career year."""
+    return _compute_group_year_describe(df, "Pos")
 
 
 def position_career_stats(
@@ -556,6 +561,41 @@ def position_career_stats(
     lf = _aggregate_career_av_by_position(lf, normalize=normalize)
     df = lf.collect()
     return _compute_position_year_describe(df)
+
+
+def round_career_stats(directory: str | Path) -> pl.DataFrame:
+    """Compute per-draft-round, per-career-year descriptive statistics of annual AV.
+
+    Loads all parquet files from ``directory`` lazily, annotates each
+    player-season with ``years_from_draft``, then computes descriptive
+    statistics grouped by ``(Round, years_from_draft)``.
+
+    Args:
+        directory: Path to the directory containing annual AV parquet files
+            (e.g. ``data/raw/stathead/annual_av``).
+
+    Returns:
+        Eager DataFrame sorted by ``(Round, years_from_draft)`` ascending with
+        columns: ``Round`` (Int64), ``years_from_draft`` (Int64),
+        ``count`` (UInt32), ``mean`` (Float64), ``std`` (Float64),
+        ``min`` (Float64), ``25%`` (Float64), ``50%`` (Float64),
+        ``75%`` (Float64), ``max`` (Float64).
+    """
+    lf = load_parquets_from_dir(directory, lazy=True)
+    df = (
+        _prepare_av_data(lf)
+        .with_columns(
+            [
+                pl.col("Round").cast(pl.Int64, strict=False),
+                (pl.col("Season") - pl.col("Draft Year")).alias("years_from_draft"),
+            ]
+        )
+        .filter(pl.col("years_from_draft") >= 0)
+        .drop_nulls(subset=["Round"])
+        .select(["Player", "Round", "Draft Year", "years_from_draft", "AV.1"])
+        .collect()
+    )
+    return _compute_group_year_describe(df, "Round")
 
 
 # ---------------------------------------------------------------------------

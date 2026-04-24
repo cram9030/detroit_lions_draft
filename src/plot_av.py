@@ -544,36 +544,43 @@ def plot_exponential_fit_means(
 def plot_position_career_av(
     stats_df: pl.DataFrame,
     title: str,
-    positions: list[str] | None = None,
+    positions: list | None = None,
     show_percentile: bool = False,
+    group_col: str = "Pos",
     export_path: str | Path | None = None,
     export_format: Literal["html", "png", "svg"] | None = None,
 ) -> go.Figure:
-    """Create a multi-line chart of annual AV by career year, one line per position.
+    """Create a multi-line chart of annual AV by career year, one line per group.
 
-    Positions are color-coded using the Viridis palette spread across the
-    number of positions plotted. The 25th–75th percentile band is off by
-    default; enable it with ``show_percentile=True`` (most useful when
-    plotting a single position for a detailed view).
+    Groups are color-coded using the Viridis palette spread across the number
+    plotted. The 25th–75th percentile band is off by default; enable it with
+    ``show_percentile=True`` (most useful when plotting a single group for a
+    detailed view).
+
+    Works for any grouping column — pass ``group_col="Pos"`` (default) for
+    position data from :func:`annual_av_analysis.position_career_stats` or
+    ``group_col="Round"`` for round data from
+    :func:`annual_av_analysis.round_career_stats`.
 
     Input DataFrame columns required:
-        - ``Pos`` (String): Position label.
+        - Column named ``group_col``: Group label (position, round, etc.).
         - ``years_from_draft`` (Int64): Career year (0 = rookie season).
-        - ``mean`` (Float64): Mean annual AV at this position/year.
+        - ``mean`` (Float64): Mean annual AV at this group/year.
         - ``25%`` (Float64): 25th percentile; used when ``show_percentile=True``.
         - ``75%`` (Float64): 75th percentile; used when ``show_percentile=True``.
 
     Args:
-        stats_df: Output of
-            :func:`annual_av_analysis.position_career_stats`, one row per
-            ``(Pos, years_from_draft)`` combination.
+        stats_df: Output of :func:`annual_av_analysis.position_career_stats`
+            or :func:`annual_av_analysis.round_career_stats`.
         title: Chart title displayed at the top of the figure.
-        positions: Optional list of position labels to include. If ``None``,
-            all positions present in ``stats_df`` are plotted (sorted
-            alphabetically). When provided, positions are plotted in the order
-            given, which also controls color assignment.
+        positions: Optional list of group values to include. If ``None``, all
+            values present in ``stats_df[group_col]`` are plotted (sorted).
+            When provided, groups are plotted in the order given, which also
+            controls color assignment.
         show_percentile: If ``True``, draw a shaded 25th–75th percentile band
             behind each mean line. Default ``False``.
+        group_col: Name of the column in ``stats_df`` that identifies each
+            group (line). Default ``"Pos"``.
         export_path: If provided, the figure is saved to this path.
         export_format: Required when ``export_path`` is set. One of
             ``"html"``, ``"png"``, or ``"svg"``.
@@ -589,7 +596,7 @@ def plot_position_career_av(
         raise ValueError("export_format must be specified when export_path is provided.")
 
     if positions is None:
-        positions = sorted(stats_df["Pos"].unique().to_list())
+        positions = sorted(stats_df[group_col].unique().to_list())
 
     # sample_colorscale requires at least 2 points; fall back to a single color for n=1
     if len(positions) == 1:
@@ -599,16 +606,16 @@ def plot_position_career_av(
 
     fig = go.Figure()
 
-    for pos, color in zip(positions, colors):
-        pos_df = (
-            stats_df.filter(pl.col("Pos") == pos)
+    for group_val, color in zip(positions, colors):
+        group_df = (
+            stats_df.filter(pl.col(group_col) == group_val)
             .sort("years_from_draft")
         )
-        if pos_df.is_empty():
+        if group_df.is_empty():
             continue
 
-        x = pos_df["years_from_draft"].to_list()
-        y_mean = pos_df["mean"].to_list()
+        x = group_df["years_from_draft"].to_list()
+        y_mean = group_df["mean"].to_list()
 
         # Normalise color to rgba: sample_colorscale → "rgb(...)", _VIRIDIS → "#rrggbb"
         if color.startswith("#"):
@@ -620,8 +627,8 @@ def plot_position_career_av(
             line_color = color
 
         if show_percentile:
-            y_q25 = pos_df["25%"].to_list()
-            y_q75 = pos_df["75%"].to_list()
+            y_q25 = group_df["25%"].to_list()
+            y_q75 = group_df["75%"].to_list()
             x_band = x + x[::-1]
             y_band = y_q75 + y_q25[::-1]
             fig.add_trace(
@@ -643,7 +650,7 @@ def plot_position_career_av(
                 y=y_mean,
                 mode="lines",
                 line=dict(color=line_color, width=2),
-                name=pos,
+                name=str(group_val),
             )
         )
 

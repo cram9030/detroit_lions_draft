@@ -39,6 +39,7 @@ from src.annual_av_analysis import (
     exponential_av_fit_means,
     pick_based_stats,
     position_career_stats,
+    round_career_stats,
     rolling_window_pick_stats,
     rolling_window_skew_fit,
     skew_normal_fit,
@@ -235,6 +236,11 @@ def main() -> None:
         )
         print(f"  Saved position_career_stats_raw.csv ({len(pos_stats_raw)} rows)")
 
+        print("Computing round career stats...")
+        round_stats = round_career_stats(RAW_DIR)
+        save_data(round_stats, PROCESSED_DIR / "round_career_stats.csv", format="csv")
+        print(f"  Saved round_career_stats.csv ({len(round_stats)} rows)")
+
         if not args.skip_plots:
             print("Generating position career AV plot (normalized)...")
             plot_position_career_av(
@@ -253,6 +259,16 @@ def main() -> None:
                 export_format="html",
             )
             print("  Saved position_career_av_raw.html")
+
+            print("Generating round career AV plot...")
+            plot_position_career_av(
+                round_stats,
+                title="Annual AV Development by Draft Round (1970–2025)",
+                group_col="Round",
+                export_path=FIGURES_DIR / "round_career_av.html",
+                export_format="html",
+            )
+            print("  Saved round_career_av.html")
     else:
         print("Skipping position career analysis (--skip-position).")
 
