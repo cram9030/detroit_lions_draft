@@ -26,6 +26,26 @@ from src.data_ingest import load_parquets_from_dir
 
 
 # ---------------------------------------------------------------------------
+# Position normalization
+# ---------------------------------------------------------------------------
+
+_POSITION_GROUPS: dict[str, str] = {
+    "FB": "RB",
+    "LDE": "DE", "RDE": "DE",
+    "NT": "DT",
+    "LG": "OL", "RG": "OL", "C": "OL", "G": "OL", "T": "OL", "LT": "OL", "RT": "OL",
+    "LCB": "CB", "RCB": "CB", "DB": "CB",
+    "LILB": "LB", "RILB": "LB", "LOLB": "LB", "ROLB": "LB", "LLB": "LB",
+    "FS": "S", "SS": "S",
+}
+"""Maps raw ``Pos`` variants to 12 standard position groups.
+
+Positions absent from this dict are left unchanged (e.g. QB, WR, TE, DE,
+DT, LB, CB, K, P stay as-is).
+"""
+
+
+# ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
 
@@ -42,6 +62,7 @@ def _prepare_av_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
         - ``AV.1``: Season-level Approximate Value → cast to ``Float64``.
         - ``Draft Year``: Year the player was drafted → cast to ``Int64``.
         - ``Season``: Season year → cast to ``Int64``.
+        - ``Pos``: Player position → whitespace stripped, kept as ``String``.
 
     All other columns are passed through unchanged.
 
@@ -50,8 +71,9 @@ def _prepare_av_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
 
     Returns:
         LazyFrame with ``Pick`` (Int64), ``AV.1`` (Float64),
-        ``Draft Year`` (Int64), and ``Season`` (Int64) cast; rows where
-        ``AV.1`` is null after casting are dropped.
+        ``Draft Year`` (Int64), ``Season`` (Int64) cast, and ``Pos``
+        whitespace-stripped; rows where ``AV.1`` is null after casting
+        are dropped.
     """
     return (
         lazy_frame.with_columns(
@@ -60,6 +82,7 @@ def _prepare_av_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
                 pl.col("AV.1").cast(pl.Float64, strict=False),
                 pl.col("Draft Year").cast(pl.Int64),
                 pl.col("Season").cast(pl.Int64),
+                pl.col("Pos").str.strip_chars(),
             ]
         )
         .drop_nulls(subset=["AV.1"])
@@ -397,6 +420,118 @@ def rolling_window_skew_fit(
         result[center] = _fit_skewnorm_on_df(window_df, min_samples=min_samples)
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Position career development
+# ---------------------------------------------------------------------------
+
+
+def _aggregate_career_av_by_position(
+    lazy_frame: pl.LazyFrame,
+    normalize: bool,
+) -> pl.LazyFrame:
+    """Return season-level AV annotated with career year and (optionally) normalized position.
+
+    Works on the season-level data from :func:`_prepare_av_data` — one row
+    per player per season. Each row is retained as-is; no cross-season
+    aggregation is performed here.
+
+    Args:
+        lazy_frame: LazyFrame already processed through :func:`_prepare_av_data`.
+        normalize: If ``True``, remaps ``Pos`` values that appear as keys in
+            :data:`_POSITION_GROUPS` (e.g. ``"LDE"`` → ``"DE"``,
+            ``"FB"`` → ``"RB"``). Compound values not in the mapping
+            (e.g. ``"C/LG"``) are left unchanged. If ``False``, all
+            ``Pos`` values are kept exactly as recorded.
+
+    Returns:
+        LazyFrame with columns ``Player``, ``Pos``, ``Draft Year``,
+        ``years_from_draft`` (Int64), ``AV.1``. Rows where
+        ``years_from_draft < 0`` or ``Pos`` is null are dropped.
+    """
+    lf = lazy_frame
+    if normalize:
+        lf = lf.with_columns(
+            pl.col("Pos").replace(_POSITION_GROUPS, default=pl.col("Pos"))
+        )
+    return (
+        lf.with_columns(
+            (pl.col("Season") - pl.col("Draft Year")).alias("years_from_draft")
+        )
+        .filter(pl.col("years_from_draft") >= 0)
+        .drop_nulls(subset=["Pos"])
+        .select(["Player", "Pos", "Draft Year", "years_from_draft", "AV.1"])
+    )
+
+
+def _compute_position_year_describe(df: pl.DataFrame) -> pl.DataFrame:
+    """Compute descriptive statistics of ``AV.1`` grouped by position and career year.
+
+    Input columns required:
+        - ``Pos`` (String): Player position.
+        - ``years_from_draft`` (Int64): Career year (0 = rookie season).
+        - ``AV.1`` (Float64): Season-level Approximate Value.
+
+    Args:
+        df: Eager DataFrame with one row per player-season, output of
+            :func:`_aggregate_career_av_by_position` after ``.collect()``.
+
+    Returns:
+        Eager DataFrame sorted by ``(Pos, years_from_draft)`` ascending with
+        columns: ``Pos`` (String), ``years_from_draft`` (Int64),
+        ``count`` (UInt32), ``mean`` (Float64), ``std`` (Float64),
+        ``min`` (Float64), ``25%`` (Float64), ``50%`` (Float64),
+        ``75%`` (Float64), ``max`` (Float64).
+    """
+    return (
+        df.group_by(["Pos", "years_from_draft"])
+        .agg(
+            [
+                pl.col("AV.1").count().alias("count"),
+                pl.col("AV.1").mean().alias("mean"),
+                pl.col("AV.1").std().alias("std"),
+                pl.col("AV.1").min().alias("min"),
+                pl.col("AV.1").quantile(0.25, interpolation="linear").alias("25%"),
+                pl.col("AV.1").quantile(0.50, interpolation="linear").alias("50%"),
+                pl.col("AV.1").quantile(0.75, interpolation="linear").alias("75%"),
+                pl.col("AV.1").max().alias("max"),
+            ]
+        )
+        .sort(["Pos", "years_from_draft"])
+    )
+
+
+def position_career_stats(
+    directory: str | Path,
+    normalize: bool = True,
+) -> pl.DataFrame:
+    """Compute per-position, per-career-year descriptive statistics of annual AV.
+
+    Loads all parquet files from ``directory`` lazily, annotates each
+    player-season with ``years_from_draft``, optionally normalizes position
+    labels to 12 standard groups, then computes descriptive statistics
+    grouped by ``(Pos, years_from_draft)``.
+
+    Args:
+        directory: Path to the directory containing annual AV parquet files
+            (e.g. ``data/raw/stathead/annual_av``).
+        normalize: If ``True`` (default), consolidates raw position variants
+            using :data:`_POSITION_GROUPS` (e.g. ``"LDE"`` → ``"DE"``).
+            If ``False``, all raw positions are kept as-is.
+
+    Returns:
+        Eager DataFrame sorted by ``(Pos, years_from_draft)`` ascending with
+        columns: ``Pos`` (String), ``years_from_draft`` (Int64),
+        ``count`` (UInt32), ``mean`` (Float64), ``std`` (Float64),
+        ``min`` (Float64), ``25%`` (Float64), ``50%`` (Float64),
+        ``75%`` (Float64), ``max`` (Float64).
+    """
+    lf = load_parquets_from_dir(directory, lazy=True)
+    lf = _prepare_av_data(lf)
+    lf = _aggregate_career_av_by_position(lf, normalize=normalize)
+    df = lf.collect()
+    return _compute_position_year_describe(df)
 
 
 # ---------------------------------------------------------------------------
