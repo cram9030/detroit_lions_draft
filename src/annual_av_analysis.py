@@ -436,6 +436,7 @@ def rolling_window_skew_fit(
 def _aggregate_career_av_by_position(
     lazy_frame: pl.LazyFrame,
     normalize: bool,
+    rounds: list[int] | None = None,
 ) -> pl.LazyFrame:
     """Return season-level AV annotated with career year and (optionally) normalized position.
 
@@ -457,8 +458,11 @@ def _aggregate_career_av_by_position(
         lazy_frame: LazyFrame already processed through :func:`_prepare_av_data`.
         normalize: If ``True``, split compound positions, map components
             through :data:`_POSITION_GROUPS`, and remove any positions in
-            :data:`_SPECALIST` (K, KR, P, PR, LS) and '_GENERALIST' (DL, OL). If ``False``, keep
-            ``Pos`` as-is with no filtering.
+            :data:`_SPECALIST` (K, KR, P, PR, LS) and ``_GENERALIST`` (DL, OL).
+            If ``False``, keep ``Pos`` as-is with no filtering.
+        rounds: Optional list of draft round numbers to include (e.g.
+            ``[1]`` for first-round picks only, ``[1, 2]`` for the first two
+            rounds). If ``None``, all rounds are included.
 
     Returns:
         LazyFrame with columns ``Player``, ``Pos``, ``Draft Year``,
@@ -468,11 +472,17 @@ def _aggregate_career_av_by_position(
     lf = (
         lazy_frame
         .with_columns(
-            (pl.col("Season") - pl.col("Draft Year")).alias("years_from_draft")
+            [
+                pl.col("Round").cast(pl.Int64, strict=False),
+                (pl.col("Season") - pl.col("Draft Year")).alias("years_from_draft"),
+            ]
         )
         .filter(pl.col("years_from_draft") >= 0)
         .drop_nulls(subset=["Pos"])
     )
+
+    if rounds is not None:
+        lf = lf.filter(pl.col("Round").is_in(rounds))
 
     if normalize:
         lf = (
@@ -534,13 +544,14 @@ def _compute_position_year_describe(df: pl.DataFrame) -> pl.DataFrame:
 def position_career_stats(
     directory: str | Path,
     normalize: bool = True,
+    rounds: list[int] | None = None,
 ) -> pl.DataFrame:
     """Compute per-position, per-career-year descriptive statistics of annual AV.
 
     Loads all parquet files from ``directory`` lazily, annotates each
-    player-season with ``years_from_draft``, optionally normalizes position
-    labels to 12 standard groups, then computes descriptive statistics
-    grouped by ``(Pos, years_from_draft)``.
+    player-season with ``years_from_draft``, optionally filters to specific
+    draft rounds, optionally normalizes position labels to standard groups,
+    then computes descriptive statistics grouped by ``(Pos, years_from_draft)``.
 
     Args:
         directory: Path to the directory containing annual AV parquet files
@@ -548,6 +559,9 @@ def position_career_stats(
         normalize: If ``True`` (default), consolidates raw position variants
             using :data:`_POSITION_GROUPS` (e.g. ``"LDE"`` → ``"DE"``).
             If ``False``, all raw positions are kept as-is.
+        rounds: Optional list of draft round numbers to restrict the analysis
+            to (e.g. ``[1]`` for first-round picks only, ``[1, 2]`` for the
+            first two rounds). If ``None`` (default), all rounds are included.
 
     Returns:
         Eager DataFrame sorted by ``(Pos, years_from_draft)`` ascending with
@@ -558,7 +572,7 @@ def position_career_stats(
     """
     lf = load_parquets_from_dir(directory, lazy=True)
     lf = _prepare_av_data(lf)
-    lf = _aggregate_career_av_by_position(lf, normalize=normalize)
+    lf = _aggregate_career_av_by_position(lf, normalize=normalize, rounds=rounds)
     df = lf.collect()
     return _compute_position_year_describe(df)
 
