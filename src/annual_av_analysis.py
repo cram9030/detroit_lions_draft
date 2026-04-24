@@ -434,35 +434,53 @@ def _aggregate_career_av_by_position(
     """Return season-level AV annotated with career year and (optionally) normalized position.
 
     Works on the season-level data from :func:`_prepare_av_data` — one row
-    per player per season. Each row is retained as-is; no cross-season
-    aggregation is performed here.
+    per player per season.
+
+    When ``normalize=True``, compound position codes (e.g. ``"LDE/LOLB"``,
+    ``"RB-TE"``) are split on ``"/"`` and ``"-"`` and each component is mapped
+    through :data:`_POSITION_GROUPS`
+    (e.g. ``"LDE"`` → ``"DE"``, ``"LOLB"`` → ``"LB"``). The player-season row is
+    then exploded so the ``AV.1`` value is attributed to **every distinct
+    normalized position** in the compound. If both components map to the same
+    group (e.g. ``"LDE/RDE"`` → both ``"DE"``), only one row is kept.
+
+    When ``normalize=False``, compound positions are left exactly as recorded and
+    no exploding occurs.
 
     Args:
         lazy_frame: LazyFrame already processed through :func:`_prepare_av_data`.
-        normalize: If ``True``, remaps ``Pos`` values that appear as keys in
-            :data:`_POSITION_GROUPS` (e.g. ``"LDE"`` → ``"DE"``,
-            ``"FB"`` → ``"RB"``). Compound values not in the mapping
-            (e.g. ``"C/LG"``) are left unchanged. If ``False``, all
-            ``Pos`` values are kept exactly as recorded.
+        normalize: If ``True``, split compound positions and map components
+            through :data:`_POSITION_GROUPS`. If ``False``, keep ``Pos`` as-is.
 
     Returns:
         LazyFrame with columns ``Player``, ``Pos``, ``Draft Year``,
         ``years_from_draft`` (Int64), ``AV.1``. Rows where
         ``years_from_draft < 0`` or ``Pos`` is null are dropped.
     """
-    lf = lazy_frame
-    if normalize:
-        lf = lf.with_columns(
-            pl.col("Pos").replace(_POSITION_GROUPS, default=pl.col("Pos"))
-        )
-    return (
-        lf.with_columns(
+    lf = (
+        lazy_frame
+        .with_columns(
             (pl.col("Season") - pl.col("Draft Year")).alias("years_from_draft")
         )
         .filter(pl.col("years_from_draft") >= 0)
         .drop_nulls(subset=["Pos"])
-        .select(["Player", "Pos", "Draft Year", "years_from_draft", "AV.1"])
     )
+
+    if normalize:
+        lf = (
+            lf.with_columns(
+                pl.col("Pos")
+                .str.replace_all("-", "/")
+                .str.split("/")
+                .list.eval(
+                    pl.element().replace(_POSITION_GROUPS, default=pl.element())
+                )
+            )
+            .explode("Pos")
+            .unique(subset=["Player", "Draft Year", "years_from_draft", "Pos"])
+        )
+
+    return lf.select(["Player", "Pos", "Draft Year", "years_from_draft", "AV.1"])
 
 
 def _compute_position_year_describe(df: pl.DataFrame) -> pl.DataFrame:
