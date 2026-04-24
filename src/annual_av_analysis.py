@@ -41,6 +41,7 @@ def _prepare_av_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
         - ``Pick``: Overall draft pick number → cast to ``Int64``.
         - ``AV.1``: Season-level Approximate Value → cast to ``Float64``.
         - ``Draft Year``: Year the player was drafted → cast to ``Int64``.
+        - ``Season``: Season year → cast to ``Int64``.
 
     All other columns are passed through unchanged.
 
@@ -48,9 +49,9 @@ def _prepare_av_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
         lazy_frame: LazyFrame containing raw parquet data with string columns.
 
     Returns:
-        LazyFrame with ``Pick`` (Int64), ``AV.1`` (Float64), and
-        ``Draft Year`` (Int64) cast; rows where ``AV.1`` is null after
-        casting are dropped.
+        LazyFrame with ``Pick`` (Int64), ``AV.1`` (Float64),
+        ``Draft Year`` (Int64), and ``Season`` (Int64) cast; rows where
+        ``AV.1`` is null after casting are dropped.
     """
     return (
         lazy_frame.with_columns(
@@ -58,6 +59,7 @@ def _prepare_av_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
                 pl.col("Pick").cast(pl.Int64),
                 pl.col("AV.1").cast(pl.Float64, strict=False),
                 pl.col("Draft Year").cast(pl.Int64),
+                pl.col("Season").cast(pl.Int64),
             ]
         )
         .drop_nulls(subset=["AV.1"])
@@ -76,6 +78,7 @@ def _aggregate_player_av(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
         - ``Pick`` (Int64): Overall pick number.
         - ``Draft Year`` (Int64): Year the player was drafted.
         - ``Draft Team`` (String): Team that drafted the player.
+        - ``Season`` (Int64): Season year.
         - ``AV.1`` (Float64): Season-level Approximate Value.
 
     Args:
@@ -88,8 +91,10 @@ def _aggregate_player_av(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
         ``rookie_contract_av`` (Float64).
         Negative values are valid and must not be filtered.
     """
-    return lazy_frame.group_by(["Player", "Pick", "Draft Year", "Draft Team"]).agg(
-        pl.col("AV.1").sum().alias("rookie_contract_av")
+    return (
+        lazy_frame.filter(pl.col("Season") - pl.col("Draft Year") <= 3)
+        .group_by(["Player", "Pick", "Draft Year", "Draft Team"])
+        .agg(pl.col("AV.1").sum().alias("rookie_contract_av"))
     )
 
 
@@ -563,6 +568,9 @@ class ExponentialMeansFitResult(TypedDict):
         picks: Unique pick numbers from the input stats (one per pick position).
         means: Mean ``rookie_contract_av`` per pick from the input stats,
             aligned with ``picks``.
+        iqr_picks: Pick numbers where both 25th and 75th percentiles are available.
+        q25: 25th percentile AV per pick, aligned with ``iqr_picks``.
+        q75: 75th percentile AV per pick, aligned with ``iqr_picks``.
     """
 
     popt: np.ndarray
@@ -574,6 +582,9 @@ class ExponentialMeansFitResult(TypedDict):
     y_lower: np.ndarray
     picks: np.ndarray
     means: np.ndarray
+    iqr_picks: np.ndarray
+    q25: np.ndarray
+    q75: np.ndarray
 
 
 def exponential_av_fit_means(
@@ -630,6 +641,13 @@ def exponential_av_fit_means(
         .sort("Pick")
     )
 
+    iqr_df = (
+        stats_df.filter(pl.col("Pick") <= max_pick)
+        .select(["Pick", "25%", "75%"])
+        .drop_nulls()
+        .sort("Pick")
+    )
+
     if len(df) < 4:
         raise ValueError(
             f"Only {len(df)} valid picks after filtering to max_pick={max_pick}. "
@@ -681,4 +699,7 @@ def exponential_av_fit_means(
         y_lower=y_fit - sigma,
         picks=picks,
         means=means,
+        iqr_picks=iqr_df["Pick"].to_numpy(),
+        q25=iqr_df["25%"].to_numpy(),
+        q75=iqr_df["75%"].to_numpy(),
     )

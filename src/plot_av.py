@@ -13,7 +13,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import polars as pl
@@ -134,28 +133,31 @@ def plot_pick_av(
 
 
 def plot_animated_rolling_window(
-    rolling_stats_dict: dict[int, pl.DataFrame],
+    rolling_fit_dict: dict[int, dict],
     export_path: str | Path | None = None,
 ) -> go.Figure:
-    """Create an animated figure cycling through rolling-window pick AV statistics.
+    """Create an animated figure cycling through rolling-window exponential fit results.
 
-    Each frame corresponds to one center year from ``rolling_stats_dict``.
-    The animation shows how the mean rookie contract AV and IQR band change
-    over time as the draft year window advances. A slider and Play button
-    allow interactive scrubbing.
+    Each frame corresponds to one center year from ``rolling_fit_dict`` and
+    mirrors the three-layer layout of :func:`plot_exponential_fit_means`:
+    the 25th–75th percentile IQR band, the fitted exponential curve, and the
+    per-pick mean scatter. A slider and Play button allow interactive scrubbing.
 
-    The x-axis range is fixed to the global maximum pick number across all
-    frames so the axis does not jump between frames.
-
-    Input dict values — columns required per DataFrame:
-        - ``Pick`` (Int64): Overall pick number.
-        - ``mean`` (Float64): Mean rookie contract AV.
-        - ``25%`` (Float64): 25th percentile; may be null for sparse picks.
-        - ``75%`` (Float64): 75th percentile; may be null for sparse picks.
+    Input dict values — keys required per fit result (output of
+    :func:`annual_av_analysis.exponential_av_fit_means`):
+        - ``picks`` (ndarray): Unique pick numbers used in the fit.
+        - ``means`` (ndarray): Mean AV per pick, aligned with ``picks``.
+        - ``x_fit`` (ndarray): Dense pick axis for the smooth fitted curve.
+        - ``y_fit`` (ndarray): Fitted AV values at ``x_fit`` points.
+        - ``iqr_picks`` (ndarray): Pick numbers where both percentiles are available.
+        - ``q25`` (ndarray): 25th percentile AV per pick, aligned with ``iqr_picks``.
+        - ``q75`` (ndarray): 75th percentile AV per pick, aligned with ``iqr_picks``.
+        - ``popt`` (ndarray): Fitted parameters ``[a, b, c]`` shown in legend.
 
     Args:
-        rolling_stats_dict: Mapping of ``center_year`` → stats DataFrame,
-            output of :func:`annual_av_analysis.rolling_window_pick_stats`.
+        rolling_fit_dict: Mapping of ``center_year`` → fit result dict,
+            produced by calling :func:`annual_av_analysis.exponential_av_fit_means`
+            on each window from :func:`annual_av_analysis.rolling_window_pick_stats`.
         export_path: If provided, saves the figure as an HTML file. Must end
             with ``.html`` — animated figures cannot be exported to static
             image formats.
@@ -173,22 +175,35 @@ def plot_animated_rolling_window(
             f"Got: {export_path!r}. Use a path ending with '.html'."
         )
 
-    center_years = sorted(rolling_stats_dict.keys())
-    band_fill = _hex_to_rgba(_BAND_COLOR, 0.3)
+    center_years = sorted(rolling_fit_dict.keys())
+    band_fill = _hex_to_rgba(_BAND_COLOR, 0.25)
+    obs_color = _hex_to_rgba(_VIRIDIS[3], 0.8)
 
-    def _build_traces(df: pl.DataFrame) -> list[go.BaseTraceType]:
-        mean_df = df.filter(pl.col("Pick") <= 250).select(["Pick", "mean"]).drop_nulls()
-        iqr_df = df.filter(pl.col("Pick") <= 250).select(["Pick", "25%", "75%"]).drop_nulls()
+    # Compute global y range across all frames so the axis never jumps
+    all_y = [
+        v
+        for fr in rolling_fit_dict.values()
+        for v in (
+            list(fr["q75"]) + list(fr["q25"]) + list(fr["y_fit"]) + list(fr["means"])
+        )
+    ]
+    y_min = min(all_y)
+    y_max = max(all_y)
+    y_pad = (y_max - y_min) * 0.05
+    y_range = [y_min - y_pad, y_max + y_pad]
 
-        picks_iqr = iqr_df["Pick"].to_list()
-        q25 = iqr_df["25%"].to_list()
-        q75 = iqr_df["75%"].to_list()
-
-        picks_mean = mean_df["Pick"].to_list()
-        means = mean_df["mean"].to_list()
+    def _build_traces(fit_result: dict) -> list[go.BaseTraceType]:
+        iqr_picks = list(fit_result["iqr_picks"])
+        q25 = list(fit_result["q25"])
+        q75 = list(fit_result["q75"])
+        x_fit = fit_result["x_fit"]
+        y_fit = fit_result["y_fit"]
+        picks = fit_result["picks"]
+        means = fit_result["means"]
+        a, b, c = fit_result["popt"]
 
         band = go.Scatter(
-            x=picks_iqr + picks_iqr[::-1],
+            x=iqr_picks + iqr_picks[::-1],
             y=q75 + q25[::-1],
             fill="toself",
             fillcolor=band_fill,
@@ -196,23 +211,30 @@ def plot_animated_rolling_window(
             name="25%–75% IQR",
             showlegend=True,
         )
-        line = go.Scatter(
-            x=picks_mean,
-            y=means,
+        curve = go.Scatter(
+            x=x_fit,
+            y=y_fit,
             mode="lines",
             line=dict(color=_LINE_COLOR, width=2),
-            name="Mean Rookie Contract AV",
+            name=f"Fit: {a:.2f}·exp(−{b:.4f}·pick) + {c:.2f}",
         )
-        return [band, line]
+        scatter = go.Scatter(
+            x=picks,
+            y=means,
+            mode="markers",
+            marker=dict(color=obs_color, size=5),
+            name="Mean AV per pick",
+        )
+        return [band, curve, scatter]
 
     # Build frames
     frames = [
-        go.Frame(data=_build_traces(rolling_stats_dict[yr]), name=str(yr))
+        go.Frame(data=_build_traces(rolling_fit_dict[yr]), name=str(yr))
         for yr in center_years
     ]
 
     # Initial display = first frame
-    initial_traces = _build_traces(rolling_stats_dict[center_years[0]])
+    initial_traces = _build_traces(rolling_fit_dict[center_years[0]])
 
     fig = go.Figure(data=initial_traces, frames=frames)
 
@@ -227,9 +249,9 @@ def plot_animated_rolling_window(
     ]
 
     fig.update_layout(
-        title=f"Rookie Contract AV by Draft Pick — Rolling {center_years[0]}–{center_years[-1]}",
+        title=f"Exponential Fit — Rookie Contract AV by Draft Pick — Rolling {center_years[0]}–{center_years[-1]}",
         xaxis=dict(title="Pick Number", range=[1, 250]),
-        yaxis_title="Rookie Contract AV",
+        yaxis=dict(title="Rookie Contract AV", range=y_range, dtick=5),
         template="plotly_white",
         updatemenus=[
             dict(
@@ -426,7 +448,7 @@ def plot_exponential_fit_means(
     Displays three layers:
     1. Per-pick mean AV as scatter markers (one point per pick position).
     2. The fitted ``f(pick) = a·exp(-b·pick) + c`` curve as a solid dark-blue line.
-    3. The 1-sigma confidence band as a shaded teal region.
+    3. The 25th–75th percentile IQR as a shaded teal region.
 
     Input ``fit_result`` keys required (output of
     :func:`annual_av_analysis.exponential_av_fit_means`):
@@ -434,8 +456,9 @@ def plot_exponential_fit_means(
         - ``means`` (ndarray): Mean AV per pick, aligned with ``picks``.
         - ``x_fit`` (ndarray): Dense pick axis for the smooth fitted curve.
         - ``y_fit`` (ndarray): Fitted AV values at ``x_fit`` points.
-        - ``y_upper`` (ndarray): Upper 1-sigma bound at ``x_fit`` points.
-        - ``y_lower`` (ndarray): Lower 1-sigma bound at ``x_fit`` points.
+        - ``iqr_picks`` (ndarray): Pick numbers where both percentiles are available.
+        - ``q25`` (ndarray): 25th percentile AV per pick, aligned with ``iqr_picks``.
+        - ``q75`` (ndarray): 75th percentile AV per pick, aligned with ``iqr_picks``.
         - ``popt`` (ndarray): Fitted parameters ``[a, b, c]`` shown in legend.
 
     Args:
@@ -459,8 +482,9 @@ def plot_exponential_fit_means(
     means = fit_result["means"]
     x_fit = fit_result["x_fit"]
     y_fit = fit_result["y_fit"]
-    y_upper = fit_result["y_upper"]
-    y_lower = fit_result["y_lower"]
+    iqr_picks = list(fit_result["iqr_picks"])
+    q25 = list(fit_result["q25"])
+    q75 = list(fit_result["q75"])
     a, b, c = fit_result["popt"]
 
     band_fill = _hex_to_rgba(_BAND_COLOR, 0.25)
@@ -468,17 +492,15 @@ def plot_exponential_fit_means(
 
     fig = go.Figure()
 
-    # 1-sigma band
-    x_band = list(x_fit) + list(x_fit[::-1])
-    y_band = list(y_upper) + list(y_lower[::-1])
+    # IQR band (25th–75th percentile)
     fig.add_trace(
         go.Scatter(
-            x=x_band,
-            y=y_band,
+            x=iqr_picks + iqr_picks[::-1],
+            y=q75 + q25[::-1],
             fill="toself",
             fillcolor=band_fill,
             line=dict(color="rgba(0,0,0,0)"),
-            name="±1σ confidence",
+            name="25%–75% IQR",
             showlegend=True,
         )
     )
