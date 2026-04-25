@@ -184,6 +184,41 @@ def _compute_pick_describe(player_av_df: pl.DataFrame) -> pl.DataFrame:
     )
 
 
+def _filter_top_percentile_per_pick(
+    df: pl.DataFrame,
+    av_col: str,
+    percentile: float = 0.10,
+) -> pl.DataFrame:
+    """Keep only the top ``percentile`` fraction of players by AV within each pick.
+
+    Within each unique pick number the rows are ranked descending by ``av_col``
+    and the top ``ceil(n * percentile)`` rows are retained (at least 1 per pick).
+
+    Args:
+        df: Eager DataFrame with at least ``Pick`` (Int64) and ``av_col`` columns.
+        av_col: Name of the AV column to rank on.
+        percentile: Fraction of rows to keep per pick. Default ``0.10`` keeps
+            the top 10 %.
+
+    Returns:
+        Filtered DataFrame with the same schema as ``df``.
+    """
+    return (
+        df.with_columns([
+            pl.col(av_col)
+            .rank(method="ordinal", descending=True)
+            .over("Pick")
+            .alias("_rank"),
+            pl.len().over("Pick").alias("_count"),
+        ])
+        .filter(
+            pl.col("_rank")
+            <= (pl.col("_count").cast(pl.Float64) * percentile).ceil().cast(pl.Int64)
+        )
+        .drop(["_rank", "_count"])
+    )
+
+
 def _fit_skewnorm_on_df(
     df: pl.DataFrame,
     min_samples: int = 5,
@@ -651,8 +686,9 @@ def _exp_decay(x: np.ndarray, a: float, b: float, c: float) -> np.ndarray:
 
 
 def exponential_av_fit(
-    player_av_data: pl.LazyFrame,
+    player_av_data: pl.LazyFrame | pl.DataFrame,
     max_pick: int = 250,
+    av_col: str = "rookie_contract_av",
 ) -> ExponentialFitResult:
     """Fit an exponential decay curve to individual player rookie contract AV by pick.
 
@@ -667,17 +703,18 @@ def exponential_av_fit(
     error propagation: ``sigma²(x) = J(x) @ pcov @ J(x).T`` where ``J`` is
     the Jacobian of the model with respect to the parameters.
 
-    Input LazyFrame columns required:
+    Input columns required (``pl.LazyFrame`` or ``pl.DataFrame``):
         - ``Pick`` (Int64): Overall pick number.
-        - ``rookie_contract_av`` (Float64): Total AV over tracked seasons,
-          one row per player. Output of :func:`_aggregate_player_av`.
+        - Column named ``av_col`` (Float64): One AV value per player.
 
     Args:
-        player_av_data: LazyFrame with one row per player, already processed
-            through :func:`_prepare_av_data` and :func:`_aggregate_player_av`.
-            Typically ~12,000 rows covering all draft years in the dataset.
+        player_av_data: LazyFrame or eager DataFrame with one row per player.
+            When ``av_col="rookie_contract_av"``, pass the output of
+            :func:`_aggregate_player_av`. For other metrics (e.g. ``"dr_av"``),
+            pass the appropriate per-player DataFrame.
         max_pick: Maximum pick number to include in the fit. Default 250.
             Players drafted beyond this pick are excluded before fitting.
+        av_col: Name of the AV column to fit. Default ``"rookie_contract_av"``.
 
     Returns:
         :class:`ExponentialFitResult` dict with keys:
@@ -703,8 +740,9 @@ def exponential_av_fit(
         ValueError: If fewer than 4 valid data points remain after filtering.
     """
     df = (
-        player_av_data.filter(pl.col("Pick") <= max_pick)
-        .select(["Pick", "rookie_contract_av"])
+        player_av_data.lazy()
+        .filter(pl.col("Pick") <= max_pick)
+        .select(["Pick", av_col])
         .drop_nulls()
         .collect()
         .sort("Pick")
@@ -717,7 +755,7 @@ def exponential_av_fit(
         )
 
     picks = df["Pick"].to_numpy().astype(float)
-    av_values = df["rookie_contract_av"].to_numpy()
+    av_values = df[av_col].to_numpy()
 
     # Initial guess derived from the data range
     p0 = [float(av_values.max()), 0.01, float(av_values.min())]
@@ -916,3 +954,46 @@ def exponential_av_fit_means(
         q25=iqr_df["25%"].to_numpy(),
         q75=iqr_df["75%"].to_numpy(),
     )
+
+
+def fit_result_to_dataframe(
+    fit_result: ExponentialFitResult | ExponentialMeansFitResult,
+) -> pl.DataFrame:
+    """Convert an exponential fit result to a saveable DataFrame.
+
+    Re-evaluates the fitted curve at every integer pick from 1 through the
+    maximum pick used in the fit (derived from ``x_fit[-1]``).  The 1-sigma
+    confidence band is recomputed via the same error-propagation Jacobian used
+    inside :func:`exponential_av_fit`.
+
+    Args:
+        fit_result: Return value of :func:`exponential_av_fit` or
+            :func:`exponential_av_fit_means`.
+
+    Returns:
+        Eager DataFrame with one row per integer pick and columns:
+            - ``pick`` (Int64): Integer pick number (1 … max_pick).
+            - ``y_fit`` (Float64): Fitted AV at each pick.
+            - ``y_upper`` (Float64): Upper 1-sigma bound.
+            - ``y_lower`` (Float64): Lower 1-sigma bound.
+    """
+    a, b, c = fit_result["popt"]
+    pcov = fit_result["pcov"]
+    max_pick = int(round(float(fit_result["x_fit"][-1])))
+    picks = np.arange(1, max_pick + 1, dtype=float)
+
+    y_fit = a * np.exp(-b * picks) + c
+
+    J = np.column_stack([
+        np.exp(-b * picks),
+        -a * picks * np.exp(-b * picks),
+        np.ones_like(picks),
+    ])
+    sigma = np.sqrt(np.abs(np.einsum("ij,jk,ik->i", J, pcov, J)))
+
+    return pl.DataFrame({
+        "pick": picks.astype(int).tolist(),
+        "y_fit": y_fit.tolist(),
+        "y_upper": (y_fit + sigma).tolist(),
+        "y_lower": (y_fit - sigma).tolist(),
+    })

@@ -16,11 +16,12 @@ Skip specific steps::
 
 Available ``--skip-*`` flags
 ----------------------------
---skip-skew       Skip full-dataset and rolling-window skew-normal fits.
---skip-rolling    Skip all rolling-window analyses (stats + skew + animated plot).
---skip-exp-fit    Skip exponential decay fit and its plot.
---skip-plots      Skip all Plotly figure generation.
---skip-position   Skip position-based career AV analysis and plots.
+--skip-skew        Skip full-dataset and rolling-window skew-normal fits.
+--skip-rolling     Skip all rolling-window analyses (stats + skew + animated plot).
+--skip-exp-fit     Skip exponential decay fit and its plot.
+--skip-plots       Skip all Plotly figure generation.
+--skip-position    Skip position-based career AV analysis and plots.
+--skip-comparison  Skip multi-metric normalized pick value comparison.
 """
 
 import argparse
@@ -34,21 +35,24 @@ import polars as pl
 
 from src.annual_av_analysis import (
     _aggregate_player_av,
+    _filter_top_percentile_per_pick,
     _prepare_av_data,
     exponential_av_fit,
     exponential_av_fit_means,
+    fit_result_to_dataframe,
     pick_based_stats,
     position_career_stats,
     rolling_window_pick_stats,
     rolling_window_skew_fit,
     skew_normal_fit,
 )
-from src.data_ingest import load_parquets_from_dir
+from src.data_ingest import load_csv, load_nflreadr_draft_picks, load_parquets_from_dir
 from src.data_output import save_data
 from src.plot_av import (
     plot_animated_rolling_window,
     plot_exponential_fit,
     plot_exponential_fit_means,
+    plot_normalized_pick_value_comparison,
     plot_pick_av,
     plot_position_career_av,
 )
@@ -71,6 +75,8 @@ def parse_args() -> argparse.Namespace:
                         help="Skip all Plotly figure generation.")
     parser.add_argument("--skip-position", action="store_true",
                         help="Skip position-based career AV analysis and plots.")
+    parser.add_argument("--skip-comparison", action="store_true",
+                        help="Skip multi-metric normalized pick value comparison.")
     return parser.parse_args()
 
 
@@ -182,6 +188,13 @@ def main() -> None:
         # ------------------------------------------------------------------
         # 8. Exponential fit plot
         # ------------------------------------------------------------------
+        save_data(
+            fit_result_to_dataframe(fit_result),
+            PROCESSED_DIR / "exp_fit_rookie_contract_av.csv",
+            format="csv",
+        )
+        print("  Saved exp_fit_rookie_contract_av.csv")
+
         if not args.skip_plots:
             print("Generating exponential fit plot (individual players)...")
             plot_exponential_fit(
@@ -200,6 +213,13 @@ def main() -> None:
         a, b, c = means_fit_result["popt"]
         print(f"  f(pick) = {a:.3f} * exp(-{b:.5f} * pick) + {c:.3f}")
         print(f"  Parameter uncertainties (1σ): {means_fit_result['perr']}")
+
+        save_data(
+            fit_result_to_dataframe(means_fit_result),
+            PROCESSED_DIR / "exp_fit_rookie_contract_av_means.csv",
+            format="csv",
+        )
+        print("  Saved exp_fit_rookie_contract_av_means.csv")
 
         if not args.skip_plots:
             print("Generating exponential fit plot (per-pick means)...")
@@ -273,6 +293,104 @@ def main() -> None:
             print("  Saved position_career_av_normalized_r1.html")
     else:
         print("Skipping position career analysis (--skip-position).")
+
+    # ------------------------------------------------------------------
+    # 11. Multi-metric normalized pick value comparison
+    # ------------------------------------------------------------------
+    if not args.skip_comparison:
+        print("Loading nflreadpy draft pick data (dr_av)...")
+        nflreadr_df = load_nflreadr_draft_picks().drop_nulls(subset=["dr_av"])
+        print(f"  Loaded {len(nflreadr_df)} picks with dr_av "
+              f"({nflreadr_df['Draft Year'].min()}–{nflreadr_df['Draft Year'].max()})")
+
+        # Ensure rookie contract fit is available even if --skip-exp-fit was set
+        if args.skip_exp_fit:
+            print("Computing rookie contract AV fit for comparison...")
+            fit_result = exponential_av_fit(player_av_lf, max_pick=250)
+
+        print("Computing rookie contract AV top-10% fit...")
+        rc_df = player_av_lf.collect()
+        rc_top10_df = _filter_top_percentile_per_pick(rc_df, "rookie_contract_av")
+        fit_rc_top10 = exponential_av_fit(rc_top10_df, max_pick=250, av_col="rookie_contract_av")
+        save_data(
+            fit_result_to_dataframe(fit_rc_top10),
+            PROCESSED_DIR / "exp_fit_rookie_contract_av_top10.csv",
+            format="csv",
+        )
+        print("  Saved exp_fit_rookie_contract_av_top10.csv")
+
+        print("Computing dr_av fit...")
+        fit_dr = exponential_av_fit(nflreadr_df, max_pick=250, av_col="dr_av")
+        a, b, c = fit_dr["popt"]
+        print(f"  f(pick) = {a:.3f} * exp(-{b:.5f} * pick) + {c:.3f}")
+        save_data(
+            fit_result_to_dataframe(fit_dr),
+            PROCESSED_DIR / "exp_fit_dr_av.csv",
+            format="csv",
+        )
+        print("  Saved exp_fit_dr_av.csv")
+
+        print("Computing dr_av top-10% fit...")
+        dr_top10_df = _filter_top_percentile_per_pick(nflreadr_df, "dr_av")
+        fit_dr_top10 = exponential_av_fit(dr_top10_df, max_pick=250, av_col="dr_av")
+        a, b, c = fit_dr_top10["popt"]
+        print(f"  f(pick) = {a:.3f} * exp(-{b:.5f} * pick) + {c:.3f}")
+        save_data(
+            fit_result_to_dataframe(fit_dr_top10),
+            PROCESSED_DIR / "exp_fit_dr_av_top10.csv",
+            format="csv",
+        )
+        print("  Saved exp_fit_dr_av_top10.csv")
+
+        if not args.skip_plots:
+            print("Generating normalized pick value comparison plot...")
+            trade_charts = {
+                "Jimmy Johnson": (
+                    load_csv(PROCESSED_DIR / "jimmy_johnson_trade_chart.csv")
+                    .unique(subset=["Pick"], keep="first")
+                    .sort("Pick")
+                    .select(["Pick", "Value"])
+                    .with_columns(pl.col("Pick").cast(pl.Int64))
+                ),
+                "Fitzgerald-Spielberger": (
+                    load_csv(PROCESSED_DIR / "fitzgerald_spielberger_trade_chart.csv")
+                    .select(["Pick", "Value"])
+                    .with_columns(pl.col("Pick").cast(pl.Int64))
+                ),
+                "PFF WAR": (
+                    load_csv(PROCESSED_DIR / "pff_war_draft_chart.csv")
+                    .rename({"PFF_WAR_Normalized": "Value"})
+                    .select(["Pick", "Value"])
+                    .with_columns(pl.col("Pick").cast(pl.Int64))
+                ),
+                "5-Year AV": (
+                    load_csv(PROCESSED_DIR / "5_year_av_chart.csv")
+                    .rename({"Pk": "Pick", "FP Val": "Value"})
+                    .select(["Pick", "Value"])
+                    .with_columns(pl.col("Pick").cast(pl.Int64))
+                ),
+                "Rich Hill": (
+                    load_csv(PROCESSED_DIR / "Rich-Hill.csv")
+                    .rename({"pick": "Pick", "value": "Value"})
+                    .select(["Pick", "Value"])
+                    .with_columns(pl.col("Pick").cast(pl.Int64))
+                ),
+            }
+            plot_normalized_pick_value_comparison(
+                fits={
+                    "Rookie Contract AV": fit_result,
+                    "Rookie Contract AV (Top 10%)": fit_rc_top10,
+                    "Draft AV": fit_dr,
+                    "Draft AV (Top 10%)": fit_dr_top10,
+                },
+                trade_charts=trade_charts,
+                title="Pick Value Comparison — Normalized to Pick 1 (1970–2022)",
+                export_path=FIGURES_DIR / "pick_value_comparison_normalized.html",
+                export_format="html",
+            )
+            print("  Saved pick_value_comparison_normalized.html")
+    else:
+        print("Skipping multi-metric comparison (--skip-comparison).")
 
     print("\nAnalysis complete.")
     print(f"  Processed data: {PROCESSED_DIR}")

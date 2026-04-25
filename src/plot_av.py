@@ -13,6 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import polars as pl
@@ -533,6 +534,105 @@ def plot_exponential_fit_means(
         yaxis_title="Rookie Contract AV",
         template="plotly_white",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+
+    if export_path is not None:
+        _export_figure(fig, export_path, export_format)
+
+    return fig
+
+
+# Colors for trade-chart lines — visually distinct from Viridis
+_TRADE_COLORS = ["#e15759", "#f28e2b", "#76b7b2", "#59a14f", "#b07aa1"]
+
+
+def plot_normalized_pick_value_comparison(
+    fits: dict[str, dict],
+    trade_charts: dict[str, pl.DataFrame],
+    title: str = "Pick Value Comparison — Normalized to Pick 1",
+    max_pick: int = 224,
+    export_path: str | Path | None = None,
+    export_format: Literal["html", "png", "svg"] | None = None,
+) -> go.Figure:
+    """Plot multiple pick-value models on a common normalized scale.
+
+    Evaluates each exponential fit at integer picks 1–``max_pick`` and
+    normalizes so that pick 1 = 1.0. Trade charts are normalized the same way
+    using the value at ``Pick == 1``. All series are overlaid on one figure for
+    direct comparison.
+
+    Args:
+        fits: Mapping of label → exponential fit result dict (output of
+            :func:`annual_av_analysis.exponential_av_fit` or
+            :func:`annual_av_analysis.exponential_av_fit_means`). Must contain
+            a ``popt`` key with fitted parameters ``[a, b, c]``.
+        trade_charts: Mapping of label → DataFrame with exactly two columns:
+            ``Pick`` (Int64) and ``Value`` (Float64/Int64), already sorted by
+            ``Pick`` ascending. The value at ``Pick == 1`` is used as the
+            normalization reference. Duplicate pick numbers must be removed
+            before passing.
+        title: Chart title.
+        max_pick: Last pick number to show on the x-axis. Default ``224``
+            (the upper bound of the Jimmy Johnson chart).
+        export_path: If provided, saves the figure to this path.
+        export_format: Required when ``export_path`` is set.
+
+    Returns:
+        Plotly Figure with all AV models (solid lines) and trade charts
+        (dashed lines) normalized to pick 1 = 1.0.
+
+    Raises:
+        ValueError: If ``export_path`` is set but ``export_format`` is None.
+    """
+    if export_path is not None and export_format is None:
+        raise ValueError("export_format must be specified when export_path is provided.")
+
+    pick_axis = np.arange(1, max_pick + 1, dtype=float)
+
+    n_fits = len(fits)
+    fit_colors = [_VIRIDIS[0]] if n_fits == 1 else px.colors.sample_colorscale("Viridis", n_fits)
+
+    fig = go.Figure()
+
+    for i, (label, fit_result) in enumerate(fits.items()):
+        a, b, c = fit_result["popt"]
+        y = a * np.exp(-b * pick_axis) + c
+        y_norm = y / y[0]
+        color = fit_colors[i]
+
+        fig.add_trace(go.Scatter(
+            x=pick_axis.tolist(),
+            y=y_norm.tolist(),
+            mode="lines",
+            line=dict(color=color, width=2),
+            name=label,
+            legendgroup="av_models",
+            legendgrouptitle=dict(text="AV Models") if i == 0 else {},
+        ))
+
+    for i, (label, df) in enumerate(trade_charts.items()):
+        color = _TRADE_COLORS[i % len(_TRADE_COLORS)]
+        val_at_1 = df.filter(pl.col("Pick") == 1)["Value"][0]
+        chart_df = df.filter(pl.col("Pick") <= max_pick)
+        x = chart_df["Pick"].to_list()
+        y_norm = [v / val_at_1 for v in chart_df["Value"].to_list()]
+
+        fig.add_trace(go.Scatter(
+            x=x,
+            y=y_norm,
+            mode="lines",
+            line=dict(color=color, width=2, dash="dash"),
+            name=label,
+            legendgroup="trade_charts",
+            legendgrouptitle=dict(text="Trade Charts") if i == 0 else {},
+        ))
+
+    fig.update_layout(
+        title=title,
+        xaxis=dict(title="Overall Pick", range=[1, max_pick]),
+        yaxis=dict(title="Normalized Value (Pick 1 = 1.0)"),
+        template="plotly_white",
+        legend=dict(groupclick="toggleitem"),
     )
 
     if export_path is not None:

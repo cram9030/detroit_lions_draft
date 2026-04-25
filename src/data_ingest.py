@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import polars as pl
+import nflreadpy
 
 
 def load_csv(file_path: str | Path) -> pl.DataFrame:
@@ -23,7 +24,7 @@ def load_csv(file_path: str | Path) -> pl.DataFrame:
     path = Path(file_path).resolve()
     if not path.exists():
         raise FileNotFoundError(f"CSV file not found: {path}")
-    return pl.read_csv(path)
+    return pl.read_csv(path, infer_schema_length=None)
 
 
 def load_parquet(
@@ -105,3 +106,34 @@ def load_parquets_from_dir(
     if lazy:
         return lf
     return lf.collect()
+
+
+def load_nflreadr_draft_picks(seasons: list[int] | None = None) -> pl.DataFrame:
+    """Load NFL draft pick data from nflreadpy, including ``dr_av`` per player.
+
+    Uses ``nflreadpy.load_draft_picks()`` and normalises column names to match
+    project conventions. ``dr_av`` (Approximate Value produced for the team
+    that drafted the player) is cast to Float64; rows where ``dr_av`` is null
+    are retained — callers may drop them with ``.drop_nulls(subset=["dr_av"])``.
+
+    Args:
+        seasons: Optional list of draft years to include (e.g. ``[1980, 1981]``).
+            If ``None``, all available years are returned.
+
+    Returns:
+        Eager DataFrame with columns including ``Pick`` (Int64),
+        ``Draft Year`` (Int64), ``Player`` (String), ``dr_av`` (Float64),
+        plus all other columns returned by nflreadpy.
+    """
+    df = (
+        nflreadpy.load_draft_picks()
+        .rename({"season": "Draft Year", "pick": "Pick", "pfr_player_name": "Player"})
+        .with_columns([
+            pl.col("Pick").cast(pl.Int64),
+            pl.col("Draft Year").cast(pl.Int64),
+            pl.col("dr_av").cast(pl.Float64, strict=False),
+        ])
+    )
+    if seasons is not None:
+        df = df.filter(pl.col("Draft Year").is_in(seasons))
+    return df
