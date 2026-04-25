@@ -52,8 +52,6 @@ PROCESSED_DIR = PROJECT_ROOT / "data/processed"
 
 _DRAFT_YEAR = 2024
 _OBS_SEASONS = [2024, 2025]  # years_from_draft 0 and 1
-_PROJ_YEARS = [2, 3]          # years to project
-_N_YEARS = 4                   # rookie contract window
 
 # Normalized position mapping matching _POSITION_GROUPS in annual_av_analysis
 _POSITION_GROUPS: dict[str, str] = {
@@ -70,9 +68,19 @@ _POSITION_GROUPS: dict[str, str] = {
     "FS": "S", "SS": "S", "DB": "S",
 }
 
+# Generalist codes (OL, DL) aren't resolvable without knowing the specific position.
+# Override per-player where the actual position is known.
+_PLAYER_POSITION_OVERRIDES: dict[str, str] = {
+    "Giovanni Manu": "OT",
+    "Mekhi Wingo": "DT",
+    "Christian Mahogany": "OG",
+}
 
-def _normalize_pos(pos: str) -> str:
-    """Return the first normalized position for a compound code."""
+
+def _normalize_pos(player: str, pos: str) -> str:
+    """Return the normalized position, applying per-player overrides first."""
+    if player in _PLAYER_POSITION_OVERRIDES:
+        return _PLAYER_POSITION_OVERRIDES[player]
     first = pos.replace("-", "/").split("/")[0].strip()
     return _POSITION_GROUPS.get(first, first)
 
@@ -111,7 +119,7 @@ def _load_lions_observed() -> pl.DataFrame:
 
     raw = pl.concat(frames)
 
-    return (
+    prepared = (
         raw
         .with_columns([
             pl.col("Pick").cast(pl.Int64, strict=False),
@@ -124,8 +132,18 @@ def _load_lions_observed() -> pl.DataFrame:
             (pl.col("Season") - pl.col("Draft Year")).alias("years_from_draft")
         )
         .filter(pl.col("years_from_draft").is_in([0, 1]))
-        .select(["Player", "Pos", "Pick", "Draft Year", "years_from_draft", "AV.1"])
     )
+
+    # Normalize positions so compound/variant codes resolve consistently across seasons
+    # (e.g. "RCB" and "CB" both become "CB" for the same player)
+    prepared = prepared.with_columns(
+        pl.struct(["Player", "Pos"]).map_elements(
+            lambda s: _normalize_pos(s["Player"], s["Pos"]),
+            return_dtype=pl.String,
+        ).alias("Pos")
+    )
+
+    return prepared.select(["Player", "Pos", "Pick", "Draft Year", "years_from_draft", "AV.1"])
 
 
 def _build_pick_expectation(max_pick: int = 260) -> dict[int, float]:
@@ -153,7 +171,7 @@ def _project_player(
     obs_av: list[float],
 ) -> tuple[float, float] | None:
     """Return (proj_yr2, proj_yr3) or None if position unknown to model."""
-    norm_pos = _normalize_pos(pos)
+    norm_pos = _normalize_pos(player, pos)
     try:
         result = model.predict(norm_pos, obs_av)
     except ValueError:
@@ -232,7 +250,7 @@ def main() -> None:
     print("=" * 90)
     display_cols = ["Player", "Pos", "Pick", "Obs yr0", "Obs yr1",
                     "Proj yr2", "Proj yr3", "Model 4yr", "Exp 4yr", "Delta"]
-    with pl.Config(tbl_width_chars=120):
+    with pl.Config(tbl_width_chars=200, tbl_cols=-1):
         print(results_df.select(display_cols))
 
     for row in results_df.iter_rows(named=True):
