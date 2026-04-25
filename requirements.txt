@@ -13,3 +13,7 @@ lxml
 pyarrow
 scipy
 kaleido
+scikit-learn
+joblib
+pytest
+pytest-mock

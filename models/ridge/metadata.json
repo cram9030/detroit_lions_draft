@@ -1,0 +1,8 @@
+{
+  "model": "ridge",
+  "trained_on": null,
+  "train_years": null,
+  "val_mae_by_position": null,
+  "positions": null,
+  "normalize": true
+}

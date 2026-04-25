@@ -55,6 +55,9 @@ cookies.json
 # Downloader progress tracking
 .progress.json
 
+# Trained model binaries (committed: *.json metadata/params)
+models/**/*.joblib
+
 # Outputs
 outputs/figures/*.png
 outputs/figures/*.jpg
