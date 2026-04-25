@@ -1,6 +1,6 @@
 # Detroit Lions Draft Analysis
 
-Analysis of Detroit Lions NFL draft history and data.
+Analysis of Detroit Lions NFL draft history and data. The project fetches historical Approximate Value (AV) data from Stathead, runs a suite of pick-value analyses, and provides three position-aware career trajectory models (Parametric, KNN, Ridge) for projecting future player value.
 
 ## Project Structure
 
@@ -11,14 +11,29 @@ detroit_lions_draft/
 ├── data/
 │   ├── raw/              # Raw source data (not tracked by git)
 │   └── processed/        # Cleaned and transformed data
-├── notebooks/            # Jupyter notebooks for prototyping and exploration
+├── docs/                 # Extended documentation
+│   ├── fetching-data.md
+│   ├── modeling.md
+│   └── running-analysis.md
+├── models/               # Trained model artifacts
+│   ├── knn/
+│   ├── parametric/
+│   └── ridge/
+├── notebooks/            # Jupyter notebooks for exploration
+├── outputs/
+│   ├── figures/          # Generated interactive HTML plots
+│   └── reports/
+├── scripts/              # Runnable entry points
+│   ├── example_lions_2024.py
+│   ├── run_analysis.py
+│   └── train_models.py
 ├── secrets/              # Local credentials — gitignored, never committed
 │   └── cookies.json      # (you create this — see Fetching Data below)
 ├── src/                  # Python source modules
+│   ├── models/           # CareerAV model implementations
 │   └── stathead_downloader.py
-├── outputs/
-│   ├── figures/          # Generated plots and charts
-│   └── reports/          # Generated reports
+├── tests/                # Unit tests
+│   └── models/
 ├── requirements.txt
 └── README.md
 ```
@@ -29,6 +44,7 @@ detroit_lions_draft/
 - Recommended: use the Dev Container (see below) to avoid managing Python versions locally
 
 ---
+
 # Setup
 
 ## Option 1: Dev Container (recommended)
@@ -93,381 +109,30 @@ Select the **Detroit Lions Draft** kernel when creating or opening a notebook.
 deactivate
 ```
 
-# Fetching Data
+---
+
+# Quick Start
+
+1. **Fetch data** — export Stathead cookies and run the downloader. See [docs/fetching-data.md](docs/fetching-data.md).
+
+2. **Run analysis**:
+   ```bash
+   python scripts/run_analysis.py
+   ```
+   See [docs/running-analysis.md](docs/running-analysis.md) for pipeline flags and output plot descriptions.
+
+3. **Train models**:
+   ```bash
+   python scripts/train_models.py --model all
+   ```
+   See [docs/modeling.md](docs/modeling.md) for model details, training options, and how to add a new model.
 
 ---
 
-## Prerequisites
+# Documentation
 
-- Python 3.10 or later
-- A valid Stathead subscription (logged in via your browser)
-- The **Cookie-Editor** browser extension
-  ([Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm) |
-  [Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/))
-
----
-
-## Step 1 — Install Python dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## Step 2 — Export your browser session cookies
-
-The script authenticates as you by replaying your browser's login cookies.
-You need to export them once and re-export if they expire.
-
-1. Go to **https://www.sports-reference.com/stathead/** and confirm you are logged in.
-2. Click the **Cookie-Editor** extension icon.
-3. Click **Export → Export All** (copies to clipboard or writes a file directly).
-4. Paste the contents into **`secrets/cookies.json`** (create the file if needed).
-
-The file should be a JSON array: `[{"name": "...", "value": "..."}, ...]`
-
-> **Cookie lifetime:** Stathead session cookies typically last a few days.
-> If the script logs `LOGIN WALL DETECTED`, your cookies have expired — repeat this step.
-
-> **Security:** `secrets/` is gitignored and will never be committed. Do not move
-> `cookies.json` outside that folder.
-
----
-
-## Step 3 — Configure the query
-
-Edit **`config/stathead_annual_av.json`** (or copy it to create a new config for a
-different query type). The fields you are most likely to change:
-
-| Field | What it controls | Default |
-|---|---|---|
-| `output_dir` | Where Parquet files are saved | `data/raw/stathead/annual_av` |
-| `draft_year_ranges` | List of `[min, max]` draft year pairs | `[[2021, 2021]]` |
-| `season_years` | Season years to query | `[2021, 2022, 2023, 2024, 2025]` |
-| `sleep_between_requests` | Seconds to wait between requests | `3.0` |
-
-### Typical configuration examples
-
-**Query each draft class against multiple seasons:**
-```json
-"draft_year_ranges": [[2018, 2018], [2019, 2019], [2020, 2020], [2021, 2021], [2022, 2022]],
-"season_years": [2018, 2019, 2020, 2021, 2022, 2023, 2024]
-```
-This produces 5 draft ranges × 7 season years = **35 combinations**.
-
-**Query a single wide draft window:**
-```json
-"draft_year_ranges": [[2018, 2022]],
-"season_years": [2018, 2019, 2020, 2021, 2022, 2023, 2024]
-```
-This produces 1 range × 7 seasons = **7 combinations**.
-
-The `fixed_params` block mirrors Stathead URL parameters that never change
-(`order_by=av`, `comp_type=reg`, etc.). Edit only for a fundamentally different query type.
-
----
-
-## Step 4 — Run the script
-
-```bash
-python src/stathead_downloader.py
-```
-
-Override defaults with flags:
-
-```bash
-python src/stathead_downloader.py \
-  --config config/stathead_annual_av.json \
-  --cookies secrets/cookies.json
-```
-
-The script will:
-
-1. Load cookies and the query config.
-2. Iterate over every draft-range × season-year combination.
-3. For each combination, fetch all paginated pages (200 rows each).
-4. Parse the HTML table and write a single **Parquet** file per combination.
-5. Log progress to the terminal and to `stathead_downloader.log`.
-6. Record completed combinations in `.progress.json` so interrupted runs
-   can be safely restarted without re-downloading anything.
-
----
-
-## Output structure
-
-```
-data/raw/stathead/annual_av/
-├── draft2021_season2021.parquet
-├── draft2021_season2022.parquet
-├── draft2021_season2023.parquet
-└── .progress.json              ← tracks completed combinations for resumability
-```
-
-Each Parquet file contains all pages for that draft × season combination, with
-repeating Stathead header rows stripped out.
-
----
-
-## Loading the data
-
-```python
-import polars as pl
-
-# Load a single file
-df = pl.read_parquet("data/raw/stathead/annual_av/draft2021_season2021.parquet")
-
-# Load all files at once
-df = pl.scan_parquet("data/raw/stathead/annual_av/*.parquet").collect()
-```
-
----
-
-## Resuming an interrupted run
-
-Simply re-run the script. Completed combinations are recorded in `.progress.json`
-and skipped automatically — only missing combinations are fetched.
-
----
-
-## Troubleshooting
-
-| Symptom | Likely cause | Fix |
-|---|---|---|
-| `LOGIN WALL DETECTED` | Cookies expired | Re-export cookies (Step 2) |
-| `Cookie file not found` | Wrong path | Confirm `secrets/cookies.json` exists |
-| `No data for this combination` | Draft/season combo has 0 results | Normal — script skips and continues |
-| `HTTP 429` | Too many requests | Increase `sleep_between_requests` to `5.0` or higher |
-| Wrong table parsed | Stathead updated their HTML | Inspect the table `id` in DevTools and update `parse_table()` |
-| Script is slow | Intentional rate limiting | Do not reduce `sleep_between_requests` below `2.0` |
-
----
-
-## Rate limiting and terms of service
-
-The default 3-second delay between requests is intentional. Stathead is a
-paid service and aggressive scraping can get your account flagged. Do not
-reduce the delay below **2 seconds**. This tool is intended for personal
-automation of data you are entitled to access as a subscriber.
-
----
-
-# Running the Analysis
-
-Once you have data in `data/raw/stathead/annual_av/`, run the full pipeline with:
-
-```bash
-python run_analysis.py
-```
-
-This runs every analysis step in sequence and writes processed data to `data/processed/` and figures to `outputs/figures/`.
-
-## Pipeline flags
-
-Use `--skip-*` flags to bypass expensive steps during iteration:
-
-| Flag | What it skips |
+| Topic | File |
 |---|---|
-| `--skip-skew` | Full-dataset and rolling-window skew-normal distribution fits |
-| `--skip-rolling` | All rolling-window analyses (stats, skew fit, and animated plot) |
-| `--skip-exp-fit` | Exponential decay curve fits and their plots |
-| `--skip-plots` | All Plotly figure generation (analysis steps still run) |
-
-Flags can be combined:
-
-```bash
-python run_analysis.py --skip-skew --skip-rolling
-```
-
-## Output plots
-
-All figures are saved as interactive HTML files in `outputs/figures/`. Open them in any browser — hover over data points for exact values, click legend items to show/hide traces, and use the toolbar to zoom or pan.
-
----
-
-### `pick_av_static.html` — Mean AV by Draft Pick
-
-Shows the full historical dataset (1970–2022) summarized at the pick level.
-
-- **Dark blue line** — mean rookie contract AV at each pick number (career AV accumulated through the end of the rookie contract, typically four years).
-- **Teal shaded band** — 25th–75th percentile range at each pick. Narrow bands indicate consistent outcomes; wide bands reflect high variance (e.g. early first-round picks where busts and stars diverge sharply).
-
-The steep drop-off in the first 30–40 picks and the flattening toward the later rounds reflects the diminishing expected value as picks get later.
-
----
-
-### `pick_av_animated.html` — Rolling-Window Exponential Fit
-
-An animated version of the exponential fit (see below) computed over an 11-year rolling window centered on each draft year. Use the **Play** button or the year slider to step through time.
-
-Each frame shows three layers for that window's data:
-
-- **Teal shaded band** — 25th–75th percentile IQR of AV at each pick position.
-- **Dark blue curve** — fitted exponential decay: `f(pick) = a·exp(−b·pick) + c`. The legend shows the fitted parameters for that window.
-- **Teal scatter points** — per-pick mean AV (one dot per pick number).
-
-Watch for shifts in the curve parameters over time to identify eras where early picks were more or less predictably valuable (e.g., changes in scouting, the rookie wage scale, or rule changes that amplified certain positions).
-
----
-
-### `pick_av_exp_fit.html` — Exponential Fit (Individual Players)
-
-Fits `f(pick) = a·exp(−b·pick) + c` against every individual player observation rather than per-pick means, so each player contributes one data point.
-
-- **Teal shaded band** — ±1σ confidence band derived from the fit's covariance matrix via error propagation. Reflects uncertainty in the fitted curve, not spread in player outcomes.
-- **Dark blue curve** — fitted exponential.
-- **Semi-transparent scatter** — individual player AV values. The dense cloud at low AV values throughout the pick range illustrates how most picks produce little to no contribution.
-
-Use this plot to see the raw distribution of outcomes before aggregation. The wide vertical spread at any given pick number shows that draft position is a noisy signal — the curve captures expected value, not certainty.
-
----
-
-### `pick_av_exp_fit_means.html` — Exponential Fit on Per-Pick Means
-
-Identical model to the individual-player fit above, but fitted against per-pick mean AV (one data point per pick position, each pick weighted equally regardless of how many players were drafted there).
-
-- **Teal shaded band** — 25th–75th percentile IQR of player AV at each pick, showing the actual spread of outcomes around the mean.
-- **Dark blue curve** — fitted exponential decay with parameters shown in the legend.
-- **Teal scatter points** — per-pick mean AV (the points the curve is fitted to).
-
-This plot is better for assessing the smoothness of the value curve and for reading off expected AV at a specific pick. The IQR band gives a practical sense of the range of outcomes a team should plan for — a pick where the band sits well above zero still carries meaningful bust risk.
-
----
-
-# Modeling
-
-The `src/models/` package provides position-aware trajectory models that project a player's future AV given their position and first *X* observed seasons.
-
-## The Parametric Model
-
-`ParametricCurveModel` fits a Gamma-shaped curve to the population mean AV trajectory for each normalized position group:
-
-```
-f(t) = a · t^α · exp(−b·t) + c
-```
-
-Unlike a pure exponential, this shape rises to a peak (typically years 3–5) then decays, matching the observed career arc. Parameters `a`, `α`, `b`, `c` are fitted per position using `scipy.optimize.curve_fit`.
-
-**At inference**, the curve shape is held fixed and a single scale factor `s` is computed from the player's observed seasons to personalise the projection:
-
-```
-s = mean(observed_av / f(t_observed))
-projected_av[t] = s · f(t)
-```
-
-The uncertainty band is derived from the fit's covariance matrix via Jacobian propagation.
-
-Model artifacts (human-readable JSON, committed to git) are stored in `models/parametric/`:
-- `params.json` — fitted `popt` and `pcov` per position
-- `metadata.json` — training date, year range, validation MAE by position
-
-## The KNN Model
-
-`KNNTrajectoryModel` takes a non-parametric approach: it stores the full career trajectories of all players in the training set and, at inference time, finds the K most similar historical players based on the observed seasons only.
-
-**At training**, for each position the model builds a reference matrix of shape `(n_complete_players, max_years)` — one row per player who has a full `max_years` career recorded.
-
-**At inference**, similarity is measured as Euclidean distance on the *observed* dimensions only, so the model works regardless of how many seasons have been seen:
-
-```
-dists[i] = ‖ ref_matrix[i, :n_obs] − observed_av ‖₂
-```
-
-The K nearest neighbors are selected and their future seasons are averaged with inverse-distance weights:
-
-```
-weights[i] = 1 / (dists[i] + ε)
-projected_av[t] = Σ weights[i] · ref_matrix[i, t]  for t ≥ n_obs
-```
-
-The uncertainty band is ±1 std dev across the K neighbors' future AV values.
-
-**Key parameter**: `n_neighbors` (default 10) — fewer neighbors produces projections that more closely mirror a specific player comp; more neighbors gives a smoother, population-level estimate.
-
-Model artifacts are stored in `models/knn/_config.joblib` (binary, not committed to git).
-
-## Training a Model
-
-```
-python scripts/train_models.py [--model parametric|knn|ridge|all]
-                               [--train-years START END]
-                               [--rounds ROUND ...]
-                               [--max-years N]
-```
-
-| Option | Default | Description |
-|---|---|---|
-| `--model` | `parametric` | Which model(s) to train |
-| `--train-years` | `1970 2010` | Inclusive draft-year training window |
-| `--rounds` | all | Draft rounds to include |
-| `--max-years` | `10` | Number of career years to model |
-
-The script trains on `START`–`END` draft classes, validates on 2011–2015 picks (predicting years 3–(N-1) given years 0–2), prints a per-position MAE table, and writes trained artifacts to `models/<name>/`.
-
-Example:
-
-```bash
-python scripts/train_models.py --model parametric
-```
-
-Output:
-
-```
-Position      Val MAE
-----------------------
-CB              5.201
-DE              4.653
-...
-OVERALL         4.412
-```
-
-## Example Script — Lions 2024 Draft Class
-
-`scripts/example_lions_2024.py` runs all three models (Parametric, KNN, Ridge) on the Lions 2024 draft picks, using years 0 and 1 as observed input and projecting years 2–3. Each model's 4-year cumulative AV is compared against the historical expectation derived from pick position.
-
-**Prerequisites:**
-
-1. **2024 draft data** — update `config/stathead_annual_av.json` with `"draft_year_start": 2024, "draft_year_end": 2024`, then run:
-   ```bash
-   python src/stathead_downloader.py --config config/stathead_annual_av.json
-   ```
-
-2. **Trained models** — run:
-   ```bash
-   python scripts/train_models.py --model parametric
-   python scripts/train_models.py --model knn
-   python scripts/train_models.py --model ridge
-   ```
-
-**Run:**
-
-```bash
-python scripts/example_lions_2024.py
-```
-
-The script prints a per-player table with observed AV, each model's year-2 and year-3 projections, cumulative 4-year totals, and deltas vs pick expectation, followed by a class-level summary across all three models. It then saves:
-- `outputs/figures/lions_2024_player_comparison.html` — grouped bar chart, all three models vs expectation per player
-- `outputs/figures/lions_2024_class_comparison.html` — class total AV bar chart with all three models
-
-## Adding a New Model to the Factory
-
-1. Create `src/models/<name>.py` implementing the `CareerAVModel` Protocol:
-   ```python
-   class MyModel:
-       def fit(self, trajectory_df: pl.DataFrame) -> None: ...
-       def predict(self, position: str, observed_av: list[float]) -> PredictionResult: ...
-       def save(self, model_dir: str | Path) -> None: ...
-       def load(self, model_dir: str | Path) -> None: ...
-   ```
-
-2. Register it in `src/models/factory.py`:
-   ```python
-   _REGISTRY = {
-       ...,
-       "<name>": MyModel,
-   }
-   ```
-
-3. Add a placeholder `models/<name>/metadata.json`.
-
-4. Add unit tests in `tests/models/test_<name>.py` following the existing pattern (see `test_parametric.py`).
+| Fetching data from Stathead | [docs/fetching-data.md](docs/fetching-data.md) |
+| Running the analysis pipeline and output plots | [docs/running-analysis.md](docs/running-analysis.md) |
+| Career trajectory models (Parametric, KNN, Ridge) | [docs/modeling.md](docs/modeling.md) |
