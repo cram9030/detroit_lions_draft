@@ -1,9 +1,43 @@
 {
   "model": "knn",
-  "trained_on": null,
-  "train_years": null,
-  "val_mae_by_position": null,
-  "positions": null,
+  "trained_on": "2026-04-25",
+  "train_years": [
+    1970,
+    2021
+  ],
+  "val_years": [
+    2011,
+    2015
+  ],
+  "val_mae_by_position": {
+    "DE": 2.66,
+    "S": 1.5725,
+    "DT": 2.5227,
+    "TE": 1.3006,
+    "LB": 2.4245,
+    "WR": 2.5351,
+    "OG": 2.5588,
+    "CB": 2.7777,
+    "OT": 2.5131,
+    "RB": 2.3142,
+    "QB": 2.9117,
+    "OC": 2.0119
+  },
+  "positions": [
+    "CB",
+    "DE",
+    "DT",
+    "LB",
+    "OC",
+    "OG",
+    "OT",
+    "QB",
+    "RB",
+    "S",
+    "TE",
+    "WR"
+  ],
   "normalize": true,
-  "n_neighbors": 10
+  "rounds": null,
+  "max_years": 4
 }

@@ -1,8 +1,43 @@
 {
   "model": "ridge",
-  "trained_on": null,
-  "train_years": null,
-  "val_mae_by_position": null,
-  "positions": null,
-  "normalize": true
+  "trained_on": "2026-04-25",
+  "train_years": [
+    1970,
+    2021
+  ],
+  "val_years": [
+    2011,
+    2015
+  ],
+  "val_mae_by_position": {
+    "RB": 2.6794,
+    "LB": 2.4424,
+    "TE": 1.5555,
+    "OT": 2.4414,
+    "DT": 2.4017,
+    "WR": 2.3424,
+    "DE": 2.5703,
+    "S": 1.5448,
+    "QB": 3.5423,
+    "CB": 2.3835,
+    "OG": 2.3581,
+    "OC": 2.3363
+  },
+  "positions": [
+    "CB",
+    "DE",
+    "DT",
+    "LB",
+    "OC",
+    "OG",
+    "OT",
+    "QB",
+    "RB",
+    "S",
+    "TE",
+    "WR"
+  ],
+  "normalize": true,
+  "rounds": null,
+  "max_years": 4
 }

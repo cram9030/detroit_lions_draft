@@ -10,9 +10,6 @@ import polars as pl
 
 from src.models.protocol import PredictionResult
 
-_MAX_YEARS = 10
-
-
 class KNNTrajectoryModel:
     """Finds the K most similar historical trajectories and averages their future AV.
 
@@ -20,9 +17,10 @@ class KNNTrajectoryModel:
     of how many years have been observed.
     """
 
-    def __init__(self, n_neighbors: int = 10) -> None:
+    def __init__(self, n_neighbors: int = 10, max_years: int = 10) -> None:
         self.n_neighbors = n_neighbors
-        # {pos: np.ndarray shape (n_players, MAX_YEARS)}
+        self.max_years = max_years
+        # {pos: np.ndarray shape (n_players, max_years)}
         self._reference: dict[str, np.ndarray] = {}
 
     # ------------------------------------------------------------------
@@ -34,11 +32,15 @@ class KNNTrajectoryModel:
         for pos in trajectory_df["Pos"].unique().to_list():
             sub = trajectory_df.filter(pl.col("Pos") == pos)
 
-            # Keep only players with all _MAX_YEARS seasons recorded
+            # Truncate to the first max_years seasons so long-career players
+            # contribute only the same window we're trying to predict.
+            sub = sub.filter(pl.col("years_from_draft") < self.max_years)
+
+            # Keep players with all max_years seasons recorded
             complete_players = (
                 sub.group_by("Player")
                 .agg(pl.col("years_from_draft").n_unique().alias("n_years"))
-                .filter(pl.col("n_years") == _MAX_YEARS)
+                .filter(pl.col("n_years") >= self.max_years)
                 ["Player"]
             )
             sub_complete = sub.filter(pl.col("Player").is_in(complete_players.to_list()))
@@ -49,16 +51,16 @@ class KNNTrajectoryModel:
             pivoted = (
                 sub_complete
                 .sort(["Player", "years_from_draft"])
-                .pivot(index="Player", on="years_from_draft", values="AV.1")
+                .pivot(index="Player", on="years_from_draft", values="AV.1", aggregate_function="sum")
                 .sort("Player")
             )
-            # Drop the Player column; columns are year indices (0..9)
-            year_cols = [str(y) for y in range(_MAX_YEARS)]
+            # Drop the Player column; columns are year indices (0..max_years-1)
+            year_cols = [str(y) for y in range(self.max_years)]
             available = [c for c in year_cols if c in pivoted.columns]
             matrix = pivoted.select(available).to_numpy().astype(float)
             # Pad missing year columns with zeros
-            if matrix.shape[1] < _MAX_YEARS:
-                pad = np.zeros((matrix.shape[0], _MAX_YEARS - matrix.shape[1]))
+            if matrix.shape[1] < self.max_years:
+                pad = np.zeros((matrix.shape[0], self.max_years - matrix.shape[1]))
                 matrix = np.hstack([matrix, pad])
             self._reference[pos] = matrix
 
@@ -88,7 +90,7 @@ class KNNTrajectoryModel:
             position=position,
             observed_years=list(range(n_obs)),
             observed_av=list(observed_av),
-            predicted_years=list(range(n_obs, _MAX_YEARS)),
+            predicted_years=list(range(n_obs, self.max_years)),
             y_pred=y_pred.tolist(),
             y_upper=(y_pred + y_std).tolist(),
             y_lower=np.maximum(y_pred - y_std, 0.0).tolist(),
@@ -96,12 +98,22 @@ class KNNTrajectoryModel:
 
     def save(self, model_dir: str | Path) -> None:
         model_dir = Path(model_dir)
-        for pos, matrix in self._reference.items():
-            joblib.dump(matrix, model_dir / f"{pos}.joblib")
+        joblib.dump(
+            {"max_years": self.max_years, "n_neighbors": self.n_neighbors, "reference": self._reference},
+            model_dir / "_config.joblib",
+        )
 
     def load(self, model_dir: str | Path) -> None:
         model_dir = Path(model_dir)
-        self._reference = {}
-        for path in sorted(model_dir.glob("*.joblib")):
-            pos = path.stem
-            self._reference[pos] = joblib.load(path)
+        config_path = model_dir / "_config.joblib"
+        if config_path.exists():
+            data = joblib.load(config_path)
+            self.max_years = data["max_years"]
+            self.n_neighbors = data.get("n_neighbors", self.n_neighbors)
+            self._reference = data["reference"]
+        else:
+            # legacy format: one .joblib per position
+            self._reference = {}
+            for path in sorted(model_dir.glob("*.joblib")):
+                pos = path.stem
+                self._reference[pos] = joblib.load(path)

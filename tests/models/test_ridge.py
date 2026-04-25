@@ -47,7 +47,7 @@ def test_predict_monotone_uncertainty(fitted_model):
 
 def test_save_load_roundtrip(fitted_model, tmp_path):
     fitted_model.save(tmp_path)
-    assert (tmp_path / "QB.joblib").exists()
+    assert (tmp_path / "_config.joblib").exists()
 
     fresh = RidgeRegressionModel()
     fresh.load(tmp_path)

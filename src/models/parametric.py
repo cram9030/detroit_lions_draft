@@ -11,9 +11,6 @@ from scipy.optimize import curve_fit
 
 from src.models.protocol import PredictionResult
 
-_MAX_YEARS = 10
-
-
 def _gamma_curve(t: np.ndarray, a: float, alpha: float, b: float, c: float) -> np.ndarray:
     """f(t) = a * t^alpha * exp(-b*t) + c"""
     return a * np.power(t, alpha) * np.exp(-b * t) + c
@@ -26,7 +23,8 @@ class ParametricCurveModel:
     computed from the player's observed seasons to personalise the projection.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, max_years: int = 10) -> None:
+        self.max_years = max_years
         # {pos: {"popt": list[float], "pcov": list[list[float]]}}
         self._params: dict[str, dict] = {}
 
@@ -86,7 +84,7 @@ class ParametricCurveModel:
         scale = float(np.mean(np.array(observed_av) / safe_pop))
         scale = max(0.0, scale)
 
-        pred_t = np.arange(n_obs, _MAX_YEARS, dtype=float) + 1e-6
+        pred_t = np.arange(n_obs, self.max_years, dtype=float) + 1e-6
         y_pred = scale * _gamma_curve(pred_t, *popt)
 
         # Uncertainty via Jacobian propagation: σ_f = sqrt(J @ pcov @ J^T)
@@ -103,7 +101,7 @@ class ParametricCurveModel:
             position=position,
             observed_years=list(range(n_obs)),
             observed_av=list(observed_av),
-            predicted_years=list(range(n_obs, _MAX_YEARS)),
+            predicted_years=list(range(n_obs, self.max_years)),
             y_pred=y_pred.tolist(),
             y_upper=y_upper.tolist(),
             y_lower=y_lower.tolist(),
@@ -111,8 +109,14 @@ class ParametricCurveModel:
 
     def save(self, model_dir: str | Path) -> None:
         path = Path(model_dir) / "params.json"
-        path.write_text(json.dumps(self._params, indent=2))
+        path.write_text(json.dumps({"max_years": self.max_years, "positions": self._params}, indent=2))
 
     def load(self, model_dir: str | Path) -> None:
         path = Path(model_dir) / "params.json"
-        self._params = json.loads(path.read_text())
+        data = json.loads(path.read_text())
+        if "max_years" in data:
+            self.max_years = data["max_years"]
+            self._params = data["positions"]
+        else:
+            # legacy format: top-level keys are positions
+            self._params = data

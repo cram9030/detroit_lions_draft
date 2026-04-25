@@ -43,11 +43,12 @@ def test_predict_returns_correct_shape(fitted_model):
 
 def test_save_load_roundtrip(fitted_model, tmp_path):
     fitted_model.save(tmp_path)
-    assert (tmp_path / "QB.joblib").exists()
+    assert (tmp_path / "_config.joblib").exists()
 
-    fresh = KNNTrajectoryModel(n_neighbors=3)
+    fresh = KNNTrajectoryModel(n_neighbors=99)  # different default to confirm it gets overwritten
     fresh.load(tmp_path)
 
+    assert fresh.n_neighbors == 3
     r1 = fitted_model.predict("QB", [2.0, 3.5])
     r2 = fresh.predict("QB", [2.0, 3.5])
     assert r1["y_pred"] == r2["y_pred"]
@@ -56,3 +57,17 @@ def test_save_load_roundtrip(fitted_model, tmp_path):
 def test_predict_unknown_position_raises(fitted_model):
     with pytest.raises(ValueError, match="Unknown position"):
         fitted_model.predict("XX", [2.0, 3.5])
+
+
+def test_fit_handles_duplicate_player_year_rows(tmp_path):
+    """fit() must not crash when a player-year appears more than once (e.g. multi-team seasons)."""
+    base_df = pl.read_parquet(TRAJECTORY_PATH)
+    # Duplicate every row so each player has two AV.1 entries per year
+    df_with_dupes = pl.concat([base_df, base_df])
+
+    model = KNNTrajectoryModel(n_neighbors=3)
+    model.fit(df_with_dupes)  # should not raise
+
+    assert "QB" in model._reference
+    result = model.predict("QB", [2.0, 3.5])
+    assert len(result["y_pred"]) == 8

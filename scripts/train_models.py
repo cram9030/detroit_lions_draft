@@ -67,6 +67,13 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Draft rounds to include (default: all rounds).",
     )
+    parser.add_argument(
+        "--max-years",
+        type=int,
+        default=10,
+        metavar="N",
+        help="Number of career years to model (default: 10).",
+    )
     return parser.parse_args()
 
 
@@ -79,10 +86,11 @@ def _build_trajectory_df(
     career_lf = _aggregate_career_av_by_position(prepared_lf, normalize=True, rounds=rounds)
 
     start, end = train_years
+    val_start, val_end = _VAL_YEARS
     return (
         career_lf
         .filter(
-            (pl.col("Draft Year") >= start) & (pl.col("Draft Year") <= end)
+            (pl.col("Draft Year") >= start) & (pl.col("Draft Year") <= end) & ~((pl.col("Draft Year") >= val_start) & (pl.col("Draft Year") <= val_end))
         )
         .collect()
     )
@@ -103,8 +111,8 @@ def _build_val_df(rounds: list[int] | None) -> pl.DataFrame:
     )
 
 
-def _validate_model(model, val_df: pl.DataFrame) -> dict[str, float]:
-    """Predict years 3–9 given years 0–2; return MAE per position."""
+def _validate_model(model, val_df: pl.DataFrame, max_years: int) -> dict[str, float]:
+    """Predict years 3–(max_years-1) given years 0–2; return MAE per position."""
     n_obs = 3
     mae_by_pos: dict[str, list[float]] = {}
 
@@ -112,7 +120,7 @@ def _validate_model(model, val_df: pl.DataFrame) -> dict[str, float]:
         val_df
         .group_by(["Player", "Pos"])
         .agg(pl.col("years_from_draft").n_unique().alias("n_years"))
-        .filter(pl.col("n_years") >= 10)
+        .filter(pl.col("n_years") >= max_years)
     )
 
     for row in players.iter_rows(named=True):
@@ -122,10 +130,10 @@ def _validate_model(model, val_df: pl.DataFrame) -> dict[str, float]:
             .filter((pl.col("Player") == player) & (pl.col("Pos") == pos))
             .sort("years_from_draft")
         )
-        if len(player_df) < 10:
+        if len(player_df) < max_years:
             continue
 
-        actual = player_df["AV.1"].to_list()[:10]
+        actual = player_df["AV.1"].to_list()[:max_years]
         try:
             result = model.predict(pos, actual[:n_obs])
         except ValueError:
@@ -146,18 +154,19 @@ def train_one(
     val_df: pl.DataFrame,
     train_years: tuple[int, int],
     rounds: list[int] | None,
+    max_years: int,
 ) -> None:
     model_dir = MODELS_DIR / name
     model_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\n[{name}] Training on {len(train_df)} player-seasons "
           f"({train_years[0]}–{train_years[1]})...")
-    model = make_career_av_model(name)
+    model = make_career_av_model(name, max_years=max_years)
     model.fit(train_df)
     print(f"[{name}] Fit complete.")
 
     print(f"[{name}] Validating on {_VAL_YEARS[0]}–{_VAL_YEARS[1]} draft class...")
-    val_mae = _validate_model(model, val_df)
+    val_mae = _validate_model(model, val_df, max_years)
 
     # Print MAE table
     print(f"\n{'Position':<12} {'Val MAE':>8}")
@@ -181,6 +190,7 @@ def train_one(
         "positions": sorted(val_mae.keys()),
         "normalize": True,
         "rounds": rounds,
+        "max_years": max_years,
     }
     (model_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
     print(f"[{name}] Metadata written.")
@@ -191,6 +201,7 @@ def main() -> None:
     to_train = _SUPPORTED if args.model == "all" else [args.model]
     train_years = tuple(args.train_years)
     rounds = args.rounds
+    max_years = args.max_years
 
     print("Building training dataset...")
     train_df = _build_trajectory_df(train_years, rounds)
@@ -201,7 +212,7 @@ def main() -> None:
     print(f"  {len(val_df)} rows")
 
     for name in to_train:
-        train_one(name, train_df, val_df, train_years, rounds)
+        train_one(name, train_df, val_df, train_years, rounds, max_years)
 
     print("\nTraining complete.")
 

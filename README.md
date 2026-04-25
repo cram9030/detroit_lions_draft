@@ -361,12 +361,38 @@ Model artifacts (human-readable JSON, committed to git) are stored in `models/pa
 - `params.json` — fitted `popt` and `pcov` per position
 - `metadata.json` — training date, year range, validation MAE by position
 
+## The KNN Model
+
+`KNNTrajectoryModel` takes a non-parametric approach: it stores the full career trajectories of all players in the training set and, at inference time, finds the K most similar historical players based on the observed seasons only.
+
+**At training**, for each position the model builds a reference matrix of shape `(n_complete_players, max_years)` — one row per player who has a full `max_years` career recorded.
+
+**At inference**, similarity is measured as Euclidean distance on the *observed* dimensions only, so the model works regardless of how many seasons have been seen:
+
+```
+dists[i] = ‖ ref_matrix[i, :n_obs] − observed_av ‖₂
+```
+
+The K nearest neighbors are selected and their future seasons are averaged with inverse-distance weights:
+
+```
+weights[i] = 1 / (dists[i] + ε)
+projected_av[t] = Σ weights[i] · ref_matrix[i, t]  for t ≥ n_obs
+```
+
+The uncertainty band is ±1 std dev across the K neighbors' future AV values.
+
+**Key parameter**: `n_neighbors` (default 10) — fewer neighbors produces projections that more closely mirror a specific player comp; more neighbors gives a smoother, population-level estimate.
+
+Model artifacts are stored in `models/knn/_config.joblib` (binary, not committed to git).
+
 ## Training a Model
 
 ```
 python scripts/train_models.py [--model parametric|knn|ridge|all]
                                [--train-years START END]
                                [--rounds ROUND ...]
+                               [--max-years N]
 ```
 
 | Option | Default | Description |
@@ -374,8 +400,9 @@ python scripts/train_models.py [--model parametric|knn|ridge|all]
 | `--model` | `parametric` | Which model(s) to train |
 | `--train-years` | `1970 2010` | Inclusive draft-year training window |
 | `--rounds` | all | Draft rounds to include |
+| `--max-years` | `10` | Number of career years to model |
 
-The script trains on `START`–`END` draft classes, validates on 2011–2015 picks (predicting years 3–9 given years 0–2), prints a per-position MAE table, and writes trained artifacts to `models/<name>/`.
+The script trains on `START`–`END` draft classes, validates on 2011–2015 picks (predicting years 3–(N-1) given years 0–2), prints a per-position MAE table, and writes trained artifacts to `models/<name>/`.
 
 Example:
 
@@ -396,7 +423,7 @@ OVERALL         4.412
 
 ## Example Script — Lions 2024 Draft Class
 
-`scripts/example_lions_2024.py` compares the parametric model's 4-year projection for each Lions 2024 pick against the historical expectation derived from pick position.
+`scripts/example_lions_2024.py` runs all three models (Parametric, KNN, Ridge) on the Lions 2024 draft picks, using years 0 and 1 as observed input and projecting years 2–3. Each model's 4-year cumulative AV is compared against the historical expectation derived from pick position.
 
 **Prerequisites:**
 
@@ -405,7 +432,12 @@ OVERALL         4.412
    python src/stathead_downloader.py --config config/stathead_annual_av.json
    ```
 
-2. **Trained model** — run `python scripts/train_models.py --model parametric`
+2. **Trained models** — run:
+   ```bash
+   python scripts/train_models.py --model parametric
+   python scripts/train_models.py --model knn
+   python scripts/train_models.py --model ridge
+   ```
 
 **Run:**
 
@@ -413,9 +445,9 @@ OVERALL         4.412
 python scripts/example_lions_2024.py
 ```
 
-The script prints a per-player table (`Player | Pos | Pick | Obs yr0 | Obs yr1 | Proj yr2 | Proj yr3 | Model 4yr | Exp 4yr | Delta`) and a class-level summary, then saves:
-- `outputs/figures/lions_2024_player_comparison.html` — grouped bar chart, model vs expectation per player
-- `outputs/figures/lions_2024_class_comparison.html` — class total AV bar chart
+The script prints a per-player table with observed AV, each model's year-2 and year-3 projections, cumulative 4-year totals, and deltas vs pick expectation, followed by a class-level summary across all three models. It then saves:
+- `outputs/figures/lions_2024_player_comparison.html` — grouped bar chart, all three models vs expectation per player
+- `outputs/figures/lions_2024_class_comparison.html` — class total AV bar chart with all three models
 
 ## Adding a New Model to the Factory
 

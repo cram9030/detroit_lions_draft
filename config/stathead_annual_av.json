@@ -1,10 +1,10 @@
 {
   "output_dir": "data/raw/stathead/annual_av",
 
-  "draft_year_start": 2022,
-  "draft_year_end": 2022,
+  "draft_year_start": 2024,
+  "draft_year_end": 2024,
 
-  "seasons_after_draft": 4,
+  "seasons_after_draft": 2,
 
   "fixed_params": {
     "request":         "1",
