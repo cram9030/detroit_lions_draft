@@ -331,3 +331,111 @@ Identical model to the individual-player fit above, but fitted against per-pick 
 - **Teal scatter points** — per-pick mean AV (the points the curve is fitted to).
 
 This plot is better for assessing the smoothness of the value curve and for reading off expected AV at a specific pick. The IQR band gives a practical sense of the range of outcomes a team should plan for — a pick where the band sits well above zero still carries meaningful bust risk.
+
+---
+
+# Modeling
+
+The `src/models/` package provides position-aware trajectory models that project a player's future AV given their position and first *X* observed seasons.
+
+## The Parametric Model
+
+`ParametricCurveModel` fits a Gamma-shaped curve to the population mean AV trajectory for each normalized position group:
+
+```
+f(t) = a · t^α · exp(−b·t) + c
+```
+
+Unlike a pure exponential, this shape rises to a peak (typically years 3–5) then decays, matching the observed career arc. Parameters `a`, `α`, `b`, `c` are fitted per position using `scipy.optimize.curve_fit`.
+
+**At inference**, the curve shape is held fixed and a single scale factor `s` is computed from the player's observed seasons to personalise the projection:
+
+```
+s = mean(observed_av / f(t_observed))
+projected_av[t] = s · f(t)
+```
+
+The uncertainty band is derived from the fit's covariance matrix via Jacobian propagation.
+
+Model artifacts (human-readable JSON, committed to git) are stored in `models/parametric/`:
+- `params.json` — fitted `popt` and `pcov` per position
+- `metadata.json` — training date, year range, validation MAE by position
+
+## Training a Model
+
+```
+python scripts/train_models.py [--model parametric|knn|ridge|all]
+                               [--train-years START END]
+                               [--rounds ROUND ...]
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--model` | `parametric` | Which model(s) to train |
+| `--train-years` | `1970 2010` | Inclusive draft-year training window |
+| `--rounds` | all | Draft rounds to include |
+
+The script trains on `START`–`END` draft classes, validates on 2011–2015 picks (predicting years 3–9 given years 0–2), prints a per-position MAE table, and writes trained artifacts to `models/<name>/`.
+
+Example:
+
+```bash
+python scripts/train_models.py --model parametric
+```
+
+Output:
+
+```
+Position      Val MAE
+----------------------
+CB              5.201
+DE              4.653
+...
+OVERALL         4.412
+```
+
+## Example Script — Lions 2024 Draft Class
+
+`scripts/example_lions_2024.py` compares the parametric model's 4-year projection for each Lions 2024 pick against the historical expectation derived from pick position.
+
+**Prerequisites:**
+
+1. **2024 draft data** — update `config/stathead_annual_av.json` with `"draft_year_start": 2024, "draft_year_end": 2024`, then run:
+   ```bash
+   python src/stathead_downloader.py --config config/stathead_annual_av.json
+   ```
+
+2. **Trained model** — run `python scripts/train_models.py --model parametric`
+
+**Run:**
+
+```bash
+python scripts/example_lions_2024.py
+```
+
+The script prints a per-player table (`Player | Pos | Pick | Obs yr0 | Obs yr1 | Proj yr2 | Proj yr3 | Model 4yr | Exp 4yr | Delta`) and a class-level summary, then saves:
+- `outputs/figures/lions_2024_player_comparison.html` — grouped bar chart, model vs expectation per player
+- `outputs/figures/lions_2024_class_comparison.html` — class total AV bar chart
+
+## Adding a New Model to the Factory
+
+1. Create `src/models/<name>.py` implementing the `CareerAVModel` Protocol:
+   ```python
+   class MyModel:
+       def fit(self, trajectory_df: pl.DataFrame) -> None: ...
+       def predict(self, position: str, observed_av: list[float]) -> PredictionResult: ...
+       def save(self, model_dir: str | Path) -> None: ...
+       def load(self, model_dir: str | Path) -> None: ...
+   ```
+
+2. Register it in `src/models/factory.py`:
+   ```python
+   _REGISTRY = {
+       ...,
+       "<name>": MyModel,
+   }
+   ```
+
+3. Add a placeholder `models/<name>/metadata.json`.
+
+4. Add unit tests in `tests/models/test_<name>.py` following the existing pattern (see `test_parametric.py`).

@@ -1,8 +1,42 @@
 {
   "model": "parametric",
-  "trained_on": null,
-  "train_years": null,
-  "val_mae_by_position": null,
-  "positions": null,
-  "normalize": true
+  "trained_on": "2026-04-25",
+  "train_years": [
+    1970,
+    2010
+  ],
+  "val_years": [
+    2011,
+    2015
+  ],
+  "val_mae_by_position": {
+    "S": 2.3638,
+    "LB": 4.4829,
+    "WR": 5.4562,
+    "QB": 11.6781,
+    "RB": 2.8519,
+    "OT": 2.922,
+    "OC": 3.9461,
+    "TE": 1.5683,
+    "CB": 5.2011,
+    "DT": 3.5256,
+    "DE": 4.6533,
+    "OG": 4.295
+  },
+  "positions": [
+    "CB",
+    "DE",
+    "DT",
+    "LB",
+    "OC",
+    "OG",
+    "OT",
+    "QB",
+    "RB",
+    "S",
+    "TE",
+    "WR"
+  ],
+  "normalize": true,
+  "rounds": null
 }
