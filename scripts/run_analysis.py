@@ -39,6 +39,7 @@ from src.annual_av_analysis import (
     _prepare_av_data,
     exponential_av_fit,
     exponential_av_fit_means,
+    exponential_av_fit_stat,
     fit_result_to_dataframe,
     pick_based_stats,
     position_career_stats,
@@ -230,6 +231,20 @@ def main() -> None:
                 export_format="html",
             )
             print("  Saved pick_av_exp_fit_means.html")
+
+        # ------------------------------------------------------------------
+        # 9b. Exponential fit on per-pick medians
+        # ------------------------------------------------------------------
+        print("Fitting exponential decay curve to per-pick median AV...")
+        median_fit_result = exponential_av_fit_stat(stats_df, stat_col="50%", max_pick=250)
+        a, b, c = median_fit_result["popt"]
+        print(f"  f(pick) = {a:.3f} * exp(-{b:.5f} * pick) + {c:.3f}")
+        save_data(
+            fit_result_to_dataframe(median_fit_result),
+            PROCESSED_DIR / "exp_fit_rookie_contract_av_median.csv",
+            format="csv",
+        )
+        print("  Saved exp_fit_rookie_contract_av_median.csv")
     else:
         print("Skipping exponential fit (--skip-exp-fit).")
 

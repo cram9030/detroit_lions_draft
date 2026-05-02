@@ -740,6 +740,40 @@ class ExponentialFitResult(TypedDict):
     av_values: np.ndarray
 
 
+class ExponentialStatsFitResult(TypedDict):
+    """Return type of :func:`exponential_av_fit_stat`.
+
+    Attributes:
+        popt: Fitted parameters ``[a, b, c]`` for ``f(x) = a * exp(-b*x) + c``.
+        pcov: 3×3 covariance matrix of ``popt`` from ``curve_fit``.
+        perr: 1-sigma uncertainties on each parameter, ``sqrt(diag(pcov))``.
+        x_fit: Dense array of pick numbers for plotting the fitted curve.
+        y_fit: Fitted AV values at each ``x_fit`` point.
+        y_upper: Upper 1-sigma bound at each ``x_fit`` point.
+        y_lower: Lower 1-sigma bound at each ``x_fit`` point.
+        picks: Unique pick numbers used in the fit (one per pick position).
+        stat_values: Per-pick values of whichever ``stat_col`` was fit,
+            aligned with ``picks``.
+        iqr_picks: Pick numbers where both 25th and 75th percentiles are
+            available, aligned with ``q25`` and ``q75``.
+        q25: 25th percentile AV per pick, aligned with ``iqr_picks``.
+        q75: 75th percentile AV per pick, aligned with ``iqr_picks``.
+    """
+
+    popt: np.ndarray
+    pcov: np.ndarray
+    perr: np.ndarray
+    x_fit: np.ndarray
+    y_fit: np.ndarray
+    y_upper: np.ndarray
+    y_lower: np.ndarray
+    picks: np.ndarray
+    stat_values: np.ndarray
+    iqr_picks: np.ndarray
+    q25: np.ndarray
+    q75: np.ndarray
+
+
 def _exp_decay(x: np.ndarray, a: float, b: float, c: float) -> np.ndarray:
     """Exponential decay model: ``f(x) = a * exp(-b * x) + c``."""
     return a * np.exp(-b * x) + c
@@ -898,6 +932,155 @@ class ExponentialMeansFitResult(TypedDict):
     q75: np.ndarray
 
 
+def _exponential_av_fit_stat_core(
+    picks: np.ndarray,
+    stat_values: np.ndarray,
+) -> dict:
+    """Shared fitting engine for :func:`exponential_av_fit_stat`.
+
+    Fits ``f(pick) = a * exp(-b * pick) + c`` to the supplied arrays and
+    computes the 1-sigma confidence band via Jacobian error propagation.
+
+    Args:
+        picks: 1-D array of pick numbers (float), already filtered and sorted.
+        stat_values: 1-D array of per-pick statistic values aligned with
+            ``picks``.
+
+    Returns:
+        Plain dict with keys ``popt``, ``pcov``, ``perr``, ``x_fit``,
+        ``y_fit``, ``y_upper``, ``y_lower``, ``picks``.
+
+    Warns:
+        UserWarning: If any parameter uncertainty exceeds ``1e6`` or is
+            infinite.
+
+    Raises:
+        RuntimeError: If ``curve_fit`` fails to converge.
+    """
+    p0 = [float(stat_values.max()), 0.01, float(stat_values.min())]
+
+    try:
+        popt, pcov = curve_fit(_exp_decay, picks, stat_values, p0=p0, maxfev=10000)
+    except RuntimeError as exc:
+        raise RuntimeError(f"Exponential curve fit failed to converge: {exc}") from exc
+
+    perr = np.sqrt(np.diag(pcov))
+
+    if np.any(np.isinf(pcov)) or np.any(perr > 1e6):
+        warnings.warn(
+            "Exponential fit may be over-parameterized: one or more parameter "
+            "uncertainties are extremely large (perr > 1e6 or infinite). "
+            "Consider simplifying the model or checking data quality.",
+            UserWarning,
+            stacklevel=3,
+        )
+
+    x_fit = np.linspace(picks.min(), picks.max(), 500)
+    y_fit = _exp_decay(x_fit, *popt)
+
+    a, b, _ = popt
+    J = np.column_stack(
+        [
+            np.exp(-b * x_fit),
+            -a * x_fit * np.exp(-b * x_fit),
+            np.ones_like(x_fit),
+        ]
+    )
+    sigma_sq = np.einsum("ij,jk,ik->i", J, pcov, J)
+    sigma = np.sqrt(np.abs(sigma_sq))
+
+    return dict(
+        popt=popt,
+        pcov=pcov,
+        perr=perr,
+        x_fit=x_fit,
+        y_fit=y_fit,
+        y_upper=y_fit + sigma,
+        y_lower=y_fit - sigma,
+        picks=picks,
+    )
+
+
+def exponential_av_fit_stat(
+    stats_df: pl.DataFrame,
+    stat_col: str = "mean",
+    max_pick: int = 250,
+) -> ExponentialStatsFitResult:
+    """Fit an exponential decay curve to any per-pick descriptive statistic.
+
+    Generic replacement for the column-specific :func:`exponential_av_fit_means`.
+    Fits the model ``f(pick) = a * exp(-b * pick) + c`` against the values in
+    ``stat_col``, which may be any column produced by :func:`pick_based_stats`:
+    ``"mean"``, ``"50%"`` (median), ``"25%"``, ``"75%"``, ``"min"``, or
+    ``"max"``. IQR fields are always included in the result because they
+    provide meaningful spread context regardless of which central-tendency
+    stat is being fit.
+
+    The 1-sigma confidence band is derived from the covariance matrix via
+    error propagation: ``sigma²(x) = J(x) @ pcov @ J(x).T``.
+
+    Input DataFrame columns required:
+        - ``Pick`` (Int64): Overall pick number.
+        - Column named ``stat_col`` (Float64): Per-pick statistic to fit.
+        - ``25%`` (Float64): 25th percentile per pick (for IQR context).
+        - ``75%`` (Float64): 75th percentile per pick (for IQR context).
+
+    Args:
+        stats_df: Output of :func:`pick_based_stats`, one row per pick.
+        stat_col: Name of the column to fit. Default ``"mean"``.
+        max_pick: Maximum pick number to include. Default 250.
+
+    Returns:
+        :class:`ExponentialStatsFitResult` dict with keys:
+            - ``popt``, ``pcov``, ``perr``: Fit parameters and uncertainty.
+            - ``x_fit``, ``y_fit``, ``y_upper``, ``y_lower``: Smooth curve
+              and 1-sigma band.
+            - ``picks``: Pick numbers used in the fit.
+            - ``stat_values``: Per-pick values of ``stat_col``, aligned with
+              ``picks``.
+            - ``iqr_picks``, ``q25``, ``q75``: IQR context arrays.
+
+    Warns:
+        UserWarning: If the fit is poorly constrained (large uncertainties).
+
+    Raises:
+        RuntimeError: If ``curve_fit`` fails to converge.
+        ValueError: If fewer than 4 valid picks remain after filtering.
+    """
+    df = (
+        stats_df.filter(pl.col("Pick") <= max_pick)
+        .select(["Pick", stat_col])
+        .drop_nulls()
+        .sort("Pick")
+    )
+
+    iqr_df = (
+        stats_df.filter(pl.col("Pick") <= max_pick)
+        .select(["Pick", "25%", "75%"])
+        .drop_nulls()
+        .sort("Pick")
+    )
+
+    if len(df) < 4:
+        raise ValueError(
+            f"Only {len(df)} valid picks after filtering to max_pick={max_pick}. "
+            "Need at least 4 for a 3-parameter exponential fit."
+        )
+
+    picks = df["Pick"].to_numpy().astype(float)
+    stat_values = df[stat_col].to_numpy()
+
+    base = _exponential_av_fit_stat_core(picks, stat_values)
+
+    return ExponentialStatsFitResult(
+        **base,
+        stat_values=stat_values,
+        iqr_picks=iqr_df["Pick"].to_numpy(),
+        q25=iqr_df["25%"].to_numpy(),
+        q75=iqr_df["75%"].to_numpy(),
+    )
+
+
 def exponential_av_fit_means(
     stats_df: pl.DataFrame,
     max_pick: int = 250,
@@ -945,79 +1128,25 @@ def exponential_av_fit_means(
         RuntimeError: If ``scipy.optimize.curve_fit`` fails to converge.
         ValueError: If fewer than 4 valid picks remain after filtering.
     """
-    df = (
-        stats_df.filter(pl.col("Pick") <= max_pick)
-        .select(["Pick", "mean"])
-        .drop_nulls()
-        .sort("Pick")
-    )
-
-    iqr_df = (
-        stats_df.filter(pl.col("Pick") <= max_pick)
-        .select(["Pick", "25%", "75%"])
-        .drop_nulls()
-        .sort("Pick")
-    )
-
-    if len(df) < 4:
-        raise ValueError(
-            f"Only {len(df)} valid picks after filtering to max_pick={max_pick}. "
-            "Need at least 4 for a 3-parameter exponential fit."
-        )
-
-    picks = df["Pick"].to_numpy().astype(float)
-    means = df["mean"].to_numpy()
-
-    p0 = [float(means.max()), 0.01, float(means.min())]
-
-    try:
-        popt, pcov = curve_fit(_exp_decay, picks, means, p0=p0, maxfev=10000)
-    except RuntimeError as exc:
-        raise RuntimeError(f"Exponential curve fit failed to converge: {exc}") from exc
-
-    perr = np.sqrt(np.diag(pcov))
-
-    if np.any(np.isinf(pcov)) or np.any(perr > 1e6):
-        warnings.warn(
-            "Exponential fit may be over-parameterized: one or more parameter "
-            "uncertainties are extremely large (perr > 1e6 or infinite). "
-            "Consider simplifying the model or checking data quality.",
-            UserWarning,
-            stacklevel=2,
-        )
-
-    x_fit = np.linspace(picks.min(), picks.max(), 500)
-    y_fit = _exp_decay(x_fit, *popt)
-
-    a, b, _ = popt
-    J = np.column_stack(
-        [
-            np.exp(-b * x_fit),               # df/da
-            -a * x_fit * np.exp(-b * x_fit),  # df/db
-            np.ones_like(x_fit),              # df/dc
-        ]
-    )
-    sigma_sq = np.einsum("ij,jk,ik->i", J, pcov, J)
-    sigma = np.sqrt(np.abs(sigma_sq))
-
+    result = exponential_av_fit_stat(stats_df, stat_col="mean", max_pick=max_pick)
     return ExponentialMeansFitResult(
-        popt=popt,
-        pcov=pcov,
-        perr=perr,
-        x_fit=x_fit,
-        y_fit=y_fit,
-        y_upper=y_fit + sigma,
-        y_lower=y_fit - sigma,
-        picks=picks,
-        means=means,
-        iqr_picks=iqr_df["Pick"].to_numpy(),
-        q25=iqr_df["25%"].to_numpy(),
-        q75=iqr_df["75%"].to_numpy(),
+        popt=result["popt"],
+        pcov=result["pcov"],
+        perr=result["perr"],
+        x_fit=result["x_fit"],
+        y_fit=result["y_fit"],
+        y_upper=result["y_upper"],
+        y_lower=result["y_lower"],
+        picks=result["picks"],
+        means=result["stat_values"],
+        iqr_picks=result["iqr_picks"],
+        q25=result["q25"],
+        q75=result["q75"],
     )
 
 
 def fit_result_to_dataframe(
-    fit_result: ExponentialFitResult | ExponentialMeansFitResult,
+    fit_result: ExponentialFitResult | ExponentialStatsFitResult | ExponentialMeansFitResult,
 ) -> pl.DataFrame:
     """Convert an exponential fit result to a saveable DataFrame.
 
