@@ -95,7 +95,10 @@ def _prepare_av_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
     )
 
 
-def _aggregate_player_av(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
+def _aggregate_player_av(
+    lazy_frame: pl.LazyFrame,
+    max_seasons_from_draft: int = 4,
+) -> pl.LazyFrame:
     """Aggregate season-level AV into one ``rookie_contract_av`` value per player.
 
     Groups by ``(Player, Pick, Draft Year)`` — a three-part key required to
@@ -112,6 +115,10 @@ def _aggregate_player_av(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
 
     Args:
         lazy_frame: LazyFrame already processed through :func:`_prepare_av_data`.
+        max_seasons_from_draft: Seasons after the draft year to include,
+            expressed as a strict upper bound (``Season - Draft Year <
+            max_seasons_from_draft``). Default ``4`` retains seasons 0–3
+            (the typical four-year rookie contract window).
 
     Returns:
         LazyFrame with one row per unique (Player, Pick, Draft Year)
@@ -121,7 +128,7 @@ def _aggregate_player_av(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
         Negative values are valid and must not be filtered.
     """
     return (
-        lazy_frame.filter(pl.col("Season") - pl.col("Draft Year") <= 3)
+        lazy_frame.filter(pl.col("Season") - pl.col("Draft Year") < max_seasons_from_draft)
         .group_by(["Player", "Pick", "Draft Year", "Draft Team"])
         .agg(pl.col("AV.1").sum().alias("rookie_contract_av"))
     )
@@ -277,7 +284,11 @@ def _fit_skewnorm_on_df(
 # ---------------------------------------------------------------------------
 
 
-def pick_based_stats(directory: str | Path) -> pl.DataFrame:
+def pick_based_stats(
+    directory: str | Path,
+    max_seasons_from_draft: int = 4,
+    draft_year_range: tuple[int, int] | None = None,
+) -> pl.DataFrame:
     """Compute per-pick descriptive statistics across all available draft years.
 
     Loads all parquet files from ``directory`` lazily, aggregates each
@@ -291,6 +302,12 @@ def pick_based_stats(directory: str | Path) -> pl.DataFrame:
     Args:
         directory: Path to the directory containing annual AV parquet files
             (e.g. ``data/raw/stathead/annual_av``).
+        max_seasons_from_draft: Passed to :func:`_aggregate_player_av`.
+            Strict upper bound on ``Season - Draft Year``; default ``4``
+            retains seasons 0–3.
+        draft_year_range: Optional ``(start, end)`` tuple (inclusive) to
+            restrict analysis to a specific range of draft years.  If
+            ``None`` (default), all draft years are included.
 
     Returns:
         Eager DataFrame sorted by ``Pick`` ascending with columns:
@@ -308,7 +325,12 @@ def pick_based_stats(directory: str | Path) -> pl.DataFrame:
     """
     lf = load_parquets_from_dir(directory, lazy=True)
     lf = _prepare_av_data(lf)
-    lf = _aggregate_player_av(lf)
+    if draft_year_range is not None:
+        lf = lf.filter(
+            (pl.col("Draft Year") >= draft_year_range[0])
+            & (pl.col("Draft Year") <= draft_year_range[1])
+        )
+    lf = _aggregate_player_av(lf, max_seasons_from_draft=max_seasons_from_draft)
     df = lf.collect()
     return _compute_pick_describe(df)
 
@@ -344,9 +366,40 @@ def skew_normal_fit(
     return _fit_skewnorm_on_df(df, min_samples=min_samples)
 
 
+def lookup_player_av(
+    player_name: str,
+    player_av_data: pl.LazyFrame | pl.DataFrame,
+) -> pl.DataFrame:
+    """Return the ``rookie_contract_av`` row(s) for a named player.
+
+    Intended for spot-checking the output of :func:`_aggregate_player_av`.
+    Matching is case-insensitive and uses substring containment, so partial
+    names (e.g. ``"Manning"``) will return all matching players.
+
+    Args:
+        player_name: Name (or partial name) to search for.
+        player_av_data: LazyFrame or eager DataFrame produced by
+            :func:`_aggregate_player_av`, with columns ``Player``, ``Pick``,
+            ``Draft Year``, ``Draft Team``, ``rookie_contract_av``.
+
+    Returns:
+        Eager DataFrame with columns ``Player``, ``Draft Year``, ``Pick``,
+        ``Draft Team``, ``rookie_contract_av``, sorted by ``Draft Year``
+        ascending.  Empty if no match is found.
+    """
+    return (
+        player_av_data.lazy()
+        .filter(pl.col("Player").str.to_lowercase().str.contains(player_name.lower()))
+        .select(["Player", "Draft Year", "Pick", "Draft Team", "rookie_contract_av"])
+        .sort("Draft Year")
+        .collect()
+    )
+
+
 def rolling_window_pick_stats(
     directory: str | Path,
     window_length: int,
+    max_seasons_from_draft: int = 4,
 ) -> dict[int, pl.DataFrame]:
     """Compute per-pick descriptive statistics for each rolling window of draft years.
 
@@ -361,6 +414,9 @@ def rolling_window_pick_stats(
         directory: Path to the directory containing annual AV parquet files.
         window_length: Number of draft years in each window. Must be an odd
             integer to ensure symmetric centering around the center year.
+        max_seasons_from_draft: Passed to :func:`_aggregate_player_av`.
+            Strict upper bound on ``Season - Draft Year``; default ``4``
+            retains seasons 0–3.
 
     Returns:
         Dict mapping ``center_year`` (int) to an eager DataFrame with the
@@ -387,7 +443,7 @@ def rolling_window_pick_stats(
     half = window_length // 2
 
     lf = load_parquets_from_dir(directory, lazy=True)
-    df_all = _aggregate_player_av(_prepare_av_data(lf)).collect()
+    df_all = _aggregate_player_av(_prepare_av_data(lf), max_seasons_from_draft=max_seasons_from_draft).collect()
 
     min_year: int = df_all["Draft Year"].min()
     max_year: int = df_all["Draft Year"].max()
@@ -409,6 +465,7 @@ def rolling_window_skew_fit(
     directory: str | Path,
     window_length: int,
     min_samples: int = 5,
+    max_seasons_from_draft: int = 4,
 ) -> dict[int, pl.DataFrame]:
     """Fit skew-normal distributions per pick for each rolling window of draft years.
 
@@ -423,6 +480,9 @@ def rolling_window_skew_fit(
         min_samples: Minimum players per pick required to attempt a fit.
             Default 5. Picks below this threshold are absent from each
             window's output DataFrame.
+        max_seasons_from_draft: Passed to :func:`_aggregate_player_av`.
+            Strict upper bound on ``Season - Draft Year``; default ``4``
+            retains seasons 0–3.
 
     Returns:
         Dict mapping ``center_year`` (int) to an eager DataFrame with columns:
@@ -445,7 +505,7 @@ def rolling_window_skew_fit(
     half = window_length // 2
 
     lf = load_parquets_from_dir(directory, lazy=True)
-    df_all = _aggregate_player_av(_prepare_av_data(lf)).collect()
+    df_all = _aggregate_player_av(_prepare_av_data(lf), max_seasons_from_draft=max_seasons_from_draft).collect()
 
     min_year: int = df_all["Draft Year"].min()
     max_year: int = df_all["Draft Year"].max()
