@@ -95,7 +95,7 @@ def main() -> None:
     # Step 2: Fit logarithmic decay to individual player AV
     # ------------------------------------------------------------------
     print("Fitting logarithmic decay curve...")
-    fit = logarithmic_av_fit(player_av_lf, max_pick=MAX_PICK)
+    fit = logarithmic_av_fit(player_av_lf.filter(pl.col("Pick")<=224), max_pick=MAX_PICK)
     a, b = fit["popt"]
     print(f"  f(pick) = {a:.3f} * ln(pick) + {b:.3f}")
 
