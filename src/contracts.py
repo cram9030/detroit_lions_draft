@@ -51,13 +51,13 @@ def get_replacement_level_contracts(
         replacement_percent: Ceiling multiplier on the minimum salary (default 1.20 = 120%).
 
     Returns:
-        DataFrame with columns: player, year_signed, years, value, min_salary, experience.
-        value and min_salary are in millions of dollars.
+        DataFrame with columns: player, year_signed, years, value, min_salary, experience,
+        draft_year, draft_overall. value and min_salary are in millions of dollars.
     """
     contracts = (
         nflreadpy.load_contracts()
         .filter(pl.col("years") == 1)
-        .select(["player", "year_signed", "years", "value", "otc_id"])
+        .select(["player", "year_signed", "years", "value", "otc_id", "draft_year", "draft_overall"])
     )
 
     players = (
@@ -92,7 +92,8 @@ def get_replacement_level_contracts(
             how="inner",
         )
         .filter(pl.col("value") <= pl.col("min_salary_m") * replacement_percent)
-        .select(["player", "year_signed", "years", "value", "min_salary_m", "experience"])
+        .select(["player", "year_signed", "years", "value", "min_salary_m", "experience",
+                 "draft_year", "draft_overall"])
         .rename({"min_salary_m": "min_salary"})
         .sort(["year_signed", "player"])
     )
@@ -105,9 +106,14 @@ def get_replacement_level_av(
 ) -> pl.DataFrame:
     """Return season-level AV for players on replacement-level contracts.
 
-    Joins the prepared AV LazyFrame to replacement contracts on player name and
-    season year. Name matching is based on string equality; minor formatting
-    differences between nflreadr and Stathead may cause a small miss-rate.
+    Joins the prepared AV LazyFrame to replacement contracts on player name,
+    season year, draft year, and draft pick. The four-key join uniquely
+    identifies each player, eliminating false matches between players who share
+    a name. Undrafted players (null draft_overall) have no Stathead rows and
+    are naturally excluded.
+
+    When a player holds multiple replacement-level contracts in the same season,
+    the lowest-value contract is retained to represent the floor.
 
     Args:
         av_data: LazyFrame from prepare_av_data(load_parquets_from_dir(...)).
@@ -116,8 +122,6 @@ def get_replacement_level_av(
     Returns:
         Eager DataFrame with columns: Player, year_signed, value, AV.1.
     """
-    # Deduplicate on (player, year_signed) to avoid duplicate AV rows when a
-    # player has multiple minimum-salary contracts in the same season.
     contract_pairs = (
         replacement_contracts
         .sort("value")
@@ -125,21 +129,20 @@ def get_replacement_level_av(
         .select([
             pl.col("player").alias("Player"),
             pl.col("year_signed").cast(pl.Int64).alias("Season"),
+            pl.col("draft_year").cast(pl.Int64).alias("Draft Year"),
+            pl.col("draft_overall").cast(pl.Int64).alias("Pick"),
             pl.col("value"),
         ])
     )
 
-    # When two players share a name, keep the higher AV.1 (rare name collisions).
     result = (
         av_data
         .join(
             contract_pairs.lazy(),
-            on=["Player", "Season"],
+            on=["Player", "Season", "Draft Year", "Pick"],
             how="inner",
         )
         .select(["Player", pl.col("Season").alias("year_signed"), "value", "AV.1"])
-        .group_by(["Player", "year_signed", "value"])
-        .agg(pl.col("AV.1").max())
         .collect()
         .sort(["year_signed", "Player"])
     )
