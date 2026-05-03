@@ -34,15 +34,14 @@ sys.path.insert(0, str(PROJECT_ROOT))
 import polars as pl
 
 from src.annual_av_analysis import (
-    _aggregate_player_av,
-    _filter_top_percentile_per_pick,
-    _prepare_av_data,
+    aggregate_player_av,
     exponential_av_fit,
-    exponential_av_fit_means,
     exponential_av_fit_stat,
+    filter_top_percentile_per_pick,
     fit_result_to_dataframe,
     pick_based_stats,
     position_career_stats,
+    prepare_av_data,
     rolling_window_pick_stats,
     rolling_window_skew_fit,
     skew_normal_fit,
@@ -88,7 +87,7 @@ def main() -> None:
     # Build the per-player LazyFrame once — reused by skew fit and exp fit.
     # LazyFrames are free to create; collection only happens when needed inside
     # each function.
-    player_av_lf = _aggregate_player_av(_prepare_av_data(load_parquets_from_dir(RAW_DIR)))
+    player_av_lf = aggregate_player_av(prepare_av_data(load_parquets_from_dir(RAW_DIR)))
 
     # ------------------------------------------------------------------
     # 1. Full-dataset per-pick stats
@@ -162,7 +161,7 @@ def main() -> None:
         if rolling_stats is not None:
             print("Fitting exponential decay curves for each rolling window...")
             rolling_fit = {
-                yr: exponential_av_fit_means(df)
+                yr: exponential_av_fit_stat(df, stat_col="mean")
                 for yr, df in rolling_stats.items()
             }
             print("Generating animated rolling-window plot...")
@@ -210,7 +209,7 @@ def main() -> None:
         # 9. Exponential fit on per-pick means
         # ------------------------------------------------------------------
         print("Fitting exponential decay curve to per-pick mean AV...")
-        means_fit_result = exponential_av_fit_means(stats_df, max_pick=250)
+        means_fit_result = exponential_av_fit_stat(stats_df, stat_col="mean", max_pick=250)
         a, b, c = means_fit_result["popt"]
         print(f"  f(pick) = {a:.3f} * exp(-{b:.5f} * pick) + {c:.3f}")
         print(f"  Parameter uncertainties (1σ): {means_fit_result['perr']}")
@@ -325,7 +324,7 @@ def main() -> None:
 
         print("Computing rookie contract AV top-10% fit...")
         rc_df = player_av_lf.collect()
-        rc_top10_df = _filter_top_percentile_per_pick(rc_df, "rookie_contract_av")
+        rc_top10_df = filter_top_percentile_per_pick(rc_df, "rookie_contract_av")
         fit_rc_top10 = exponential_av_fit(rc_top10_df, max_pick=250, av_col="rookie_contract_av")
         save_data(
             fit_result_to_dataframe(fit_rc_top10),
@@ -346,7 +345,7 @@ def main() -> None:
         print("  Saved exp_fit_dr_av.csv")
 
         print("Computing dr_av top-10% fit...")
-        dr_top10_df = _filter_top_percentile_per_pick(nflreadr_df, "dr_av")
+        dr_top10_df = filter_top_percentile_per_pick(nflreadr_df, "dr_av")
         fit_dr_top10 = exponential_av_fit(dr_top10_df, max_pick=250, av_col="dr_av")
         a, b, c = fit_dr_top10["popt"]
         print(f"  f(pick) = {a:.3f} * exp(-{b:.5f} * pick) + {c:.3f}")

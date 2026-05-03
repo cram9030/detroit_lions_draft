@@ -32,7 +32,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 import polars as pl
 
-from src.annual_av_analysis import _aggregate_career_av_by_position, _prepare_av_data
+from src.annual_av_analysis import aggregate_career_av_by_position, prepare_av_data
 from src.data_ingest import load_parquets_from_dir
 from src.models.factory import make_career_av_model
 
@@ -82,8 +82,8 @@ def _build_trajectory_df(
     rounds: list[int] | None,
 ) -> pl.DataFrame:
     raw_lf = load_parquets_from_dir(RAW_DIR)
-    prepared_lf = _prepare_av_data(raw_lf)
-    career_lf = _aggregate_career_av_by_position(prepared_lf, normalize=True, rounds=rounds)
+    prepared_lf = prepare_av_data(raw_lf)
+    career_lf = aggregate_career_av_by_position(prepared_lf, normalize=True, rounds=rounds)
 
     start, end = train_years
     val_start, val_end = _VAL_YEARS
@@ -98,8 +98,8 @@ def _build_trajectory_df(
 
 def _build_val_df(rounds: list[int] | None) -> pl.DataFrame:
     raw_lf = load_parquets_from_dir(RAW_DIR)
-    prepared_lf = _prepare_av_data(raw_lf)
-    career_lf = _aggregate_career_av_by_position(prepared_lf, normalize=True, rounds=rounds)
+    prepared_lf = prepare_av_data(raw_lf)
+    career_lf = aggregate_career_av_by_position(prepared_lf, normalize=True, rounds=rounds)
 
     val_start, val_end = _VAL_YEARS
     return (

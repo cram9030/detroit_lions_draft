@@ -13,15 +13,19 @@ future full-career analysis that would require additional data sources.
 
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
-from typing import TypedDict
+from typing import Iterator
 
-import numpy as np
 import polars as pl
-from scipy.optimize import curve_fit
 from scipy.stats import skewnorm
 
+from src import curve_fitting
+from src.curve_fitting import (
+    ExpDecayModel,
+    IndividualFitResult,
+    LogDecayModel,
+    StatsFitResult,
+)
 from src.data_ingest import load_parquets_from_dir
 
 
@@ -52,11 +56,11 @@ _GENERALIST: list[str] = ['DL', 'OL']
 """Generalist for a line group positions excluded from normalized position-group analysis because they don't ever play in the first year."""
 
 # ---------------------------------------------------------------------------
-# Private helpers
+# Data preparation and aggregation (public)
 # ---------------------------------------------------------------------------
 
 
-def _prepare_av_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
+def prepare_av_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
     """Cast raw string columns to analysis-ready types and drop unusable rows.
 
     The raw parquet files store all values as strings. This function performs
@@ -95,7 +99,7 @@ def _prepare_av_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
     )
 
 
-def _aggregate_player_av(
+def aggregate_player_av(
     lazy_frame: pl.LazyFrame,
     max_seasons_from_draft: int = 4,
     min_season_av: float = 0,
@@ -115,7 +119,7 @@ def _aggregate_player_av(
         - ``AV.1`` (Float64): Season-level Approximate Value.
 
     Args:
-        lazy_frame: LazyFrame already processed through :func:`_prepare_av_data`.
+        lazy_frame: LazyFrame already processed through :func:`prepare_av_data`.
         max_seasons_from_draft: Seasons after the draft year to include,
             expressed as a strict upper bound (``Season - Draft Year <
             max_seasons_from_draft``). Default ``4`` retains seasons 0–3
@@ -141,64 +145,7 @@ def _aggregate_player_av(
     )
 
 
-def _compute_pick_describe(player_av_df: pl.DataFrame) -> pl.DataFrame:
-    """Compute descriptive statistics of ``rookie_contract_av`` grouped by pick.
-
-    Input columns required:
-        - ``Pick`` (Int64): Overall pick number.
-        - ``rookie_contract_av`` (Float64): Total AV over tracked seasons.
-
-    Each row in the output represents one pick number. The statistics describe
-    the distribution of ``rookie_contract_av`` across all players drafted at
-    that pick position.
-
-    Note: ``std`` will be ``null`` for picks with only one player in the
-    dataset — this is mathematically correct and must not be replaced with 0.
-
-    Args:
-        player_av_df: Eager DataFrame with one row per player, output of
-            :func:`_aggregate_player_av` after ``.collect()``.
-
-    Returns:
-        Eager DataFrame sorted by ``Pick`` ascending with columns:
-            - ``Pick`` (Int64)
-            - ``count`` (UInt32): Number of players at this pick.
-            - ``null_count`` (UInt32): Null values in ``rookie_contract_av``
-              (always 0 after :func:`_prepare_av_data`).
-            - ``mean`` (Float64): Mean rookie contract AV.
-            - ``std`` (Float64): Standard deviation; null for n=1.
-            - ``min`` (Float64): Minimum rookie contract AV.
-            - ``25%`` (Float64): 25th percentile.
-            - ``50%`` (Float64): Median.
-            - ``75%`` (Float64): 75th percentile.
-            - ``max`` (Float64): Maximum rookie contract AV.
-    """
-    return (
-        player_av_df.group_by("Pick")
-        .agg(
-            [
-                pl.col("rookie_contract_av").count().alias("count"),
-                pl.col("rookie_contract_av").null_count().alias("null_count"),
-                pl.col("rookie_contract_av").mean().alias("mean"),
-                pl.col("rookie_contract_av").std().alias("std"),
-                pl.col("rookie_contract_av").min().alias("min"),
-                pl.col("rookie_contract_av")
-                .quantile(0.25, interpolation="linear")
-                .alias("25%"),
-                pl.col("rookie_contract_av")
-                .quantile(0.50, interpolation="linear")
-                .alias("50%"),
-                pl.col("rookie_contract_av")
-                .quantile(0.75, interpolation="linear")
-                .alias("75%"),
-                pl.col("rookie_contract_av").max().alias("max"),
-            ]
-        )
-        .sort("Pick")
-    )
-
-
-def _filter_top_percentile_per_pick(
+def filter_top_percentile_per_pick(
     df: pl.DataFrame,
     av_col: str,
     percentile: float = 0.10,
@@ -230,6 +177,68 @@ def _filter_top_percentile_per_pick(
             <= (pl.col("_count").cast(pl.Float64) * percentile).ceil().cast(pl.Int64)
         )
         .drop(["_rank", "_count"])
+    )
+
+
+# ---------------------------------------------------------------------------
+# Private helpers
+# ---------------------------------------------------------------------------
+
+
+def _compute_pick_describe(player_av_df: pl.DataFrame) -> pl.DataFrame:
+    """Compute descriptive statistics of ``rookie_contract_av`` grouped by pick.
+
+    Input columns required:
+        - ``Pick`` (Int64): Overall pick number.
+        - ``rookie_contract_av`` (Float64): Total AV over tracked seasons.
+
+    Each row in the output represents one pick number. The statistics describe
+    the distribution of ``rookie_contract_av`` across all players drafted at
+    that pick position.
+
+    Note: ``std`` will be ``null`` for picks with only one player in the
+    dataset — this is mathematically correct and must not be replaced with 0.
+
+    Args:
+        player_av_df: Eager DataFrame with one row per player, output of
+            :func:`aggregate_player_av` after ``.collect()``.
+
+    Returns:
+        Eager DataFrame sorted by ``Pick`` ascending with columns:
+            - ``Pick`` (Int64)
+            - ``count`` (UInt32): Number of players at this pick.
+            - ``null_count`` (UInt32): Null values in ``rookie_contract_av``
+              (always 0 after :func:`prepare_av_data`).
+            - ``mean`` (Float64): Mean rookie contract AV.
+            - ``std`` (Float64): Standard deviation; null for n=1.
+            - ``min`` (Float64): Minimum rookie contract AV.
+            - ``25%`` (Float64): 25th percentile.
+            - ``50%`` (Float64): Median.
+            - ``75%`` (Float64): 75th percentile.
+            - ``max`` (Float64): Maximum rookie contract AV.
+    """
+    return (
+        player_av_df.group_by("Pick")
+        .agg(
+            [
+                pl.col("rookie_contract_av").count().alias("count"),
+                pl.col("rookie_contract_av").null_count().alias("null_count"),
+                pl.col("rookie_contract_av").mean().alias("mean"),
+                pl.col("rookie_contract_av").std().alias("std"),
+                pl.col("rookie_contract_av").min().alias("min"),
+                pl.col("rookie_contract_av")
+                .quantile(0.25, interpolation="linear")
+                .alias("25%"),
+                pl.col("rookie_contract_av")
+                .quantile(0.50, interpolation="linear")
+                .alias("50%"),
+                pl.col("rookie_contract_av")
+                .quantile(0.75, interpolation="linear")
+                .alias("75%"),
+                pl.col("rookie_contract_av").max().alias("max"),
+            ]
+        )
+        .sort("Pick")
     )
 
 
@@ -286,8 +295,28 @@ def _fit_skewnorm_on_df(
     ).sort("Pick")
 
 
+def _rolling_window_iter(
+    df_all: pl.DataFrame,
+    half: int,
+) -> Iterator[tuple[int, pl.DataFrame]]:
+    """Yield ``(center_year, window_df)`` for every valid rolling window.
+
+    Args:
+        df_all: Full aggregated player-AV DataFrame with a ``Draft Year`` column.
+        half: Half-width of the window (``window_length // 2``).
+    """
+    min_year: int = df_all["Draft Year"].min()
+    max_year: int = df_all["Draft Year"].max()
+    for center in range(min_year + half, max_year - half + 1):
+        window_df = df_all.filter(
+            (pl.col("Draft Year") >= center - half)
+            & (pl.col("Draft Year") <= center + half)
+        )
+        yield center, window_df
+
+
 # ---------------------------------------------------------------------------
-# Public functions
+# Public functions — pick-based analysis
 # ---------------------------------------------------------------------------
 
 
@@ -309,7 +338,7 @@ def pick_based_stats(
     Args:
         directory: Path to the directory containing annual AV parquet files
             (e.g. ``data/raw/stathead/annual_av``).
-        max_seasons_from_draft: Passed to :func:`_aggregate_player_av`.
+        max_seasons_from_draft: Passed to :func:`aggregate_player_av`.
             Strict upper bound on ``Season - Draft Year``; default ``4``
             retains seasons 0–3.
         draft_year_range: Optional ``(start, end)`` tuple (inclusive) to
@@ -331,13 +360,13 @@ def pick_based_stats(
             - ``max`` (Float64): Maximum rookie contract AV.
     """
     lf = load_parquets_from_dir(directory, lazy=True)
-    lf = _prepare_av_data(lf)
+    lf = prepare_av_data(lf)
     if draft_year_range is not None:
         lf = lf.filter(
             (pl.col("Draft Year") >= draft_year_range[0])
             & (pl.col("Draft Year") <= draft_year_range[1])
         )
-    lf = _aggregate_player_av(lf, max_seasons_from_draft=max_seasons_from_draft)
+    lf = aggregate_player_av(lf, max_seasons_from_draft=max_seasons_from_draft)
     df = lf.collect()
     return _compute_pick_describe(df)
 
@@ -348,7 +377,7 @@ def skew_normal_fit(
 ) -> pl.DataFrame:
     """Fit a skew-normal distribution to ``rookie_contract_av`` per pick.
 
-    Intended to receive the output of :func:`_aggregate_player_av` as a
+    Intended to receive the output of :func:`aggregate_player_av` as a
     LazyFrame, which is then collected internally.
 
     Input LazyFrame columns required:
@@ -357,7 +386,7 @@ def skew_normal_fit(
 
     Args:
         player_av_data: LazyFrame with one row per player, already processed
-            through :func:`_prepare_av_data` and :func:`_aggregate_player_av`.
+            through :func:`prepare_av_data` and :func:`aggregate_player_av`.
         min_samples: Minimum players per pick to attempt a fit. Default 5.
 
     Returns:
@@ -379,14 +408,14 @@ def lookup_player_av(
 ) -> pl.DataFrame:
     """Return the ``rookie_contract_av`` row(s) for a named player.
 
-    Intended for spot-checking the output of :func:`_aggregate_player_av`.
+    Intended for spot-checking the output of :func:`aggregate_player_av`.
     Matching is case-insensitive and uses substring containment, so partial
     names (e.g. ``"Manning"``) will return all matching players.
 
     Args:
         player_name: Name (or partial name) to search for.
         player_av_data: LazyFrame or eager DataFrame produced by
-            :func:`_aggregate_player_av`, with columns ``Player``, ``Pick``,
+            :func:`aggregate_player_av`, with columns ``Player``, ``Pick``,
             ``Draft Year``, ``Draft Team``, ``rookie_contract_av``.
 
     Returns:
@@ -421,23 +450,13 @@ def rolling_window_pick_stats(
         directory: Path to the directory containing annual AV parquet files.
         window_length: Number of draft years in each window. Must be an odd
             integer to ensure symmetric centering around the center year.
-        max_seasons_from_draft: Passed to :func:`_aggregate_player_av`.
+        max_seasons_from_draft: Passed to :func:`aggregate_player_av`.
             Strict upper bound on ``Season - Draft Year``; default ``4``
             retains seasons 0–3.
 
     Returns:
         Dict mapping ``center_year`` (int) to an eager DataFrame with the
-        same schema as :func:`pick_based_stats` output:
-            - ``Pick`` (Int64)
-            - ``count`` (UInt32)
-            - ``null_count`` (UInt32)
-            - ``mean`` (Float64)
-            - ``std`` (Float64)
-            - ``min`` (Float64)
-            - ``25%`` (Float64)
-            - ``50%`` (Float64)
-            - ``75%`` (Float64)
-            - ``max`` (Float64)
+        same schema as :func:`pick_based_stats` output.
 
     Raises:
         ValueError: If ``window_length`` is even.
@@ -448,24 +467,15 @@ def rolling_window_pick_stats(
         )
 
     half = window_length // 2
-
     lf = load_parquets_from_dir(directory, lazy=True)
-    df_all = _aggregate_player_av(_prepare_av_data(lf), max_seasons_from_draft=max_seasons_from_draft).collect()
+    df_all = aggregate_player_av(
+        prepare_av_data(lf), max_seasons_from_draft=max_seasons_from_draft
+    ).collect()
 
-    min_year: int = df_all["Draft Year"].min()
-    max_year: int = df_all["Draft Year"].max()
-    first_center = min_year + half
-    last_center = max_year - half
-
-    result: dict[int, pl.DataFrame] = {}
-    for center in range(first_center, last_center + 1):
-        window_df = df_all.filter(
-            (pl.col("Draft Year") >= center - half)
-            & (pl.col("Draft Year") <= center + half)
-        )
-        result[center] = _compute_pick_describe(window_df)
-
-    return result
+    return {
+        center: _compute_pick_describe(window_df)
+        for center, window_df in _rolling_window_iter(df_all, half)
+    }
 
 
 def rolling_window_skew_fit(
@@ -487,7 +497,7 @@ def rolling_window_skew_fit(
         min_samples: Minimum players per pick required to attempt a fit.
             Default 5. Picks below this threshold are absent from each
             window's output DataFrame.
-        max_seasons_from_draft: Passed to :func:`_aggregate_player_av`.
+        max_seasons_from_draft: Passed to :func:`aggregate_player_av`.
             Strict upper bound on ``Season - Draft Year``; default ``4``
             retains seasons 0–3.
 
@@ -510,24 +520,15 @@ def rolling_window_skew_fit(
         )
 
     half = window_length // 2
-
     lf = load_parquets_from_dir(directory, lazy=True)
-    df_all = _aggregate_player_av(_prepare_av_data(lf), max_seasons_from_draft=max_seasons_from_draft).collect()
+    df_all = aggregate_player_av(
+        prepare_av_data(lf), max_seasons_from_draft=max_seasons_from_draft
+    ).collect()
 
-    min_year: int = df_all["Draft Year"].min()
-    max_year: int = df_all["Draft Year"].max()
-    first_center = min_year + half
-    last_center = max_year - half
-
-    result: dict[int, pl.DataFrame] = {}
-    for center in range(first_center, last_center + 1):
-        window_df = df_all.filter(
-            (pl.col("Draft Year") >= center - half)
-            & (pl.col("Draft Year") <= center + half)
-        )
-        result[center] = _fit_skewnorm_on_df(window_df, min_samples=min_samples)
-
-    return result
+    return {
+        center: _fit_skewnorm_on_df(window_df, min_samples=min_samples)
+        for center, window_df in _rolling_window_iter(df_all, half)
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -535,14 +536,14 @@ def rolling_window_skew_fit(
 # ---------------------------------------------------------------------------
 
 
-def _aggregate_career_av_by_position(
+def aggregate_career_av_by_position(
     lazy_frame: pl.LazyFrame,
     normalize: bool,
     rounds: list[int] | None = None,
 ) -> pl.LazyFrame:
     """Return season-level AV annotated with career year and (optionally) normalized position.
 
-    Works on the season-level data from :func:`_prepare_av_data` — one row
+    Works on the season-level data from :func:`prepare_av_data` — one row
     per player per season.
 
     When ``normalize=True``, compound position codes (e.g. ``"LDE/LOLB"``,
@@ -557,7 +558,7 @@ def _aggregate_career_av_by_position(
     no exploding occurs.
 
     Args:
-        lazy_frame: LazyFrame already processed through :func:`_prepare_av_data`.
+        lazy_frame: LazyFrame already processed through :func:`prepare_av_data`.
         normalize: If ``True``, split compound positions, map components
             through :data:`_POSITION_GROUPS`, and remove any positions in
             :data:`_SPECALIST` (K, KR, P, PR, LS) and ``_GENERALIST`` (DL, OL).
@@ -638,11 +639,6 @@ def _compute_group_year_describe(df: pl.DataFrame, group_col: str) -> pl.DataFra
     )
 
 
-def _compute_position_year_describe(df: pl.DataFrame) -> pl.DataFrame:
-    """Compute descriptive statistics of ``AV.1`` grouped by position and career year."""
-    return _compute_group_year_describe(df, "Pos")
-
-
 def position_career_stats(
     directory: str | Path,
     normalize: bool = True,
@@ -673,10 +669,10 @@ def position_career_stats(
         ``75%`` (Float64), ``max`` (Float64).
     """
     lf = load_parquets_from_dir(directory, lazy=True)
-    lf = _prepare_av_data(lf)
-    lf = _aggregate_career_av_by_position(lf, normalize=normalize, rounds=rounds)
+    lf = prepare_av_data(lf)
+    lf = aggregate_career_av_by_position(lf, normalize=normalize, rounds=rounds)
     df = lf.collect()
-    return _compute_position_year_describe(df)
+    return _compute_group_year_describe(df, "Pos")
 
 
 def round_career_stats(directory: str | Path) -> pl.DataFrame:
@@ -699,7 +695,7 @@ def round_career_stats(directory: str | Path) -> pl.DataFrame:
     """
     lf = load_parquets_from_dir(directory, lazy=True)
     df = (
-        _prepare_av_data(lf)
+        prepare_av_data(lf)
         .with_columns(
             [
                 pl.col("Round").cast(pl.Int64, strict=False),
@@ -715,296 +711,37 @@ def round_career_stats(directory: str | Path) -> pl.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# Exponential fit
+# Curve fitting — exponential decay
 # ---------------------------------------------------------------------------
-
-
-class ExponentialFitResult(TypedDict):
-    """Return type of :func:`exponential_av_fit`.
-
-    Attributes:
-        popt: Fitted parameters ``[a, b, c]`` for ``f(x) = a * exp(-b*x) + c``.
-        pcov: 3×3 covariance matrix of ``popt`` from ``curve_fit``.
-        perr: 1-sigma uncertainties on each parameter, ``sqrt(diag(pcov))``.
-        x_fit: Dense array of pick numbers for plotting the fitted curve.
-        y_fit: Fitted AV values at each ``x_fit`` point.
-        y_upper: Upper 1-sigma bound at each ``x_fit`` point.
-        y_lower: Lower 1-sigma bound at each ``x_fit`` point.
-        picks: Individual pick numbers for every player used in the fit
-            (repeated — one entry per player, not per unique pick).
-        av_values: Individual ``rookie_contract_av`` values for every player
-            used in the fit, aligned with ``picks``.
-    """
-
-    popt: np.ndarray
-    pcov: np.ndarray
-    perr: np.ndarray
-    x_fit: np.ndarray
-    y_fit: np.ndarray
-    y_upper: np.ndarray
-    y_lower: np.ndarray
-    picks: np.ndarray
-    av_values: np.ndarray
-
-
-class ExponentialStatsFitResult(TypedDict):
-    """Return type of :func:`exponential_av_fit_stat`.
-
-    Attributes:
-        popt: Fitted parameters ``[a, b, c]`` for ``f(x) = a * exp(-b*x) + c``.
-        pcov: 3×3 covariance matrix of ``popt`` from ``curve_fit``.
-        perr: 1-sigma uncertainties on each parameter, ``sqrt(diag(pcov))``.
-        x_fit: Dense array of pick numbers for plotting the fitted curve.
-        y_fit: Fitted AV values at each ``x_fit`` point.
-        y_upper: Upper 1-sigma bound at each ``x_fit`` point.
-        y_lower: Lower 1-sigma bound at each ``x_fit`` point.
-        picks: Unique pick numbers used in the fit (one per pick position).
-        stat_values: Per-pick values of whichever ``stat_col`` was fit,
-            aligned with ``picks``.
-        iqr_picks: Pick numbers where both 25th and 75th percentiles are
-            available, aligned with ``q25`` and ``q75``.
-        q25: 25th percentile AV per pick, aligned with ``iqr_picks``.
-        q75: 75th percentile AV per pick, aligned with ``iqr_picks``.
-    """
-
-    popt: np.ndarray
-    pcov: np.ndarray
-    perr: np.ndarray
-    x_fit: np.ndarray
-    y_fit: np.ndarray
-    y_upper: np.ndarray
-    y_lower: np.ndarray
-    picks: np.ndarray
-    stat_values: np.ndarray
-    iqr_picks: np.ndarray
-    q25: np.ndarray
-    q75: np.ndarray
-
-
-def _exp_decay(x: np.ndarray, a: float, b: float, c: float) -> np.ndarray:
-    """Exponential decay model: ``f(x) = a * exp(-b * x) + c``."""
-    return a * np.exp(-b * x) + c
 
 
 def exponential_av_fit(
     player_av_data: pl.LazyFrame | pl.DataFrame,
     max_pick: int = 250,
     av_col: str = "rookie_contract_av",
-) -> ExponentialFitResult:
+) -> IndividualFitResult:
     """Fit an exponential decay curve to individual player rookie contract AV by pick.
 
-    Uses ``scipy.optimize.curve_fit`` to fit the model
-    ``f(pick) = a * exp(-b * pick) + c`` against every individual player's
-    ``rookie_contract_av`` value. Each pick number appears once per player
-    drafted at that position (typically ~52 data points per pick across the
-    full dataset), giving the fit the full statistical weight of the population
-    rather than fitting to per-pick means.
-
-    The 1-sigma confidence band is derived from the covariance matrix via
-    error propagation: ``sigma²(x) = J(x) @ pcov @ J(x).T`` where ``J`` is
-    the Jacobian of the model with respect to the parameters.
-
-    Input columns required (``pl.LazyFrame`` or ``pl.DataFrame``):
-        - ``Pick`` (Int64): Overall pick number.
-        - Column named ``av_col`` (Float64): One AV value per player.
+    Uses the model ``f(pick) = a * exp(-b * pick) + c`` against every individual
+    player's ``rookie_contract_av`` value.
 
     Args:
         player_av_data: LazyFrame or eager DataFrame with one row per player.
-            When ``av_col="rookie_contract_av"``, pass the output of
-            :func:`_aggregate_player_av`. For other metrics (e.g. ``"dr_av"``),
-            pass the appropriate per-player DataFrame.
+            Must contain ``Pick`` (Int64) and the column named ``av_col``.
         max_pick: Maximum pick number to include in the fit. Default 250.
-            Players drafted beyond this pick are excluded before fitting.
         av_col: Name of the AV column to fit. Default ``"rookie_contract_av"``.
 
     Returns:
-        :class:`ExponentialFitResult` dict with keys:
-            - ``popt`` (ndarray, shape (3,)): Fitted parameters ``[a, b, c]``.
-            - ``pcov`` (ndarray, shape (3, 3)): Covariance matrix of ``popt``.
-            - ``perr`` (ndarray, shape (3,)): 1-sigma parameter uncertainties.
-            - ``x_fit`` (ndarray): 500-point pick axis for smooth curve plotting.
-            - ``y_fit`` (ndarray): Fitted AV values at ``x_fit`` points.
-            - ``y_upper`` (ndarray): Upper 1-sigma bound at ``x_fit`` points.
-            - ``y_lower`` (ndarray): Lower 1-sigma bound at ``x_fit`` points.
-            - ``picks`` (ndarray): Individual pick numbers used in the fit
-              (one entry per player, repeated across draft years).
-            - ``av_values`` (ndarray): Individual ``rookie_contract_av`` values
-              aligned with ``picks``.
-
-    Warns:
-        UserWarning: If any diagonal element of ``pcov`` exceeds ``1e6`` or
-            is infinite, indicating the fit may be over-parameterized or that
-            the model is poorly constrained by the available data.
-
-    Raises:
-        RuntimeError: If ``scipy.optimize.curve_fit`` fails to converge.
-        ValueError: If fewer than 4 valid data points remain after filtering.
-    """
-    df = (
-        player_av_data.lazy()
-        .filter(pl.col("Pick") <= max_pick)
-        .select(["Pick", av_col])
-        .drop_nulls()
-        .collect()
-        .sort("Pick")
-    )
-
-    if len(df) < 4:
-        raise ValueError(
-            f"Only {len(df)} player records after filtering to max_pick={max_pick}. "
-            "Need at least 4 for a 3-parameter exponential fit."
-        )
-
-    picks = df["Pick"].to_numpy().astype(float)
-    av_values = df[av_col].to_numpy()
-
-    # Initial guess derived from the data range
-    p0 = [float(av_values.max()), 0.01, float(av_values.min())]
-
-    try:
-        popt, pcov = curve_fit(_exp_decay, picks, av_values, p0=p0, maxfev=10000)
-    except RuntimeError as exc:
-        raise RuntimeError(f"Exponential curve fit failed to converge: {exc}") from exc
-
-    perr = np.sqrt(np.diag(pcov))
-
-    if np.any(np.isinf(pcov)) or np.any(perr > 1e6):
-        warnings.warn(
-            "Exponential fit may be over-parameterized: one or more parameter "
-            "uncertainties are extremely large (perr > 1e6 or infinite). "
-            "Consider simplifying the model or checking data quality.",
-            UserWarning,
-            stacklevel=2,
-        )
-
-    # Dense x axis for smooth curve
-    x_fit = np.linspace(picks.min(), picks.max(), 500)
-    y_fit = _exp_decay(x_fit, *popt)
-
-    # 1-sigma band via error propagation: sigma²(x) = J(x) @ pcov @ J(x).T
-    a, b, _ = popt
-    J = np.column_stack(
-        [
-            np.exp(-b * x_fit),               # df/da
-            -a * x_fit * np.exp(-b * x_fit),  # df/db
-            np.ones_like(x_fit),              # df/dc
-        ]
-    )  # shape (500, 3)
-    sigma_sq = np.einsum("ij,jk,ik->i", J, pcov, J)
-    sigma = np.sqrt(np.abs(sigma_sq))
-
-    return ExponentialFitResult(
-        popt=popt,
-        pcov=pcov,
-        perr=perr,
-        x_fit=x_fit,
-        y_fit=y_fit,
-        y_upper=y_fit + sigma,
-        y_lower=y_fit - sigma,
-        picks=picks,
-        av_values=av_values,
-    )
-
-
-class ExponentialMeansFitResult(TypedDict):
-    """Return type of :func:`exponential_av_fit_means`.
-
-    Attributes:
-        popt: Fitted parameters ``[a, b, c]`` for ``f(x) = a * exp(-b*x) + c``.
-        pcov: 3×3 covariance matrix of ``popt`` from ``curve_fit``.
-        perr: 1-sigma uncertainties on each parameter, ``sqrt(diag(pcov))``.
-        x_fit: Dense array of pick numbers for plotting the fitted curve.
-        y_fit: Fitted AV values at each ``x_fit`` point.
-        y_upper: Upper 1-sigma bound at each ``x_fit`` point.
-        y_lower: Lower 1-sigma bound at each ``x_fit`` point.
-        picks: Unique pick numbers from the input stats (one per pick position).
-        means: Mean ``rookie_contract_av`` per pick from the input stats,
-            aligned with ``picks``.
-        iqr_picks: Pick numbers where both 25th and 75th percentiles are available.
-        q25: 25th percentile AV per pick, aligned with ``iqr_picks``.
-        q75: 75th percentile AV per pick, aligned with ``iqr_picks``.
-    """
-
-    popt: np.ndarray
-    pcov: np.ndarray
-    perr: np.ndarray
-    x_fit: np.ndarray
-    y_fit: np.ndarray
-    y_upper: np.ndarray
-    y_lower: np.ndarray
-    picks: np.ndarray
-    means: np.ndarray
-    iqr_picks: np.ndarray
-    q25: np.ndarray
-    q75: np.ndarray
-
-
-def _exponential_av_fit_stat_core(
-    picks: np.ndarray,
-    stat_values: np.ndarray,
-) -> dict:
-    """Shared fitting engine for :func:`exponential_av_fit_stat`.
-
-    Fits ``f(pick) = a * exp(-b * pick) + c`` to the supplied arrays and
-    computes the 1-sigma confidence band via Jacobian error propagation.
-
-    Args:
-        picks: 1-D array of pick numbers (float), already filtered and sorted.
-        stat_values: 1-D array of per-pick statistic values aligned with
-            ``picks``.
-
-    Returns:
-        Plain dict with keys ``popt``, ``pcov``, ``perr``, ``x_fit``,
-        ``y_fit``, ``y_upper``, ``y_lower``, ``picks``.
-
-    Warns:
-        UserWarning: If any parameter uncertainty exceeds ``1e6`` or is
-            infinite.
+        :class:`~curve_fitting.IndividualFitResult` with keys ``popt``,
+        ``pcov``, ``perr``, ``x_fit``, ``y_fit``, ``y_upper``, ``y_lower``,
+        ``picks``, ``av_values``.
 
     Raises:
         RuntimeError: If ``curve_fit`` fails to converge.
+        ValueError: If fewer than 4 valid data points remain after filtering.
     """
-    p0 = [float(stat_values.max()), 0.01, float(stat_values.min())]
-
-    try:
-        popt, pcov = curve_fit(_exp_decay, picks, stat_values, p0=p0, maxfev=10000)
-    except RuntimeError as exc:
-        raise RuntimeError(f"Exponential curve fit failed to converge: {exc}") from exc
-
-    perr = np.sqrt(np.diag(pcov))
-
-    if np.any(np.isinf(pcov)) or np.any(perr > 1e6):
-        warnings.warn(
-            "Exponential fit may be over-parameterized: one or more parameter "
-            "uncertainties are extremely large (perr > 1e6 or infinite). "
-            "Consider simplifying the model or checking data quality.",
-            UserWarning,
-            stacklevel=3,
-        )
-
-    x_fit = np.linspace(picks.min(), picks.max(), 500)
-    y_fit = _exp_decay(x_fit, *popt)
-
-    a, b, _ = popt
-    J = np.column_stack(
-        [
-            np.exp(-b * x_fit),
-            -a * x_fit * np.exp(-b * x_fit),
-            np.ones_like(x_fit),
-        ]
-    )
-    sigma_sq = np.einsum("ij,jk,ik->i", J, pcov, J)
-    sigma = np.sqrt(np.abs(sigma_sq))
-
-    return dict(
-        popt=popt,
-        pcov=pcov,
-        perr=perr,
-        x_fit=x_fit,
-        y_fit=y_fit,
-        y_upper=y_fit + sigma,
-        y_lower=y_fit - sigma,
-        picks=picks,
+    return curve_fitting.fit_individuals(
+        player_av_data, ExpDecayModel, max_pick=max_pick, av_col=av_col
     )
 
 
@@ -1012,25 +749,11 @@ def exponential_av_fit_stat(
     stats_df: pl.DataFrame,
     stat_col: str = "mean",
     max_pick: int = 250,
-) -> ExponentialStatsFitResult:
+) -> StatsFitResult:
     """Fit an exponential decay curve to any per-pick descriptive statistic.
 
-    Generic replacement for the column-specific :func:`exponential_av_fit_means`.
-    Fits the model ``f(pick) = a * exp(-b * pick) + c`` against the values in
-    ``stat_col``, which may be any column produced by :func:`pick_based_stats`:
-    ``"mean"``, ``"50%"`` (median), ``"25%"``, ``"75%"``, ``"min"``, or
-    ``"max"``. IQR fields are always included in the result because they
-    provide meaningful spread context regardless of which central-tendency
-    stat is being fit.
-
-    The 1-sigma confidence band is derived from the covariance matrix via
-    error propagation: ``sigma²(x) = J(x) @ pcov @ J(x).T``.
-
-    Input DataFrame columns required:
-        - ``Pick`` (Int64): Overall pick number.
-        - Column named ``stat_col`` (Float64): Per-pick statistic to fit.
-        - ``25%`` (Float64): 25th percentile per pick (for IQR context).
-        - ``75%`` (Float64): 75th percentile per pick (for IQR context).
+    Fits ``f(pick) = a * exp(-b * pick) + c`` against the values in
+    ``stat_col``, which may be any column produced by :func:`pick_based_stats`.
 
     Args:
         stats_df: Output of :func:`pick_based_stats`, one row per pick.
@@ -1038,246 +761,82 @@ def exponential_av_fit_stat(
         max_pick: Maximum pick number to include. Default 250.
 
     Returns:
-        :class:`ExponentialStatsFitResult` dict with keys:
-            - ``popt``, ``pcov``, ``perr``: Fit parameters and uncertainty.
-            - ``x_fit``, ``y_fit``, ``y_upper``, ``y_lower``: Smooth curve
-              and 1-sigma band.
-            - ``picks``: Pick numbers used in the fit.
-            - ``stat_values``: Per-pick values of ``stat_col``, aligned with
-              ``picks``.
-            - ``iqr_picks``, ``q25``, ``q75``: IQR context arrays.
-
-    Warns:
-        UserWarning: If the fit is poorly constrained (large uncertainties).
+        :class:`~curve_fitting.StatsFitResult` with keys ``popt``, ``pcov``,
+        ``perr``, ``x_fit``, ``y_fit``, ``y_upper``, ``y_lower``, ``picks``,
+        ``stat_values``, ``iqr_picks``, ``q25``, ``q75``.
 
     Raises:
         RuntimeError: If ``curve_fit`` fails to converge.
         ValueError: If fewer than 4 valid picks remain after filtering.
     """
-    df = (
-        stats_df.filter(pl.col("Pick") <= max_pick)
-        .select(["Pick", stat_col])
-        .drop_nulls()
-        .sort("Pick")
-    )
-
-    iqr_df = (
-        stats_df.filter(pl.col("Pick") <= max_pick)
-        .select(["Pick", "25%", "75%"])
-        .drop_nulls()
-        .sort("Pick")
-    )
-
-    if len(df) < 4:
-        raise ValueError(
-            f"Only {len(df)} valid picks after filtering to max_pick={max_pick}. "
-            "Need at least 4 for a 3-parameter exponential fit."
-        )
-
-    picks = df["Pick"].to_numpy().astype(float)
-    stat_values = df[stat_col].to_numpy()
-
-    base = _exponential_av_fit_stat_core(picks, stat_values)
-
-    return ExponentialStatsFitResult(
-        **base,
-        stat_values=stat_values,
-        iqr_picks=iqr_df["Pick"].to_numpy(),
-        q25=iqr_df["25%"].to_numpy(),
-        q75=iqr_df["75%"].to_numpy(),
-    )
-
-
-def exponential_av_fit_means(
-    stats_df: pl.DataFrame,
-    max_pick: int = 250,
-) -> ExponentialMeansFitResult:
-    """Fit an exponential decay curve to mean rookie contract AV by pick number.
-
-    Uses ``scipy.optimize.curve_fit`` to fit the model
-    ``f(pick) = a * exp(-b * pick) + c`` against the per-pick mean AV values
-    from :func:`pick_based_stats`. Each pick contributes exactly one data
-    point (its mean), giving every pick equal weight in the fit regardless of
-    how many players were drafted there.
-
-    The 1-sigma confidence band is derived from the covariance matrix via
-    error propagation: ``sigma²(x) = J(x) @ pcov @ J(x).T`` where ``J`` is
-    the Jacobian of the model with respect to the parameters.
-
-    Input DataFrame columns required:
-        - ``Pick`` (Int64): Overall pick number.
-        - ``mean`` (Float64): Mean ``rookie_contract_av`` per pick. Rows where
-          ``mean`` is null are excluded before fitting.
-
-    Args:
-        stats_df: Output of :func:`pick_based_stats`, one row per pick with
-            descriptive statistics of ``rookie_contract_av``.
-        max_pick: Maximum pick number to include in the fit. Default 250.
-            Picks beyond this value are excluded before fitting.
-
-    Returns:
-        :class:`ExponentialMeansFitResult` dict with keys:
-            - ``popt`` (ndarray, shape (3,)): Fitted parameters ``[a, b, c]``.
-            - ``pcov`` (ndarray, shape (3, 3)): Covariance matrix of ``popt``.
-            - ``perr`` (ndarray, shape (3,)): 1-sigma parameter uncertainties.
-            - ``x_fit`` (ndarray): 500-point pick axis for smooth curve plotting.
-            - ``y_fit`` (ndarray): Fitted AV values at ``x_fit`` points.
-            - ``y_upper`` (ndarray): Upper 1-sigma bound at ``x_fit`` points.
-            - ``y_lower`` (ndarray): Lower 1-sigma bound at ``x_fit`` points.
-            - ``picks`` (ndarray): Unique pick numbers used in the fit.
-            - ``means`` (ndarray): Mean AV per pick aligned with ``picks``.
-
-    Warns:
-        UserWarning: If any diagonal element of ``pcov`` exceeds ``1e6`` or
-            is infinite, indicating the fit may be over-parameterized.
-
-    Raises:
-        RuntimeError: If ``scipy.optimize.curve_fit`` fails to converge.
-        ValueError: If fewer than 4 valid picks remain after filtering.
-    """
-    result = exponential_av_fit_stat(stats_df, stat_col="mean", max_pick=max_pick)
-    return ExponentialMeansFitResult(
-        popt=result["popt"],
-        pcov=result["pcov"],
-        perr=result["perr"],
-        x_fit=result["x_fit"],
-        y_fit=result["y_fit"],
-        y_upper=result["y_upper"],
-        y_lower=result["y_lower"],
-        picks=result["picks"],
-        means=result["stat_values"],
-        iqr_picks=result["iqr_picks"],
-        q25=result["q25"],
-        q75=result["q75"],
+    return curve_fitting.fit_stats(
+        stats_df, ExpDecayModel, stat_col=stat_col, max_pick=max_pick
     )
 
 
 def fit_result_to_dataframe(
-    fit_result: ExponentialFitResult | ExponentialStatsFitResult | ExponentialMeansFitResult,
+    fit_result: IndividualFitResult | StatsFitResult,
 ) -> pl.DataFrame:
     """Convert an exponential fit result to a saveable DataFrame.
 
     Re-evaluates the fitted curve at every integer pick from 1 through the
-    maximum pick used in the fit (derived from ``x_fit[-1]``).  The 1-sigma
-    confidence band is recomputed via the same error-propagation Jacobian used
-    inside :func:`exponential_av_fit`.
+    maximum pick used in the fit with the 1-sigma confidence band.
 
     Args:
         fit_result: Return value of :func:`exponential_av_fit` or
-            :func:`exponential_av_fit_means`.
+            :func:`exponential_av_fit_stat`.
 
     Returns:
-        Eager DataFrame with one row per integer pick and columns:
-            - ``pick`` (Int64): Integer pick number (1 … max_pick).
-            - ``y_fit`` (Float64): Fitted AV at each pick.
-            - ``y_upper`` (Float64): Upper 1-sigma bound.
-            - ``y_lower`` (Float64): Lower 1-sigma bound.
+        Eager DataFrame with columns ``pick`` (Int64), ``y_fit``,
+        ``y_upper``, ``y_lower`` (Float64), one row per integer pick.
     """
-    a, b, c = fit_result["popt"]
-    pcov = fit_result["pcov"]
-    max_pick = int(round(float(fit_result["x_fit"][-1])))
-    picks = np.arange(1, max_pick + 1, dtype=float)
-
-    y_fit = a * np.exp(-b * picks) + c
-
-    J = np.column_stack([
-        np.exp(-b * picks),
-        -a * picks * np.exp(-b * picks),
-        np.ones_like(picks),
-    ])
-    sigma = np.sqrt(np.abs(np.einsum("ij,jk,ik->i", J, pcov, J)))
-
-    return pl.DataFrame({
-        "pick": picks.astype(int).tolist(),
-        "y_fit": y_fit.tolist(),
-        "y_upper": (y_fit + sigma).tolist(),
-        "y_lower": (y_fit - sigma).tolist(),
-    })
+    return curve_fitting.fit_result_to_dataframe(fit_result, ExpDecayModel)
 
 
-def _log_decay(x: np.ndarray, a: float, b: float) -> np.ndarray:
-    return a * np.log(x) + b
+# ---------------------------------------------------------------------------
+# Curve fitting — logarithmic decay
+# ---------------------------------------------------------------------------
 
 
 def logarithmic_av_fit(
     player_av_data: pl.LazyFrame | pl.DataFrame,
     max_pick: int = 250,
     av_col: str = "rookie_contract_av",
-) -> dict:
+) -> IndividualFitResult:
     """Fit a logarithmic decay curve to individual player rookie contract AV by pick.
 
-    Fits the model ``f(pick) = a * ln(pick) + b`` against every individual
-    player's AV value. Mirrors :func:`exponential_av_fit` but uses a 2-parameter
-    logarithmic model.
+    Uses the model ``f(pick) = a * ln(pick) + b`` against every individual
+    player's AV value.
 
     Args:
-        player_av_data: LazyFrame or eager DataFrame with one row per player,
-            containing ``Pick`` and the column named ``av_col``.
+        player_av_data: LazyFrame or eager DataFrame with one row per player.
+            Must contain ``Pick`` (Int64) and the column named ``av_col``.
         max_pick: Maximum pick number to include. Default 250.
         av_col: Name of the AV column. Default ``"rookie_contract_av"``.
 
     Returns:
-        Dict with keys ``popt`` (ndarray[2]), ``pcov`` (ndarray[2,2]),
-        ``perr`` (ndarray[2]), ``x_fit``, ``y_fit``, ``y_upper``,
-        ``y_lower``, ``picks``, ``av_values``.
+        :class:`~curve_fitting.IndividualFitResult` with keys ``popt``,
+        ``pcov``, ``perr``, ``x_fit``, ``y_fit``, ``y_upper``, ``y_lower``,
+        ``picks``, ``av_values``.
 
     Raises:
         RuntimeError: If ``curve_fit`` fails to converge.
         ValueError: If fewer than 3 valid data points remain after filtering.
     """
-    df = (
-        player_av_data.lazy()
-        .filter(pl.col("Pick") <= max_pick)
-        .select(["Pick", av_col])
-        .drop_nulls()
-        .collect()
-        .sort("Pick")
+    return curve_fitting.fit_individuals(
+        player_av_data, LogDecayModel, max_pick=max_pick, av_col=av_col
     )
-
-    if len(df) < 3:
-        raise ValueError(
-            f"Only {len(df)} player records after filtering to max_pick={max_pick}. "
-            "Need at least 3 for a 2-parameter logarithmic fit."
-        )
-
-    picks = df["Pick"].to_numpy().astype(float)
-    av_values = df[av_col].to_numpy()
-
-    try:
-        popt, pcov = curve_fit(_log_decay, picks, av_values, p0=[-5.0, 20.0], maxfev=10000)
-    except RuntimeError as exc:
-        raise RuntimeError(f"Logarithmic curve fit failed to converge: {exc}") from exc
-
-    perr = np.sqrt(np.diag(pcov))
-
-    x_fit = np.linspace(picks.min(), picks.max(), 500)
-    y_fit = _log_decay(x_fit, *popt)
-
-    J = np.column_stack([np.log(x_fit), np.ones_like(x_fit)])
-    sigma = np.sqrt(np.abs(np.einsum("ij,jk,ik->i", J, pcov, J)))
-
-    return {
-        "popt": popt,
-        "pcov": pcov,
-        "perr": perr,
-        "x_fit": x_fit,
-        "y_fit": y_fit,
-        "y_upper": y_fit + sigma,
-        "y_lower": y_fit - sigma,
-        "picks": picks,
-        "av_values": av_values,
-    }
 
 
 def logarithmic_av_fit_stat(
     stats_df: pl.DataFrame,
     stat_col: str = "mean",
     max_pick: int = 250,
-) -> dict:
+) -> StatsFitResult:
     """Fit a logarithmic decay curve to a per-pick statistic column.
 
-    Fits the model ``f(pick) = a * ln(pick) + b`` via nonlinear least squares.
-    For a decreasing function ``a < 0`` and ``b`` is the value at pick 1.
+    Fits ``f(pick) = a * ln(pick) + b`` via nonlinear least squares.
+    For a decreasing function ``a < 0`` and ``b`` is the value at pick e ≈ 2.72.
 
     Args:
         stats_df: Per-pick stats DataFrame (output of :func:`pick_based_stats`).
@@ -1285,52 +844,29 @@ def logarithmic_av_fit_stat(
         max_pick: Upper pick bound (inclusive) for the fit.
 
     Returns:
-        Dict with keys ``popt`` (ndarray[2]), ``pcov`` (ndarray[2,2]),
-        ``x_fit`` (ndarray), ``y_fit`` (ndarray).
+        :class:`~curve_fitting.StatsFitResult` with keys ``popt``, ``pcov``,
+        ``perr``, ``x_fit``, ``y_fit``, ``y_upper``, ``y_lower``, ``picks``,
+        ``stat_values``, ``iqr_picks``, ``q25``, ``q75``.
     """
-    from scipy.optimize import curve_fit
-
-    sub = (
-        stats_df.filter(pl.col("Pick") <= max_pick)
-        .select(["Pick", stat_col])
-        .drop_nulls()
-        .sort("Pick")
+    return curve_fitting.fit_stats(
+        stats_df, LogDecayModel, stat_col=stat_col, max_pick=max_pick
     )
-    picks = sub["Pick"].to_numpy().astype(float)
-    values = sub[stat_col].to_numpy().astype(float)
-
-    popt, pcov = curve_fit(_log_decay, picks, values, p0=[-5.0, 25.0])
-    y_fit = _log_decay(picks, *popt)
-    return {"popt": popt, "pcov": pcov, "x_fit": picks, "y_fit": y_fit}
 
 
-def logarithmic_fit_result_to_dataframe(fit_result: dict) -> pl.DataFrame:
+def logarithmic_fit_result_to_dataframe(
+    fit_result: IndividualFitResult | StatsFitResult,
+) -> pl.DataFrame:
     """Convert a logarithmic fit result to a saveable DataFrame.
 
     Re-evaluates ``f(pick) = a * ln(pick) + b`` at every integer pick from 1
     through the maximum pick used in the fit, with a 1-sigma confidence band.
 
     Args:
-        fit_result: Return value of :func:`logarithmic_av_fit_stat`.
+        fit_result: Return value of :func:`logarithmic_av_fit` or
+            :func:`logarithmic_av_fit_stat`.
 
     Returns:
         Eager DataFrame with columns ``pick`` (Int64), ``y_fit``,
-        ``y_upper``, ``y_lower`` (Float64).
+        ``y_upper``, ``y_lower`` (Float64), one row per integer pick.
     """
-    a, b = fit_result["popt"]
-    pcov = fit_result["pcov"]
-    max_pick = int(round(float(fit_result["x_fit"][-1])))
-    picks = np.arange(1, max_pick + 1, dtype=float)
-
-    y_fit = _log_decay(picks, a, b)
-
-    # Jacobian: [d/da, d/db] = [ln(pick), 1]
-    J = np.column_stack([np.log(picks), np.ones_like(picks)])
-    sigma = np.sqrt(np.abs(np.einsum("ij,jk,ik->i", J, pcov, J)))
-
-    return pl.DataFrame({
-        "pick": picks.astype(int).tolist(),
-        "y_fit": y_fit.tolist(),
-        "y_upper": (y_fit + sigma).tolist(),
-        "y_lower": (y_fit - sigma).tolist(),
-    })
+    return curve_fitting.fit_result_to_dataframe(fit_result, LogDecayModel)

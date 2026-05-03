@@ -25,10 +25,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.annual_av_analysis import (
-    _aggregate_player_av,
-    _prepare_av_data,
+    aggregate_player_av,
     logarithmic_av_fit,
     logarithmic_fit_result_to_dataframe,
+    prepare_av_data,
 )
 from src.data_ingest import load_parquets_from_dir
 
@@ -82,8 +82,8 @@ def main() -> None:
     print(f"Loading AV data (draft years {DRAFT_YEAR_START}–{DRAFT_YEAR_END}, "
           f"first {MAX_SEASONS_FROM_DRAFT} seasons, min season AV = {MIN_SEASON_AV})...")
 
-    player_av_lf = _aggregate_player_av(
-        _prepare_av_data(load_parquets_from_dir(RAW_DIR, lazy=True)).filter(
+    player_av_lf = aggregate_player_av(
+        prepare_av_data(load_parquets_from_dir(RAW_DIR, lazy=True)).filter(
             (pl.col("Draft Year") >= DRAFT_YEAR_START)
             & (pl.col("Draft Year") <= DRAFT_YEAR_END)
         ),

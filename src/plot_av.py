@@ -185,7 +185,7 @@ def plot_animated_rolling_window(
         v
         for fr in rolling_fit_dict.values()
         for v in (
-            list(fr["q75"]) + list(fr["q25"]) + list(fr["y_fit"]) + list(fr["means"])
+            list(fr["q75"]) + list(fr["q25"]) + list(fr["y_fit"]) + list(fr["stat_values"])
         )
     ]
     y_min = min(all_y)
@@ -200,7 +200,7 @@ def plot_animated_rolling_window(
         x_fit = fit_result["x_fit"]
         y_fit = fit_result["y_fit"]
         picks = fit_result["picks"]
-        means = fit_result["means"]
+        stat_values = fit_result["stat_values"]
         a, b, c = fit_result["popt"]
 
         band = go.Scatter(
@@ -221,7 +221,7 @@ def plot_animated_rolling_window(
         )
         scatter = go.Scatter(
             x=picks,
-            y=means,
+            y=stat_values,
             mode="markers",
             marker=dict(color=obs_color, size=5),
             name="Mean AV per pick",
@@ -480,7 +480,7 @@ def plot_exponential_fit_means(
         raise ValueError("export_format must be specified when export_path is provided.")
 
     picks = fit_result["picks"]
-    means = fit_result["means"]
+    stat_values = fit_result["stat_values"]
     x_fit = fit_result["x_fit"]
     y_fit = fit_result["y_fit"]
     iqr_picks = list(fit_result["iqr_picks"])
@@ -521,7 +521,7 @@ def plot_exponential_fit_means(
     fig.add_trace(
         go.Scatter(
             x=picks,
-            y=means,
+            y=stat_values,
             mode="markers",
             marker=dict(color=obs_color, size=5),
             name="Mean AV per pick",

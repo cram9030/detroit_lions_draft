@@ -45,7 +45,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 import polars as pl
 import plotly.graph_objects as go
 
-from src.annual_av_analysis import exponential_av_fit_means
+from src.annual_av_analysis import exponential_av_fit_stat
 from src.models.factory import make_career_av_model
 
 RAW_DIR = PROJECT_ROOT / "data/raw/stathead/annual_av"
@@ -176,7 +176,7 @@ def _build_pick_expectation(max_pick: int = 260) -> dict[int, float]:
         )
 
     stats_df = pl.read_csv(pick_stats_path)
-    fit = exponential_av_fit_means(stats_df, max_pick=max_pick)
+    fit = exponential_av_fit_stat(stats_df, stat_col="mean", max_pick=max_pick)
     import numpy as np
     a, b, c = fit["popt"]
     picks = stats_df.filter(pl.col("Pick") <= max_pick)["Pick"].to_list()
