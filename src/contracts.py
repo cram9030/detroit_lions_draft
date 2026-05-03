@@ -116,12 +116,20 @@ def get_replacement_level_av(
     Returns:
         Eager DataFrame with columns: Player, year_signed, value, AV.1.
     """
-    contract_pairs = replacement_contracts.select([
-        pl.col("player").alias("Player"),
-        pl.col("year_signed").cast(pl.Int64).alias("Season"),
-        pl.col("value"),
-    ])
+    # Deduplicate on (player, year_signed) to avoid duplicate AV rows when a
+    # player has multiple minimum-salary contracts in the same season.
+    contract_pairs = (
+        replacement_contracts
+        .sort("value")
+        .unique(subset=["player", "year_signed"], keep="first")
+        .select([
+            pl.col("player").alias("Player"),
+            pl.col("year_signed").cast(pl.Int64).alias("Season"),
+            pl.col("value"),
+        ])
+    )
 
+    # When two players share a name, keep the higher AV.1 (rare name collisions).
     result = (
         av_data
         .join(
@@ -130,6 +138,8 @@ def get_replacement_level_av(
             how="inner",
         )
         .select(["Player", pl.col("Season").alias("year_signed"), "value", "AV.1"])
+        .group_by(["Player", "year_signed", "value"])
+        .agg(pl.col("AV.1").max())
         .collect()
         .sort(["year_signed", "Player"])
     )
