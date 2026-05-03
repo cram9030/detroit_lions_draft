@@ -1193,3 +1193,74 @@ def fit_result_to_dataframe(
         "y_upper": (y_fit + sigma).tolist(),
         "y_lower": (y_fit - sigma).tolist(),
     })
+
+
+def _log_decay(x: np.ndarray, a: float, b: float) -> np.ndarray:
+    return a * np.log(x) + b
+
+
+def logarithmic_av_fit_stat(
+    stats_df: pl.DataFrame,
+    stat_col: str = "mean",
+    max_pick: int = 250,
+) -> dict:
+    """Fit a logarithmic decay curve to a per-pick statistic column.
+
+    Fits the model ``f(pick) = a * ln(pick) + b`` via nonlinear least squares.
+    For a decreasing function ``a < 0`` and ``b`` is the value at pick 1.
+
+    Args:
+        stats_df: Per-pick stats DataFrame (output of :func:`pick_based_stats`).
+        stat_col: Column name to fit (e.g. ``"mean"``, ``"50%"``).
+        max_pick: Upper pick bound (inclusive) for the fit.
+
+    Returns:
+        Dict with keys ``popt`` (ndarray[2]), ``pcov`` (ndarray[2,2]),
+        ``x_fit`` (ndarray), ``y_fit`` (ndarray).
+    """
+    from scipy.optimize import curve_fit
+
+    sub = (
+        stats_df.filter(pl.col("Pick") <= max_pick)
+        .select(["Pick", stat_col])
+        .drop_nulls()
+        .sort("Pick")
+    )
+    picks = sub["Pick"].to_numpy().astype(float)
+    values = sub[stat_col].to_numpy().astype(float)
+
+    popt, pcov = curve_fit(_log_decay, picks, values, p0=[-5.0, 25.0])
+    y_fit = _log_decay(picks, *popt)
+    return {"popt": popt, "pcov": pcov, "x_fit": picks, "y_fit": y_fit}
+
+
+def logarithmic_fit_result_to_dataframe(fit_result: dict) -> pl.DataFrame:
+    """Convert a logarithmic fit result to a saveable DataFrame.
+
+    Re-evaluates ``f(pick) = a * ln(pick) + b`` at every integer pick from 1
+    through the maximum pick used in the fit, with a 1-sigma confidence band.
+
+    Args:
+        fit_result: Return value of :func:`logarithmic_av_fit_stat`.
+
+    Returns:
+        Eager DataFrame with columns ``pick`` (Int64), ``y_fit``,
+        ``y_upper``, ``y_lower`` (Float64).
+    """
+    a, b = fit_result["popt"]
+    pcov = fit_result["pcov"]
+    max_pick = int(round(float(fit_result["x_fit"][-1])))
+    picks = np.arange(1, max_pick + 1, dtype=float)
+
+    y_fit = _log_decay(picks, a, b)
+
+    # Jacobian: [d/da, d/db] = [ln(pick), 1]
+    J = np.column_stack([np.log(picks), np.ones_like(picks)])
+    sigma = np.sqrt(np.abs(np.einsum("ij,jk,ik->i", J, pcov, J)))
+
+    return pl.DataFrame({
+        "pick": picks.astype(int).tolist(),
+        "y_fit": y_fit.tolist(),
+        "y_upper": (y_fit + sigma).tolist(),
+        "y_lower": (y_fit - sigma).tolist(),
+    })
