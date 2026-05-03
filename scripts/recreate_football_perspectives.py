@@ -34,6 +34,7 @@ from src.annual_av_analysis import (
     exponential_av_fit,
     exponential_av_fit_stat,
     fit_result_to_dataframe,
+    logarithmic_av_fit,
     logarithmic_av_fit_stat,
     logarithmic_fit_result_to_dataframe,
     pick_based_stats,
@@ -55,10 +56,11 @@ MARGINAL_ADJUSTMENT = 3.6   # subtract to convert total AV → marginal value
 MAX_PICK = 224              # published FP chart covers picks 1–224
 
 # Colors follow the notebook palette
-_COLOR_INDIVIDUAL = "#59a14f"   # green  — individual player fit
-_COLOR_MEAN       = "#4e79a7"   # blue   — per-pick mean exponential fit
-_COLOR_LOG        = "#f28e2b"   # orange — per-pick mean logarithmic fit
-_COLOR_FP_REF     = "#e15759"   # red    — Football Perspectives reference
+_COLOR_INDIVIDUAL     = "#59a14f"   # green       — individual player exponential fit
+_COLOR_INDIVIDUAL_LOG = "#76b7b2"   # teal        — individual player logarithmic fit
+_COLOR_MEAN           = "#4e79a7"   # blue        — per-pick mean exponential fit
+_COLOR_LOG            = "#f28e2b"   # orange      — per-pick mean logarithmic fit
+_COLOR_FP_REF         = "#e15759"   # red         — Football Perspectives reference
 
 
 # ---------------------------------------------------------------------------
@@ -144,18 +146,25 @@ def main() -> None:
     a, b = fit_log["popt"]
     print(f"      f(pick) = {a:.3f} * ln(pick) + {b:.3f}")
 
-    df_individual = fit_result_to_dataframe(fit_individual)
-    df_mean       = fit_result_to_dataframe(fit_mean)
-    df_log        = logarithmic_fit_result_to_dataframe(fit_log)
+    print("  (d) Individual player AV (logarithmic)...")
+    fit_individual_log = logarithmic_av_fit(player_av_adjusted, max_pick=MAX_PICK)
+    a, b = fit_individual_log["popt"]
+    print(f"      f(pick) = {a:.3f} * ln(pick) + {b:.3f}")
+
+    df_individual     = fit_result_to_dataframe(fit_individual)
+    df_mean           = fit_result_to_dataframe(fit_mean)
+    df_log            = logarithmic_fit_result_to_dataframe(fit_log)
+    df_individual_log = logarithmic_fit_result_to_dataframe(fit_individual_log)
 
     # Normalize all curves so pick 224 = 0.1 (Stewart's anchoring convention)
     def _normalize(df: pl.DataFrame) -> pl.DataFrame:
         shift = df.filter(pl.col("pick") == MAX_PICK)["y_fit"][0] - 0.1
         return df.with_columns([(pl.col(c) - shift).alias(c) for c in ("y_fit", "y_upper", "y_lower")])
 
-    df_individual = _normalize(df_individual)
-    df_mean       = _normalize(df_mean)
-    df_log        = _normalize(df_log)
+    df_individual     = _normalize(df_individual)
+    df_mean           = _normalize(df_mean)
+    df_log            = _normalize(df_log)
+    df_individual_log = _normalize(df_individual_log)
 
     # ------------------------------------------------------------------
     # Step 4: Load reference and compute least-squares comparison
@@ -174,9 +183,10 @@ def main() -> None:
     )
 
     metrics = {
-        "Individual fit": _least_squares(df_individual.join(fp_chart, on="pick", how="inner"), fp_vals),
-        "Mean fit":       _least_squares(df_mean.join(fp_chart, on="pick", how="inner"), fp_vals),
-        "Log fit":        _least_squares(df_log.join(fp_chart, on="pick", how="inner"), fp_vals),
+        "Individual fit":     _least_squares(df_individual.join(fp_chart, on="pick", how="inner"), fp_vals),
+        "Mean fit":           _least_squares(df_mean.join(fp_chart, on="pick", how="inner"), fp_vals),
+        "Log fit":            _least_squares(df_log.join(fp_chart, on="pick", how="inner"), fp_vals),
+        "Individual log fit": _least_squares(df_individual_log.join(fp_chart, on="pick", how="inner"), fp_vals),
     }
 
     print(f"\nLeast-Squares Comparison vs. Football Perspectives ({len(fp_vals)} picks):")
@@ -191,6 +201,7 @@ def main() -> None:
     df_individual.write_csv(PROCESSED_DIR / "exp_fit_5yr_av_marginal_individual.csv")
     df_mean.write_csv(PROCESSED_DIR / "exp_fit_5yr_av_marginal_mean.csv")
     df_log.write_csv(PROCESSED_DIR / "exp_fit_5yr_av_marginal_log.csv")
+    df_individual_log.write_csv(PROCESSED_DIR / "exp_fit_5yr_av_marginal_individual_log.csv")
     print(f"\nSaved fitted curves → {PROCESSED_DIR.relative_to(PROJECT_ROOT)}/exp_fit_5yr_av_marginal_*.csv")
 
     # ------------------------------------------------------------------
@@ -211,9 +222,10 @@ def main() -> None:
 
     # 1-sigma bands (behind the curves, very transparent)
     for df, color, label in [
-        (df_individual, _COLOR_INDIVIDUAL, "Individual"),
-        (df_mean,       _COLOR_MEAN,       "Mean"),
-        (df_log,        _COLOR_LOG,        "Log"),
+        (df_individual,     _COLOR_INDIVIDUAL,     "Individual"),
+        (df_individual_log, _COLOR_INDIVIDUAL_LOG, "IndividualLog"),
+        (df_mean,           _COLOR_MEAN,           "Mean"),
+        (df_log,            _COLOR_LOG,            "Log"),
     ]:
         bx, by = _band_xy(df)
         r, g, b_val = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
@@ -236,15 +248,22 @@ def main() -> None:
         name="Adjusted per-pick mean (1980–2007)",
     ))
 
-    r2_ind = metrics["Individual fit"]["r2"]
-    r2_mn  = metrics["Mean fit"]["r2"]
-    r2_log = metrics["Log fit"]["r2"]
+    r2_ind     = metrics["Individual fit"]["r2"]
+    r2_ind_log = metrics["Individual log fit"]["r2"]
+    r2_mn      = metrics["Mean fit"]["r2"]
+    r2_log     = metrics["Log fit"]["r2"]
 
     fig.add_trace(go.Scatter(
         x=df_individual["pick"].to_list(), y=df_individual["y_fit"].to_list(),
         mode="lines", line=dict(color=_COLOR_INDIVIDUAL, width=2),
         name=f"Individual player fit — exponential (R²={r2_ind:.3f})",
         legendgroup="Individual",
+    ))
+    fig.add_trace(go.Scatter(
+        x=df_individual_log["pick"].to_list(), y=df_individual_log["y_fit"].to_list(),
+        mode="lines", line=dict(color=_COLOR_INDIVIDUAL_LOG, width=2),
+        name=f"Individual player fit — logarithmic (R²={r2_ind_log:.3f})",
+        legendgroup="IndividualLog",
     ))
     fig.add_trace(go.Scatter(
         x=df_mean["pick"].to_list(), y=df_mean["y_fit"].to_list(),
@@ -271,7 +290,7 @@ def main() -> None:
             "Football Perspectives Draft Value Chart — Recreation<br>"
             f"<sup>1980–2007 drafts · 5-year AV · −{MARGINAL_ADJUSTMENT} marginal adjustment · "
             f"normalized pick {MAX_PICK} = 0.1 · "
-            f"R²: individual={r2_ind:.3f}, mean={r2_mn:.3f}, log={r2_log:.3f}</sup>"
+            f"R²: ind_exp={r2_ind:.3f}, ind_log={r2_ind_log:.3f}, mean_exp={r2_mn:.3f}, mean_log={r2_log:.3f}</sup>"
         ),
         xaxis=dict(title="Overall Pick", range=[1, MAX_PICK]),
         yaxis=dict(title="Normalized Pick Value"),

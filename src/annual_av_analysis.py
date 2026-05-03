@@ -1199,6 +1199,76 @@ def _log_decay(x: np.ndarray, a: float, b: float) -> np.ndarray:
     return a * np.log(x) + b
 
 
+def logarithmic_av_fit(
+    player_av_data: pl.LazyFrame | pl.DataFrame,
+    max_pick: int = 250,
+    av_col: str = "rookie_contract_av",
+) -> dict:
+    """Fit a logarithmic decay curve to individual player rookie contract AV by pick.
+
+    Fits the model ``f(pick) = a * ln(pick) + b`` against every individual
+    player's AV value. Mirrors :func:`exponential_av_fit` but uses a 2-parameter
+    logarithmic model.
+
+    Args:
+        player_av_data: LazyFrame or eager DataFrame with one row per player,
+            containing ``Pick`` and the column named ``av_col``.
+        max_pick: Maximum pick number to include. Default 250.
+        av_col: Name of the AV column. Default ``"rookie_contract_av"``.
+
+    Returns:
+        Dict with keys ``popt`` (ndarray[2]), ``pcov`` (ndarray[2,2]),
+        ``perr`` (ndarray[2]), ``x_fit``, ``y_fit``, ``y_upper``,
+        ``y_lower``, ``picks``, ``av_values``.
+
+    Raises:
+        RuntimeError: If ``curve_fit`` fails to converge.
+        ValueError: If fewer than 3 valid data points remain after filtering.
+    """
+    df = (
+        player_av_data.lazy()
+        .filter(pl.col("Pick") <= max_pick)
+        .select(["Pick", av_col])
+        .drop_nulls()
+        .collect()
+        .sort("Pick")
+    )
+
+    if len(df) < 3:
+        raise ValueError(
+            f"Only {len(df)} player records after filtering to max_pick={max_pick}. "
+            "Need at least 3 for a 2-parameter logarithmic fit."
+        )
+
+    picks = df["Pick"].to_numpy().astype(float)
+    av_values = df[av_col].to_numpy()
+
+    try:
+        popt, pcov = curve_fit(_log_decay, picks, av_values, p0=[-5.0, 20.0], maxfev=10000)
+    except RuntimeError as exc:
+        raise RuntimeError(f"Logarithmic curve fit failed to converge: {exc}") from exc
+
+    perr = np.sqrt(np.diag(pcov))
+
+    x_fit = np.linspace(picks.min(), picks.max(), 500)
+    y_fit = _log_decay(x_fit, *popt)
+
+    J = np.column_stack([np.log(x_fit), np.ones_like(x_fit)])
+    sigma = np.sqrt(np.abs(np.einsum("ij,jk,ik->i", J, pcov, J)))
+
+    return {
+        "popt": popt,
+        "pcov": pcov,
+        "perr": perr,
+        "x_fit": x_fit,
+        "y_fit": y_fit,
+        "y_upper": y_fit + sigma,
+        "y_lower": y_fit - sigma,
+        "picks": picks,
+        "av_values": av_values,
+    }
+
+
 def logarithmic_av_fit_stat(
     stats_df: pl.DataFrame,
     stat_col: str = "mean",
