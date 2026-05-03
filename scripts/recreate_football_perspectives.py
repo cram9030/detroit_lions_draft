@@ -107,6 +107,7 @@ def main() -> None:
             & (pl.col("Draft Year") <= DRAFT_YEAR_END)
         ),
         max_seasons_from_draft=MAX_SEASONS_FROM_DRAFT,
+        min_season_av=2,
     )
 
     # ------------------------------------------------------------------

@@ -98,6 +98,7 @@ def _prepare_av_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
 def _aggregate_player_av(
     lazy_frame: pl.LazyFrame,
     max_seasons_from_draft: int = 4,
+    min_season_av: float = 0,
 ) -> pl.LazyFrame:
     """Aggregate season-level AV into one ``rookie_contract_av`` value per player.
 
@@ -119,6 +120,10 @@ def _aggregate_player_av(
             expressed as a strict upper bound (``Season - Draft Year <
             max_seasons_from_draft``). Default ``4`` retains seasons 0–3
             (the typical four-year rookie contract window).
+        min_season_av: Minimum single-season AV required for a season to be
+            included in the sum. Seasons with ``AV.1 < min_season_av`` are
+            dropped before aggregation. Default ``0`` retains all seasons and
+            preserves prior behaviour.
 
     Returns:
         LazyFrame with one row per unique (Player, Pick, Draft Year)
@@ -128,7 +133,9 @@ def _aggregate_player_av(
         Negative values are valid and must not be filtered.
     """
     return (
-        lazy_frame.filter(pl.col("Season") - pl.col("Draft Year") < max_seasons_from_draft)
+        lazy_frame
+        .filter(pl.col("Season") - pl.col("Draft Year") < max_seasons_from_draft)
+        .filter(pl.col("AV.1") >= min_season_av)
         .group_by(["Player", "Pick", "Draft Year", "Draft Team"])
         .agg(pl.col("AV.1").sum().alias("rookie_contract_av"))
     )
