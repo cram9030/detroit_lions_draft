@@ -18,6 +18,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import polars as pl
 
+from src import curve_fitting as _cf
+
 # Viridis color list (10 entries, dark purple → bright yellow)
 _VIRIDIS = px.colors.sequential.Viridis
 
@@ -438,6 +440,111 @@ def plot_exponential_fit(
     return fig
 
 
+def plot_exp_and_log_fit(
+    exp_fit_result: dict,
+    log_fit_result: dict,
+    title: str,
+    export_path: str | Path | None = None,
+    export_format: Literal["html", "png", "svg"] | None = None,
+) -> go.Figure:
+    """Plot exponential and logarithmic decay fits together on one figure.
+
+    Displays four layers:
+    1. Individual player AV scatter (semi-transparent).
+    2. Exponential fit curve + 1-sigma band (dark blue / teal).
+    3. Logarithmic fit curve + 1-sigma band (green / light green).
+
+    Args:
+        exp_fit_result: Return value of :func:`annual_av_analysis.exponential_av_fit`.
+        log_fit_result: Return value of :func:`annual_av_analysis.logarithmic_av_fit`.
+        title: Chart title.
+        export_path: If provided, the figure is saved to this path.
+        export_format: Required when ``export_path`` is set.
+
+    Returns:
+        Plotly Figure object.
+
+    Raises:
+        ValueError: If ``export_path`` is set but ``export_format`` is None.
+    """
+    if export_path is not None and export_format is None:
+        raise ValueError("export_format must be specified when export_path is provided.")
+
+    _LOG_LINE_COLOR = _VIRIDIS[7]   # green-yellow for log fit line
+    _LOG_BAND_COLOR = _VIRIDIS[6]   # mid-green for log fit band
+
+    picks = exp_fit_result["picks"]
+    av_values = exp_fit_result["av_values"]
+    obs_color = _hex_to_rgba(_VIRIDIS[3], 0.3)
+
+    exp_band_fill = _hex_to_rgba(_BAND_COLOR, 0.25)
+    log_band_fill = _hex_to_rgba(_LOG_BAND_COLOR, 0.25)
+
+    a_e, b_e, c_e = exp_fit_result["popt"]
+    a_l, b_l = log_fit_result["popt"]
+
+    fig = go.Figure()
+
+    # Exponential 1-sigma band
+    x_exp = exp_fit_result["x_fit"]
+    x_exp_band = list(x_exp) + list(x_exp[::-1])
+    y_exp_band = list(exp_fit_result["y_upper"]) + list(exp_fit_result["y_lower"][::-1])
+    fig.add_trace(go.Scatter(
+        x=x_exp_band, y=y_exp_band,
+        fill="toself", fillcolor=exp_band_fill,
+        line=dict(color="rgba(0,0,0,0)"),
+        name="Exp ±1σ", showlegend=True,
+    ))
+
+    # Exponential fit curve
+    fig.add_trace(go.Scatter(
+        x=x_exp, y=exp_fit_result["y_fit"],
+        mode="lines",
+        line=dict(color=_LINE_COLOR, width=2),
+        name=f"Exp: {a_e:.2f}·exp(−{b_e:.4f}·pick) + {c_e:.2f}",
+    ))
+
+    # Logarithmic 1-sigma band
+    x_log = log_fit_result["x_fit"]
+    x_log_band = list(x_log) + list(x_log[::-1])
+    y_log_band = list(log_fit_result["y_upper"]) + list(log_fit_result["y_lower"][::-1])
+    fig.add_trace(go.Scatter(
+        x=x_log_band, y=y_log_band,
+        fill="toself", fillcolor=log_band_fill,
+        line=dict(color="rgba(0,0,0,0)"),
+        name="Log ±1σ", showlegend=True,
+    ))
+
+    # Logarithmic fit curve
+    fig.add_trace(go.Scatter(
+        x=x_log, y=log_fit_result["y_fit"],
+        mode="lines",
+        line=dict(color=_LOG_LINE_COLOR, width=2),
+        name=f"Log: {a_l:.2f}·ln(pick) + {b_l:.2f}",
+    ))
+
+    # Individual player AV scatter
+    fig.add_trace(go.Scatter(
+        x=picks, y=av_values,
+        mode="markers",
+        marker=dict(color=obs_color, size=3),
+        name="Individual player AV",
+    ))
+
+    fig.update_layout(
+        title=title,
+        xaxis=dict(title="Pick Number", range=[1, 250]),
+        yaxis_title="Rookie Contract AV",
+        template="plotly_white",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+
+    if export_path is not None:
+        _export_figure(fig, export_path, export_format)
+
+    return fig
+
+
 def plot_exponential_fit_means(
     fit_result: dict,
     title: str,
@@ -633,6 +740,86 @@ def plot_normalized_pick_value_comparison(
         yaxis=dict(title="Normalized Value (Pick 1 = 1.0)"),
         template="plotly_white",
         legend=dict(groupclick="toggleitem"),
+    )
+
+    if export_path is not None:
+        _export_figure(fig, export_path, export_format)
+
+    return fig
+
+
+def plot_multi_fit_comparison(
+    fits: dict[str, tuple[dict, "_cf.ModelDescriptor"]],
+    picks: np.ndarray,
+    av_values: np.ndarray,
+    title: str,
+    export_path: str | Path | None = None,
+    export_format: Literal["html", "png", "svg"] | None = None,
+) -> go.Figure:
+    """Overlay multiple curve-fit models on one figure with individual player scatter.
+
+    Each model in ``fits`` is evaluated at every integer pick from 1 to the
+    maximum pick in the fit result and plotted as a solid line. Individual
+    player AV observations are shown as a semi-transparent scatter underneath.
+
+    Args:
+        fits: Mapping of label → ``(fit_result, model)`` pairs. ``fit_result``
+            is the output of :func:`curve_fitting.fit_individuals` or
+            :func:`curve_fitting.fit_stats`; ``model`` is the same
+            :data:`~curve_fitting.ModelDescriptor` used to produce it.
+        picks: Individual player pick numbers for the scatter layer.
+        av_values: Individual player AV values aligned with ``picks``.
+        title: Chart title.
+        export_path: If provided, the figure is saved to this path.
+        export_format: Required when ``export_path`` is set.
+
+    Returns:
+        Plotly Figure with one line per model plus the scatter layer.
+
+    Raises:
+        ValueError: If ``export_path`` is set but ``export_format`` is None.
+    """
+    if export_path is not None and export_format is None:
+        raise ValueError("export_format must be specified when export_path is provided.")
+
+    n = len(fits)
+    if n == 1:
+        line_colors = [_VIRIDIS[0]]
+    else:
+        line_colors = px.colors.sample_colorscale("Viridis", n)
+
+    obs_color = _hex_to_rgba(_VIRIDIS[3], 0.2)
+
+    fig = go.Figure()
+
+    # Scatter first so all fit lines render on top
+    fig.add_trace(go.Scatter(
+        x=picks.tolist(),
+        y=av_values.tolist(),
+        mode="markers",
+        marker=dict(color=obs_color, size=3),
+        name="Individual player AV",
+        legendgroup="scatter",
+    ))
+
+    for i, (label, (fit_result, model)) in enumerate(fits.items()):
+        df = _cf.fit_result_to_dataframe(fit_result, model)
+        color = line_colors[i]
+
+        fig.add_trace(go.Scatter(
+            x=df["pick"].to_list(),
+            y=df["y_fit"].to_list(),
+            mode="lines",
+            line=dict(color=color, width=2),
+            name=label,
+        ))
+
+    fig.update_layout(
+        title=title,
+        xaxis=dict(title="Pick Number", range=[1, 250]),
+        yaxis_title="Rookie Contract AV",
+        template="plotly_white",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
 
     if export_path is not None:

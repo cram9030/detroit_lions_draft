@@ -31,6 +31,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+import numpy as np
 import polars as pl
 
 from src.annual_av_analysis import (
@@ -39,6 +40,8 @@ from src.annual_av_analysis import (
     exponential_av_fit_stat,
     filter_top_percentile_per_pick,
     fit_result_to_dataframe,
+    logarithmic_av_fit,
+    logarithmic_fit_result_to_dataframe,
     pick_based_stats,
     position_career_stats,
     prepare_av_data,
@@ -46,12 +49,28 @@ from src.annual_av_analysis import (
     rolling_window_skew_fit,
     skew_normal_fit,
 )
+from src.curve_fitting import (
+    CubicModel,
+    ExpDecayModel,
+    LogDecayModel,
+    QuadraticModel,
+    QuarticModel,
+    cubic,
+    exp_decay,
+    fit_individuals,
+    fit_result_to_dataframe as poly_fit_to_dataframe,
+    log_decay,
+    quadratic,
+    quartic,
+)
 from src.data_ingest import load_csv, load_nflreadr_draft_picks, load_parquets_from_dir
 from src.data_output import save_data
 from src.plot_av import (
     plot_animated_rolling_window,
+    plot_exp_and_log_fit,
     plot_exponential_fit,
     plot_exponential_fit_means,
+    plot_multi_fit_comparison,
     plot_normalized_pick_value_comparison,
     plot_pick_av,
     plot_position_career_av,
@@ -176,7 +195,7 @@ def main() -> None:
         print("Skipping all plots (--skip-plots).")
 
     # ------------------------------------------------------------------
-    # 7. Exponential fit
+    # 7. Exponential fit + logarithmic fit + goodness-of-fit metrics
     # ------------------------------------------------------------------
     if not args.skip_exp_fit:
         print("Fitting exponential decay curve to per-player rookie contract AV...")
@@ -185,8 +204,78 @@ def main() -> None:
         print(f"  f(pick) = {a:.3f} * exp(-{b:.5f} * pick) + {c:.3f}")
         print(f"  Parameter uncertainties (1σ): {fit_result['perr']}")
 
+        print("Fitting logarithmic decay curve to per-player rookie contract AV...")
+        log_fit_result = logarithmic_av_fit(player_av_lf, max_pick=250)
+        a_log, b_log = log_fit_result["popt"]
+        print(f"  f(pick) = {a_log:.3f} * ln(pick) + {b_log:.3f}")
+        print(f"  Parameter uncertainties (1σ): {log_fit_result['perr']}")
+
+        print("Fitting polynomial curves to per-player rookie contract AV...")
+        quad_fit_result = fit_individuals(player_av_lf, QuadraticModel, max_pick=250)
+        cubic_fit_result = fit_individuals(player_av_lf, CubicModel, max_pick=250)
+        quartic_fit_result = fit_individuals(player_av_lf, QuarticModel, max_pick=250)
+        print(f"  Quadratic popt: {quad_fit_result['popt']}")
+        print(f"  Cubic    popt: {cubic_fit_result['popt']}")
+        print(f"  Quartic  popt: {quartic_fit_result['popt']}")
+
+        def _r2_rmse(fit_res, model_fn):
+            y = fit_res["av_values"]
+            y_pred = model_fn(fit_res["picks"], *fit_res["popt"])
+            r2 = 1 - np.sum((y - y_pred) ** 2) / np.sum((y - y.mean()) ** 2)
+            rmse = np.sqrt(np.mean((y - y_pred) ** 2))
+            return float(r2), float(rmse)
+
+        r2_exp, rmse_exp = _r2_rmse(fit_result, exp_decay)
+        r2_log, rmse_log = _r2_rmse(log_fit_result, log_decay)
+        r2_quad, rmse_quad = _r2_rmse(quad_fit_result, quadratic)
+        r2_cubic, rmse_cubic = _r2_rmse(cubic_fit_result, cubic)
+        r2_quartic, rmse_quartic = _r2_rmse(quartic_fit_result, quartic)
+
+        print("  Fit metrics (individual player rookie contract AV):")
+        print(f"    Exponential: R²={r2_exp:.4f}, RMSE={rmse_exp:.4f}")
+        print(f"    Logarithmic: R²={r2_log:.4f}, RMSE={rmse_log:.4f}")
+        print(f"    Quadratic:   R²={r2_quad:.4f}, RMSE={rmse_quad:.4f}")
+        print(f"    Cubic:       R²={r2_cubic:.4f}, RMSE={rmse_cubic:.4f}")
+        print(f"    Quartic:     R²={r2_quartic:.4f}, RMSE={rmse_quartic:.4f}")
+
+        metrics_df = pl.DataFrame({
+            "model": ["exponential", "logarithmic", "quadratic", "cubic", "quartic"],
+            "r2": [r2_exp, r2_log, r2_quad, r2_cubic, r2_quartic],
+            "rmse": [rmse_exp, rmse_log, rmse_quad, rmse_cubic, rmse_quartic],
+        })
+        save_data(metrics_df, PROCESSED_DIR / "fit_metrics.csv", format="csv")
+        print("  Saved fit_metrics.csv")
+
+        save_data(
+            logarithmic_fit_result_to_dataframe(log_fit_result),
+            PROCESSED_DIR / "log_fit_rookie_contract_av.csv",
+            format="csv",
+        )
+        print("  Saved log_fit_rookie_contract_av.csv")
+
+        save_data(
+            poly_fit_to_dataframe(quad_fit_result, QuadraticModel),
+            PROCESSED_DIR / "poly_fit_quadratic_rookie_contract_av.csv",
+            format="csv",
+        )
+        print("  Saved poly_fit_quadratic_rookie_contract_av.csv")
+
+        save_data(
+            poly_fit_to_dataframe(cubic_fit_result, CubicModel),
+            PROCESSED_DIR / "poly_fit_cubic_rookie_contract_av.csv",
+            format="csv",
+        )
+        print("  Saved poly_fit_cubic_rookie_contract_av.csv")
+
+        save_data(
+            poly_fit_to_dataframe(quartic_fit_result, QuarticModel),
+            PROCESSED_DIR / "poly_fit_quartic_rookie_contract_av.csv",
+            format="csv",
+        )
+        print("  Saved poly_fit_quartic_rookie_contract_av.csv")
+
         # ------------------------------------------------------------------
-        # 8. Exponential fit plot
+        # 8. Exponential fit plot + all-model comparison
         # ------------------------------------------------------------------
         save_data(
             fit_result_to_dataframe(fit_result),
@@ -204,6 +293,33 @@ def main() -> None:
                 export_format="html",
             )
             print("  Saved pick_av_exp_fit.html")
+
+            print("Generating combined exponential + logarithmic fit plot...")
+            plot_exp_and_log_fit(
+                fit_result,
+                log_fit_result,
+                title="Rookie Contract AV — Exponential vs Logarithmic Fit by Pick (1970–2022)",
+                export_path=FIGURES_DIR / "pick_av_exp_vs_log_fit.html",
+                export_format="html",
+            )
+            print("  Saved pick_av_exp_vs_log_fit.html")
+
+            print("Generating all-model comparison plot...")
+            plot_multi_fit_comparison(
+                fits={
+                    "Exponential": (fit_result, ExpDecayModel),
+                    "Logarithmic": (log_fit_result, LogDecayModel),
+                    "Quadratic": (quad_fit_result, QuadraticModel),
+                    "Cubic": (cubic_fit_result, CubicModel),
+                    "Quartic": (quartic_fit_result, QuarticModel),
+                },
+                picks=fit_result["picks"],
+                av_values=fit_result["av_values"],
+                title="Rookie Contract AV — Model Comparison by Pick (1970–2022)",
+                export_path=FIGURES_DIR / "pick_av_all_fits_comparison.html",
+                export_format="html",
+            )
+            print("  Saved pick_av_all_fits_comparison.html")
 
         # ------------------------------------------------------------------
         # 9. Exponential fit on per-pick means
