@@ -440,6 +440,118 @@ def plot_exponential_fit(
     return fig
 
 
+def plot_eavar(
+    fit_result: dict,
+    replacement_level: float,
+    title: str,
+    export_path: str | Path | None = None,
+    export_format: Literal["html", "png", "svg"] | None = None,
+) -> go.Figure:
+    """Plot the Expected AV Above Replacement (EAVAR) curve by draft pick.
+
+    Shifts the exponential fit down by ``replacement_level`` so the y-axis
+    represents how much above replacement a given pick is expected to produce
+    over the rookie contract window. A horizontal dashed line at y = 0 marks
+    the replacement level baseline.
+
+    Displays three layers:
+    1. Individual player AV above replacement (scatter, semi-transparent).
+    2. EAVAR fitted curve (solid dark-blue line).
+    3. 1-sigma confidence band (shaded teal region).
+    4. Horizontal dashed line at y = 0 (replacement level).
+
+    Args:
+        fit_result: Return value of :func:`annual_av_analysis.exponential_av_fit`.
+            Must contain ``picks``, ``av_values``, ``x_fit``, ``y_fit``,
+            ``y_upper``, ``y_lower``, and ``popt`` keys.
+        replacement_level: Replacement-level AV baseline to subtract (mean
+            per-season AV × 4 for the rookie contract window).
+        title: Chart title displayed at the top of the figure.
+        export_path: If provided, the figure is saved to this path.
+        export_format: Required when ``export_path`` is set. One of
+            ``"html"``, ``"png"``, or ``"svg"``.
+
+    Returns:
+        Plotly Figure object.
+
+    Raises:
+        ValueError: If ``export_path`` is set but ``export_format`` is None.
+    """
+    if export_path is not None and export_format is None:
+        raise ValueError("export_format must be specified when export_path is provided.")
+
+    picks = fit_result["picks"]
+    av_values = fit_result["av_values"] - replacement_level
+    x_fit = fit_result["x_fit"]
+    y_fit = fit_result["y_fit"] - replacement_level
+    y_upper = fit_result["y_upper"] - replacement_level
+    y_lower = fit_result["y_lower"] - replacement_level
+    a, b, c = fit_result["popt"]
+
+    band_fill = _hex_to_rgba(_BAND_COLOR, 0.25)
+    obs_color = _hex_to_rgba(_VIRIDIS[3], 0.3)
+
+    fig = go.Figure()
+
+    # 1-sigma band (rendered first, behind everything)
+    x_band = list(x_fit) + list(x_fit[::-1])
+    y_band = list(y_upper) + list(y_lower[::-1])
+    fig.add_trace(
+        go.Scatter(
+            x=x_band,
+            y=y_band,
+            fill="toself",
+            fillcolor=band_fill,
+            line=dict(color="rgba(0,0,0,0)"),
+            name="±1σ confidence",
+            showlegend=True,
+        )
+    )
+
+    # EAVAR fitted curve
+    fig.add_trace(
+        go.Scatter(
+            x=x_fit,
+            y=y_fit,
+            mode="lines",
+            line=dict(color=_LINE_COLOR, width=2),
+            name=f"EAVAR: {a:.2f}·exp(−{b:.4f}·pick) + {c:.2f} − {replacement_level:.1f}",
+        )
+    )
+
+    # Individual player EAVAR scatter
+    fig.add_trace(
+        go.Scatter(
+            x=picks,
+            y=av_values,
+            mode="markers",
+            marker=dict(color=obs_color, size=3),
+            name="Individual player EAVAR",
+        )
+    )
+
+    # Replacement level baseline at y = 0
+    fig.add_hline(
+        y=0,
+        line=dict(color="black", width=1.5, dash="dash"),
+        annotation_text=f"Replacement Level ({replacement_level:.1f} AV)",
+        annotation_position="top right",
+    )
+
+    fig.update_layout(
+        title=title,
+        xaxis=dict(title="Pick Number", range=[1, 250]),
+        yaxis_title="Expected AV Above Replacement (Rookie Contract Window)",
+        template="plotly_white",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+
+    if export_path is not None:
+        _export_figure(fig, export_path, export_format)
+
+    return fig
+
+
 def plot_exp_and_log_fit(
     exp_fit_result: dict,
     log_fit_result: dict,
