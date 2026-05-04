@@ -79,3 +79,38 @@ Identical model to the individual-player fit above, but fitted against per-pick 
 - **Teal scatter points** — per-pick mean AV (the points the curve is fitted to).
 
 This plot is better for assessing the smoothness of the value curve and for reading off expected AV at a specific pick. The IQR band gives a practical sense of the range of outcomes a team should plan for — a pick where the band sits well above zero still carries meaningful bust risk.
+
+---
+
+### `pick_av_all_fits_comparison.html` — All-Model Comparison
+
+Overlays all five decay models on one figure against the individual player scatter, allowing direct visual comparison of how each functional form tracks the data.
+
+Models shown (each as a solid line across picks 1–250):
+
+| Model | Form |
+|---|---|
+| Exponential | `a · exp(−b · pick) + c` |
+| Logarithmic | `a · ln(pick) + b` |
+| Quadratic | `a · pick² + b · pick + c` |
+| Cubic | `a · pick³ + b · pick² + c · pick + d` |
+| Quartic | `a · pick⁴ + b · pick³ + c · pick² + d · pick + e` |
+
+All five models fit the data comparably well (R² ≈ 0.28–0.29 on individual player AV, which is inherently noisy). The quartic edges out exponential by a small margin. Use this plot to assess where models diverge — particularly in the late rounds — and whether any functional form produces implausible values outside the fitted range.
+
+---
+
+## Processed data outputs
+
+In addition to the figures, `run_analysis.py` writes per-pick fit curves to `data/processed/`:
+
+| File | Contents |
+|---|---|
+| `exp_fit_rookie_contract_av.csv` | Exponential fit evaluated at picks 1–250 |
+| `log_fit_rookie_contract_av.csv` | Logarithmic fit evaluated at picks 1–250 |
+| `poly_fit_quadratic_rookie_contract_av.csv` | Quadratic fit evaluated at picks 1–250 |
+| `poly_fit_cubic_rookie_contract_av.csv` | Cubic fit evaluated at picks 1–250 |
+| `poly_fit_quartic_rookie_contract_av.csv` | Quartic fit evaluated at picks 1–250 |
+| `fit_metrics.csv` | R² and RMSE for all five models |
+
+All fit CSVs share the same schema: `pick` (integer), `y_fit`, `y_upper`, `y_lower` (Float64, 1-sigma confidence band).
