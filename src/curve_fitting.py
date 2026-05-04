@@ -100,6 +100,21 @@ def log_decay(x: np.ndarray, a: float, b: float) -> np.ndarray:
     return a * np.log(x) + b
 
 
+def quadratic(x: np.ndarray, a: float, b: float, c: float) -> np.ndarray:
+    """Quadratic polynomial: ``f(x) = a * x² + b * x + c``."""
+    return a * x**2 + b * x + c
+
+
+def cubic(x: np.ndarray, a: float, b: float, c: float, d: float) -> np.ndarray:
+    """Cubic polynomial: ``f(x) = a * x³ + b * x² + c * x + d``."""
+    return a * x**3 + b * x**2 + c * x + d
+
+
+def quartic(x: np.ndarray, a: float, b: float, c: float, d: float, e: float) -> np.ndarray:
+    """Quartic polynomial: ``f(x) = a * x⁴ + b * x³ + c * x² + d * x + e``."""
+    return a * x**4 + b * x**3 + c * x**2 + d * x + e
+
+
 def _exp_jacobian(x: np.ndarray, popt: np.ndarray) -> np.ndarray:
     a, b, _ = popt
     return np.column_stack([
@@ -111,6 +126,18 @@ def _exp_jacobian(x: np.ndarray, popt: np.ndarray) -> np.ndarray:
 
 def _log_jacobian(x: np.ndarray, popt: np.ndarray) -> np.ndarray:  # noqa: ARG001
     return np.column_stack([np.log(x), np.ones_like(x)])
+
+
+def _quadratic_jacobian(x: np.ndarray, popt: np.ndarray) -> np.ndarray:  # noqa: ARG001
+    return np.column_stack([x**2, x, np.ones_like(x)])
+
+
+def _cubic_jacobian(x: np.ndarray, popt: np.ndarray) -> np.ndarray:  # noqa: ARG001
+    return np.column_stack([x**3, x**2, x, np.ones_like(x)])
+
+
+def _quartic_jacobian(x: np.ndarray, popt: np.ndarray) -> np.ndarray:  # noqa: ARG001
+    return np.column_stack([x**4, x**3, x**2, x, np.ones_like(x)])
 
 
 # ---------------------------------------------------------------------------
@@ -133,6 +160,27 @@ LogDecayModel: ModelDescriptor = (
 )
 """Two-parameter logarithmic decay: ``f(pick) = a * ln(pick) + b``."""
 
+QuadraticModel: ModelDescriptor = (
+    quadratic,
+    _quadratic_jacobian,
+    lambda v: [0.0, -(float(v.max()) - float(v.min())) / 250, float(v.max())],
+)
+"""Three-parameter quadratic polynomial: ``f(pick) = a * pick² + b * pick + c``."""
+
+CubicModel: ModelDescriptor = (
+    cubic,
+    _cubic_jacobian,
+    lambda v: [0.0, 0.0, -(float(v.max()) - float(v.min())) / 250, float(v.max())],
+)
+"""Four-parameter cubic polynomial: ``f(pick) = a * pick³ + b * pick² + c * pick + d``."""
+
+QuarticModel: ModelDescriptor = (
+    quartic,
+    _quartic_jacobian,
+    lambda v: [0.0, 0.0, 0.0, -(float(v.max()) - float(v.min())) / 250, float(v.max())],
+)
+"""Five-parameter quartic polynomial: ``f(pick) = a * pick⁴ + b * pick³ + c * pick² + d * pick + e``."""
+
 
 # ---------------------------------------------------------------------------
 # Shared fitting engine
@@ -152,7 +200,7 @@ def _fit_and_band(
     ``x_fit``, ``y_fit``, ``y_upper``, ``y_lower``, ``picks``.
     """
     try:
-        popt, pcov = curve_fit(model_fn, picks, values, p0=p0, maxfev=10000)
+        popt, pcov, infodict, mesg, ier = curve_fit(model_fn, picks, values, p0=p0, maxfev=10000, full_output=True)
     except RuntimeError as exc:
         raise RuntimeError(f"Curve fit failed to converge: {exc}") from exc
 
@@ -180,6 +228,7 @@ def _fit_and_band(
         y_upper=y_fit + sigma,
         y_lower=y_fit - sigma,
         picks=picks,
+        infodict=infodict,
     )
 
 
