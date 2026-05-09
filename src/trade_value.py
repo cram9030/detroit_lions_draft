@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import TypedDict
 
+import nflreadpy
 import polars as pl
 
 from src.data_ingest import load_csv
@@ -266,3 +267,178 @@ def find_pick_combination(
         error=total - target_value,
         n_picks=len(picks),
     )
+
+
+# ---------------------------------------------------------------------------
+# Draft trade analysis
+# ---------------------------------------------------------------------------
+
+_TRADE_CHARTS: list[tuple[str, str]] = [
+    ("fitz_spiel", "fitzgerald_spielberger"),
+    ("jj", "jimmy_johnson"),
+    ("pff", "pff_war"),
+    ("rich_hill", "rich_hill"),
+    ("eaar", "eavar"),
+]
+
+
+def _empty_trade_df() -> pl.DataFrame:
+    """Return a zero-row DataFrame with the analyze_draft_trades schema."""
+    schema: dict[str, pl.PolarsDataType] = {
+        "trade_id": pl.Int64,
+        "team_traded_with": pl.String,
+        "picks_received": pl.String,
+        "picks_gave": pl.String,
+    }
+    for prefix, _ in _TRADE_CHARTS:
+        schema[f"{prefix}_value"] = pl.Float64
+        schema[f"{prefix}_picks"] = pl.String
+    return pl.DataFrame(schema=schema)
+
+
+def _resolve_pick_number(
+    pick_number: float | None,
+    pick_round: float | None,
+) -> int | None:
+    """Return a concrete pick number, estimating mid-round when only round is known."""
+    if pick_number is not None:
+        return int(pick_number)
+    if pick_round is not None:
+        return int((pick_round - 1) * 32 + 16)
+    return None
+
+
+def _compute_chart_value(
+    picks_received: list[int],
+    picks_gave: list[int],
+    chart_name: str,
+    data_dir: Path | str = _PROCESSED_DATA_DIR,
+) -> tuple[float, str]:
+    """Return (net_value, equivalent_picks_str) for one trade chart.
+
+    net_value = sum of received pick values - sum of gave pick values.
+    equivalent_picks_str = find_pick_combination(abs(net_value)) when net != 0,
+    empty string when net == 0.
+    """
+    chart = load_trade_chart(chart_name, data_dir=data_dir)
+
+    def _val(p: int) -> float:
+        row = chart.filter(pl.col("Pick") == p)
+        return float(row["Value"][0]) if len(row) > 0 else 0.0
+
+    net = sum(_val(p) for p in picks_received) - sum(_val(p) for p in picks_gave)
+
+    if net != 0:
+        result = find_pick_combination(abs(net), chart_name, data_dir=data_dir)
+        equiv = ",".join(str(p) for p in sorted(result["picks"]))
+    else:
+        equiv = ""
+
+    return net, equiv
+
+
+def analyze_draft_trades(
+    team: str,
+    year: int,
+    data_dir: Path | str = _PROCESSED_DATA_DIR,
+) -> pl.DataFrame:
+    """Return a DataFrame of draft trades involving team in the given year.
+
+    Each row represents one trade. Trades are excluded when:
+    - Any player asset (non-null pfr_id) has a draft_year ≠ year.
+    - After pick number resolution, no picks were exchanged on either side.
+
+    Rows with null pfr_id are pure pick rows and never trigger exclusion.
+    When only pick_round is known (pick_number is null), pick number is
+    estimated as (round - 1) * 32 + 16.
+
+    Args:
+        team: 3-letter NFL team abbreviation (e.g. "PHI", "DAL").
+        year: Draft year to filter by.
+        data_dir: Directory containing trade chart CSVs.
+
+    Returns:
+        DataFrame with columns: trade_id, team_traded_with, picks_received,
+        picks_gave, and for each of 5 trade charts a {prefix}_value (Float64)
+        and {prefix}_picks (String) column. picks_* columns are comma-separated
+        pick numbers sorted ascending. {prefix}_picks is the combination from
+        find_pick_combination(abs(net_value)), or "" when net_value == 0.
+    """
+    all_trades = nflreadpy.load_trades()
+    team_trades = all_trades.filter(
+        (pl.col("season") == year)
+        & ((pl.col("gave") == team) | (pl.col("received") == team))
+    )
+
+    if len(team_trades) == 0:
+        return _empty_trade_df()
+
+    all_players = nflreadpy.load_players()
+    pfr_to_draft_year: dict[str, int | None] = {
+        pfr_id: dy
+        for pfr_id, dy in zip(
+            all_players["pfr_id"].to_list(),
+            all_players["draft_year"].to_list(),
+        )
+        if pfr_id is not None
+    }
+
+    output_rows: list[dict] = []
+
+    for tid in team_trades["trade_id"].unique().to_list():
+        trade_rows = team_trades.filter(pl.col("trade_id") == tid)
+
+        # Exclusion rule 1: player drafted in a different year
+        player_rows = trade_rows.filter(pl.col("pfr_id").is_not_null())
+        if any(
+            pfr_to_draft_year.get(pfr_id) != year
+            for pfr_id in player_rows["pfr_id"].to_list()
+        ):
+            continue
+
+        # Resolve pick numbers for each row
+        rcv_picks: list[int] = []
+        gave_picks: list[int] = []
+        for row in trade_rows.iter_rows(named=True):
+            resolved = _resolve_pick_number(row["pick_number"], row["pick_round"])
+            if resolved is None:
+                continue
+            if row["received"] == team:
+                rcv_picks.append(resolved)
+            if row["gave"] == team:
+                gave_picks.append(resolved)
+
+        # Exclusion rule 2: no picks exchanged
+        if not rcv_picks and not gave_picks:
+            continue
+
+        rcv_picks.sort()
+        gave_picks.sort()
+
+        other_teams: set[str] = set()
+        for gave_col, rcv_col in zip(
+            trade_rows["gave"].to_list(), trade_rows["received"].to_list()
+        ):
+            if gave_col != team:
+                other_teams.add(gave_col)
+            if rcv_col != team:
+                other_teams.add(rcv_col)
+
+        row_dict: dict = {
+            "trade_id": int(tid),
+            "team_traded_with": ",".join(sorted(other_teams)),
+            "picks_received": ",".join(str(p) for p in rcv_picks),
+            "picks_gave": ",".join(str(p) for p in gave_picks),
+        }
+
+        for prefix, chart_name in _TRADE_CHARTS:
+            val, equiv = _compute_chart_value(rcv_picks, gave_picks, chart_name, data_dir)
+            row_dict[f"{prefix}_value"] = val
+            row_dict[f"{prefix}_picks"] = equiv
+
+        output_rows.append(row_dict)
+
+    if not output_rows:
+        return _empty_trade_df()
+
+    return pl.DataFrame(output_rows)

@@ -14,7 +14,8 @@ detroit_lions_draft/
 ├── docs/                 # Extended documentation
 │   ├── fetching-data.md
 │   ├── modeling.md
-│   └── running-analysis.md
+│   ├── running-analysis.md
+│   └── trade-analysis.md
 ├── models/               # Trained model artifacts
 │   ├── knn/
 │   ├── parametric/
@@ -136,3 +137,38 @@ deactivate
 | Fetching data from Stathead | [docs/fetching-data.md](docs/fetching-data.md) |
 | Running the analysis pipeline and output plots | [docs/running-analysis.md](docs/running-analysis.md) |
 | Career trajectory models (Parametric, KNN, Ridge) | [docs/modeling.md](docs/modeling.md) |
+| Draft trade analysis across 5 trade charts | [docs/trade-analysis.md](docs/trade-analysis.md) |
+
+---
+
+# Trade Analysis
+
+`analyze_draft_trades(team, year)` in `src/trade_value.py` evaluates all draft-day trades involving a team in a given year across five trade charts.
+
+```python
+from src.trade_value import analyze_draft_trades
+
+df = analyze_draft_trades("PHI", 2021)
+print(df)
+```
+
+Each row in the output represents one trade. Output columns:
+
+| Column | Type | Description |
+|---|---|---|
+| `trade_id` | Int64 | Identifier from nflreadpy |
+| `team_traded_with` | String | Other team(s), comma-separated |
+| `picks_received` | String | Pick numbers received, sorted ascending, comma-separated |
+| `picks_gave` | String | Pick numbers given, sorted ascending, comma-separated |
+| `fitz_spiel_value` | Float64 | Net value (received − gave) per Fitzgerald-Spielberger chart |
+| `fitz_spiel_picks` | String | Picks equivalent to `abs(net_value)` on that chart |
+| `jj_value` | Float64 | Net value per Jimmy Johnson chart |
+| `jj_picks` | String | Equivalent picks |
+| `pff_value` | Float64 | Net value per PFF WAR chart |
+| `pff_picks` | String | Equivalent picks |
+| `rich_hill_value` | Float64 | Net value per Rich Hill chart |
+| `rich_hill_picks` | String | Equivalent picks |
+| `eaar_value` | Float64 | Net value per Expected AV Above Replacement chart |
+| `eaar_picks` | String | Equivalent picks |
+
+A trade is excluded when any player asset was not drafted in `year`, or when no picks were exchanged. See [docs/trade-analysis.md](docs/trade-analysis.md) for full details.

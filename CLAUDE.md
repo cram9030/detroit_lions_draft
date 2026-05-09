@@ -59,7 +59,7 @@ Each Parquet file covers one `(draft_year, season_year)` pair. **All columns are
 | `data_output.py` | `save_data()` — writes CSV or Parquet, auto-creates parent dirs |
 | `stathead_downloader.py` | Paginated Stathead scraper; resumes via `.progress.json` |
 | `models/` | `CareerAVModel` protocol + Parametric / KNN / Ridge implementations |
-| `trade_value.py` | `load_trade_chart(chart_name)` — normalises any of the 6 trade chart CSVs to `[Pick, Value]`; `find_pick_combination(target, chart_name)` — extended two-pointer search returning the set of picks summing closest to `target` |
+| `trade_value.py` | `load_trade_chart(chart_name)` — normalises any of the 6 trade chart CSVs to `[Pick, Value]`; `find_pick_combination(target, chart_name)` — extended two-pointer search returning the set of picks summing closest to `target`; `analyze_draft_trades(team, year)` — fetches trades via nflreadpy, filters to same-year draft picks, returns per-trade DataFrame with net value and equivalent picks (via `abs(net_value)`) across 5 trade charts |
 
 ### Key types in `curve_fitting.py`
 
