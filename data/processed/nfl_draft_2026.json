@@ -1,0 +1,2550 @@
+[
+  {"pick": 1, "round": 1, "round_pick": 1, "original_team": "Raiders", "selecting_team": "Raiders", "player": "Fernando Mendoza"},
+  {"pick": 2, "round": 1, "round_pick": 2, "original_team": "Jets", "selecting_team": "Jets", "player": "David Bailey"},
+  {"pick": 3, "round": 1, "round_pick": 3, "original_team": "Cardinals", "selecting_team": "Cardinals", "player": "Jeremiyah Love"},
+  {"pick": 4, "round": 1, "round_pick": 4, "original_team": "Titans", "selecting_team": "Titans", "player": "Carnell Tate"},
+  {"pick": 5, "round": 1, "round_pick": 5, "original_team": "Giants", "selecting_team": "Giants", "player": "Arvell Reese"},
+  {
+    "pick": 6, "round": 1, "round_pick": 6,
+    "original_team": "Browns", "selecting_team": "Chiefs",
+    "player": "Mansoor Delane",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Chiefs", "to": "Browns",
+        "chiefs_sent": ["2026 first round pick (#9-Spencer Fano)", "2026 third round pick (#74-Malachi Fields)", "2026 fifth round pick (#148-Beau Stephens)"],
+        "browns_sent": ["2026 first round pick (#6-Mansoor Delane)"]
+      }
+    ]
+  },
+  {"pick": 7, "round": 1, "round_pick": 7, "original_team": "Commanders", "selecting_team": "Commanders", "player": "Sonny Styles"},
+  {"pick": 8, "round": 1, "round_pick": 8, "original_team": "Saints", "selecting_team": "Saints", "player": "Jordyn Tyson"},
+  {
+    "pick": 9, "round": 1, "round_pick": 9,
+    "original_team": "Chiefs", "selecting_team": "Browns",
+    "player": "Spencer Fano",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Browns", "to": "Chiefs",
+        "browns_sent": ["2026 first round pick (#6-Mansoor Delane)"],
+        "chiefs_sent": ["2026 first round pick (#9-Spencer Fano)", "2026 third round pick (#74-Malachi Fields)", "2026 fifth round pick (#148-Beau Stephens)"]
+      }
+    ]
+  },
+  {
+    "pick": 10, "round": 1, "round_pick": 10,
+    "original_team": "Bengals", "selecting_team": "Giants",
+    "player": "Francis Mauigoa",
+    "trades": [
+      {
+        "date": "2026-04-20",
+        "from": "Giants", "to": "Bengals",
+        "bengals_sent": ["Dexter Lawrence"],
+        "giants_sent": ["2026 first round pick (#10-Francis Mauigoa)"]
+      }
+    ]
+  },
+  {
+    "pick": 11, "round": 1, "round_pick": 11,
+    "original_team": "Dolphins", "selecting_team": "Cowboys",
+    "player": "Caleb Downs",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Cowboys", "to": "Dolphins",
+        "cowboys_sent": ["2026 first round pick (#12-Kadyn Proctor)", "2026 fifth round pick (#177-Kevin Coleman Jr.)", "2026 fifth round pick (#180-Seydou Traore)"],
+        "dolphins_sent": ["2026 first round pick (#11-Caleb Downs)"]
+      }
+    ]
+  },
+  {
+    "pick": 12, "round": 1, "round_pick": 12,
+    "original_team": "Cowboys", "selecting_team": "Dolphins",
+    "player": "Kadyn Proctor",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Dolphins", "to": "Cowboys",
+        "dolphins_sent": ["2026 first round pick (#11-Caleb Downs)"],
+        "cowboys_sent": ["2026 first round pick (#12-Kadyn Proctor)", "2026 fifth round pick (#177-Kevin Coleman Jr.)", "2026 fifth round pick (#180-Seydou Traore)"]
+      }
+    ]
+  },
+  {
+    "pick": 13, "round": 1, "round_pick": 13,
+    "original_team": "Falcons", "selecting_team": "Rams",
+    "player": "Ty Simpson",
+    "trades": [
+      {
+        "date": "2025-04-24",
+        "from": "Rams", "to": "Falcons",
+        "falcons_sent": ["2025 first round pick (#26-James Pearce Jr.)", "2025 third round pick (#101-Sai'vion Jones)"],
+        "rams_sent": ["2025 second round pick (#46-Terrance Ferguson)", "2025 seventh round pick (#242-Konata Mumpfield)", "2026 first round pick (#13-Ty Simpson)"]
+      }
+    ]
+  },
+  {"pick": 14, "round": 1, "round_pick": 14, "original_team": "Ravens", "selecting_team": "Ravens", "player": "Vega Ioane"},
+  {"pick": 15, "round": 1, "round_pick": 15, "original_team": "Buccaneers", "selecting_team": "Buccaneers", "player": "Rueben Bain Jr."},
+  {
+    "pick": 16, "round": 1, "round_pick": 16,
+    "original_team": "Colts", "selecting_team": "Jets",
+    "player": "Kenyon Sadiq",
+    "trades": [
+      {
+        "date": "2025-11-04",
+        "from": "Jets", "to": "Colts",
+        "jets_sent": ["Ahmad \"Sauce\" Gardner"],
+        "colts_sent": ["Adonai Mitchell", "2026 first round pick (#16-Kenyon Sadiq)", "2027 first round pick"]
+      }
+    ]
+  },
+  {"pick": 17, "round": 1, "round_pick": 17, "original_team": "Lions", "selecting_team": "Lions", "player": "Blake Miller"},
+  {"pick": 18, "round": 1, "round_pick": 18, "original_team": "Vikings", "selecting_team": "Vikings", "player": "Caleb Banks"},
+  {"pick": 19, "round": 1, "round_pick": 19, "original_team": "Panthers", "selecting_team": "Panthers", "player": "Monroe Freeling"},
+  {
+    "pick": 20, "round": 1, "round_pick": 20,
+    "original_team": "Packers", "selecting_team": "Eagles",
+    "player": "Makai Lemon",
+    "trades": [
+      {
+        "date": "2025-08-29",
+        "from": "Packers", "to": "Cowboys",
+        "packers_sent": ["Micah Parsons"],
+        "cowboys_sent": ["Kenny Clark", "2026 first round pick (#20-Makai Lemon)", "2027 first round pick"]
+      },
+      {
+        "date": "2026-04-23",
+        "from": "Eagles", "to": "Cowboys",
+        "cowboys_sent": ["2026 first round pick (#20-Makai Lemon)", "2027 seventh round pick"],
+        "eagles_sent": ["2026 first round pick (#23-Malachi Lawrence)", "2026 fourth round pick (#114-Devin Moore)", "2026 fourth round pick (#137-L.T. Overton)"]
+      }
+    ]
+  },
+  {"pick": 21, "round": 1, "round_pick": 21, "original_team": "Steelers", "selecting_team": "Steelers", "player": "Max Iheanachor"},
+  {"pick": 22, "round": 1, "round_pick": 22, "original_team": "Chargers", "selecting_team": "Chargers", "player": "Akheem Mesidor"},
+  {
+    "pick": 23, "round": 1, "round_pick": 23,
+    "original_team": "Eagles", "selecting_team": "Cowboys",
+    "player": "Malachi Lawrence",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Cowboys", "to": "Eagles",
+        "eagles_sent": ["2026 first round pick (#20-Makai Lemon)", "2027 seventh round pick"],
+        "cowboys_sent": ["2026 first round pick (#23-Malachi Lawrence)", "2026 fourth round pick (#114-Devin Moore)", "2026 fourth round pick (#137-L.T. Overton)"]
+      }
+    ]
+  },
+  {
+    "pick": 24, "round": 1, "round_pick": 24,
+    "original_team": "Jaguars", "selecting_team": "Browns",
+    "player": "K.C. Concepcion",
+    "trades": [
+      {
+        "date": "2025-04-24",
+        "from": "Browns", "to": "Jaguars",
+        "jaguars_sent": ["2025 first round pick (#2-Travis Hunter)", "2025 fourth round pick (#104-Bhayshul Tuten)", "2025 sixth round pick (#200-Rayuan Lane III)"],
+        "browns_sent": ["2025 first round pick (#5-Mason Graham)", "2025 second round pick (#36-Quinshon Judkins)", "2025 fourth round pick (#126-Dylan Sampson)", "2026 first round pick (#24-K.C. Concepcion)"]
+      }
+    ]
+  },
+  {"pick": 25, "round": 1, "round_pick": 25, "original_team": "Bears", "selecting_team": "Bears", "player": "Dillon Thieneman"},
+  {
+    "pick": 26, "round": 1, "round_pick": 26,
+    "original_team": "Bills", "selecting_team": "Texans",
+    "player": "Keylan Rutledge",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Bills", "to": "Texans",
+        "texans_sent": ["2026 first round pick (#28-Caleb Lomu)", "2026 third round pick (#69-Sam Roush)", "2026 fifth round pick (#167-Jalon Kilgore)"],
+        "bills_sent": ["2026 first round pick (#26-Keylan Rutledge)", "2026 third round pick (#91-Trey Zuhn III)"]
+      }
+    ]
+  },
+  {
+    "pick": 27, "round": 1, "round_pick": 27,
+    "original_team": "49ers", "selecting_team": "Dolphins",
+    "player": "Chris Johnson",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "49ers", "to": "Dolphins",
+        "dolphins_sent": ["2026 first round pick (#30-Omar Cooper)", "2026 third round pick (#90-Kaelon Black)"],
+        "49ers_sent": ["2026 first round pick (#27-Chris Johnson)", "2026 fourth round pick (#138-Kyle Louis)"]
+      }
+    ]
+  },
+  {
+    "pick": 28, "round": 1, "round_pick": 28,
+    "original_team": "Texans", "selecting_team": "Patriots",
+    "player": "Caleb Lomu",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Texans", "to": "Bills",
+        "bills_sent": ["2026 first round pick (#26-Keylan Rutledge)", "2026 third round pick (#91-Trey Zuhn III)"],
+        "texans_sent": ["2026 first round pick (#28-Caleb Lomu)", "2026 third round pick (#69-Sam Roush)", "2026 fifth round pick (#167-Jalon Kilgore)"]
+      },
+      {
+        "date": "2026-04-23",
+        "from": "Bills", "to": "Patriots",
+        "patriots_sent": ["2026 first round pick (#31-Keldric Faulk)", "2026 fourth round pick (#125-Skyler Bell)"],
+        "bills_sent": ["2026 first round pick (#28-Caleb Lomu)"]
+      }
+    ]
+  },
+  {
+    "pick": 29, "round": 1, "round_pick": 29,
+    "original_team": "Rams", "selecting_team": "Chiefs",
+    "player": "Peter Woods",
+    "trades": [
+      {
+        "date": "2026-03-11",
+        "from": "Rams", "to": "Chiefs",
+        "chiefs_sent": ["Trent McDuffie"],
+        "rams_sent": ["2026 first round pick (#29-Peter Woods)", "2026 fifth round pick (#169-Riley Nowakowski)", "2026 sixth round pick (#210-Gabriel Rubio)", "2027 third round pick"]
+      }
+    ]
+  },
+  {
+    "pick": 30, "round": 1, "round_pick": 30,
+    "original_team": "Broncos", "selecting_team": "Jets",
+    "player": "Omar Cooper",
+    "trades": [
+      {
+        "date": "2026-03-18",
+        "from": "Broncos", "to": "Dolphins",
+        "dolphins_sent": ["Jaylen Waddle", "2026 fourth round pick (#111-Kage Casey)"],
+        "broncos_sent": ["2026 first round pick (#30-Omar Cooper)", "2026 third round pick (#94-Chris Bell)", "2026 fourth round pick (#130-Trey Moore)"]
+      },
+      {
+        "date": "2026-04-23",
+        "from": "Dolphins", "to": "49ers",
+        "49ers_sent": ["2026 first round pick (#27-Chris Johnson)", "2026 fourth round pick (#138-Kyle Louis)"],
+        "dolphins_sent": ["2026 first round pick (#30-Omar Cooper)", "2026 third round pick (#90-Kaelon Black)"]
+      },
+      {
+        "date": "2026-04-23",
+        "from": "49ers", "to": "Jets",
+        "jets_sent": ["2026 second round pick (#33-De'Zhaun Stribling)", "2026 fifth round pick (#179-Enrique Cruz Jr.)"],
+        "49ers_sent": ["2026 first round pick (#30-Omar Cooper)"]
+      }
+    ]
+  },
+  {
+    "pick": 31, "round": 1, "round_pick": 31,
+    "original_team": "Patriots", "selecting_team": "Titans",
+    "player": "Keldric Faulk",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Patriots", "to": "Bills",
+        "bills_sent": ["2026 first round pick (#28-Caleb Lomu)"],
+        "patriots_sent": ["2026 first round pick (#31-Keldric Faulk)", "2026 fourth round pick (#125-Skyler Bell)"]
+      },
+      {
+        "date": "2026-04-23",
+        "from": "Bills", "to": "Titans",
+        "titans_sent": ["2026 second round pick (#35-T.J. Parker)", "2026 third round pick (#66-Tyler Onyedim)", "2026 fourth round pick (#101-Jermod McCoy)"],
+        "bills_sent": ["2026 first round pick (#31-Keldric Faulk)", "2026 third round pick (#69-Sam Roush)", "2026 fifth round pick (#165-Nicholas Singleton)"]
+      }
+    ]
+  },
+  {"pick": 32, "round": 1, "round_pick": 32, "original_team": "Seahawks", "selecting_team": "Seahawks", "player": "Jadarian Price"},
+  {
+    "pick": 33, "round": 2, "round_pick": 1,
+    "original_team": "Jets", "selecting_team": "49ers",
+    "player": "De'Zhaun Stribling",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "49ers", "to": "Jets",
+        "jets_sent": ["2026 second round pick (#33-De'Zhaun Stribling)", "2026 fifth round pick (#179-Enrique Cruz Jr.)"],
+        "49ers_sent": ["2026 first round pick (#30-Omar Cooper)"]
+      }
+    ]
+  },
+  {"pick": 34, "round": 2, "round_pick": 2, "original_team": "Cardinals", "selecting_team": "Cardinals", "player": "Chase Bisontis"},
+  {
+    "pick": 35, "round": 2, "round_pick": 3,
+    "original_team": "Titans", "selecting_team": "Bills",
+    "player": "T.J. Parker",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Bills", "to": "Titans",
+        "titans_sent": ["2026 second round pick (#35-T.J. Parker)", "2026 third round pick (#66-Tyler Onyedim)", "2026 fourth round pick (#101-Jermod McCoy)"],
+        "bills_sent": ["2026 first round pick (#31-Keldric Faulk)", "2026 third round pick (#69-Sam Roush)", "2026 fifth round pick (#165-Nicholas Singleton)"]
+      }
+    ]
+  },
+  {
+    "pick": 36, "round": 2, "round_pick": 4,
+    "original_team": "Raiders", "selecting_team": "Texans",
+    "player": "Kayden McDonald",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Texans", "to": "Raiders",
+        "raiders_sent": ["2026 second round pick (#38-Treydan Stukes)", "2026 third round pick (#91-Trey Zuhn III)"],
+        "texans_sent": ["2026 second round pick (#36-Kayden McDonald)", "2026 fourth round pick (#117-Travis Burke)"]
+      }
+    ]
+  },
+  {"pick": 37, "round": 2, "round_pick": 5, "original_team": "Giants", "selecting_team": "Giants", "player": "Colton Hood"},
+  {
+    "pick": 38, "round": 2, "round_pick": 6,
+    "original_team": "Commanders", "selecting_team": "Raiders",
+    "player": "Treydan Stukes",
+    "trades": [
+      {
+        "date": "2025-03-15",
+        "from": "Commanders", "to": "Texans",
+        "texans_sent": ["Laremy Tunsil", "2025 fourth round pick (#128-Jaylin Lane)"],
+        "commanders_sent": ["2025 third round pick (#79-Jaylin Noel)", "2025 seventh round pick (#236-LeQuint Allen)", "2026 second round pick (#38-Treydan Stukes)", "2026 fourth round pick (#106-Febechi Nwaiwu)"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Raiders", "to": "Texans",
+        "texans_sent": ["2026 second round pick (#36-Kayden McDonald)", "2026 fourth round pick (#117-Travis Burke)"],
+        "raiders_sent": ["2026 second round pick (#38-Treydan Stukes)", "2026 third round pick (#91-Trey Zuhn III)"]
+      }
+    ]
+  },
+  {"pick": 39, "round": 2, "round_pick": 7, "original_team": "Browns", "selecting_team": "Browns", "player": "Denzel Boston"},
+  {"pick": 40, "round": 2, "round_pick": 8, "original_team": "Chiefs", "selecting_team": "Chiefs", "player": "R Mason Thomas"},
+  {"pick": 41, "round": 2, "round_pick": 9, "original_team": "Bengals", "selecting_team": "Bengals", "player": "Cashius Howell"},
+  {"pick": 42, "round": 2, "round_pick": 10, "original_team": "Saints", "selecting_team": "Saints", "player": "Christen Miller"},
+  {"pick": 43, "round": 2, "round_pick": 11, "original_team": "Dolphins", "selecting_team": "Dolphins", "player": "Jacob Rodriguez"},
+  {
+    "pick": 44, "round": 2, "round_pick": 12,
+    "original_team": "Cowboys", "selecting_team": "Lions",
+    "player": "Derrick Moore",
+    "trades": [
+      {
+        "date": "2025-11-04",
+        "from": "Cowboys", "to": "Jets",
+        "jets_sent": ["Quinnen Williams"],
+        "cowboys_sent": ["Mazi Smith", "2026 second round pick (#44-Derrick Moore)", "2027 first round pick (more favorable of Cowboys, Packers picks)"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Jets", "to": "Lions",
+        "lions_sent": ["2026 second round pick (#50-D'Angelo Ponds)", "2026 fourth round pick (#128-Connor Lew)"],
+        "jets_sent": ["2026 second round pick (#44-Derrick Moore)"]
+      }
+    ]
+  },
+  {"pick": 45, "round": 2, "round_pick": 13, "original_team": "Ravens", "selecting_team": "Ravens", "player": "Zion Young"},
+  {"pick": 46, "round": 2, "round_pick": 14, "original_team": "Buccaneers", "selecting_team": "Buccaneers", "player": "Josiah Trotter"},
+  {
+    "pick": 47, "round": 2, "round_pick": 15,
+    "original_team": "Colts", "selecting_team": "Steelers",
+    "player": "Germie Bernard",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Steelers", "to": "Colts",
+        "colts_sent": ["2026 second round pick (#53-C.J. Allen)", "2026 fourth round pick (#135-Bryce Boettcher)", "2026 seventh round pick (#237-Seth McGowan)"],
+        "steelers_sent": ["2026 second round pick (#47-Germie Bernard)", "2026 seventh round pick (#249-Garrett Nussmeier)"]
+      }
+    ]
+  },
+  {"pick": 48, "round": 2, "round_pick": 16, "original_team": "Falcons", "selecting_team": "Falcons", "player": "Avieon Terrell"},
+  {
+    "pick": 49, "round": 2, "round_pick": 17,
+    "original_team": "Vikings", "selecting_team": "Panthers",
+    "player": "Lee Hunter",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Panthers", "to": "Vikings",
+        "vikings_sent": ["2026 second round pick (#51-Jake Golday)", "2026 sixth round pick (#159-Max Bredeson)"],
+        "panthers_sent": ["2026 second round pick (#49-Lee Hunter)", "2026 fifth round pick (#196-Dametrious Crownover)"]
+      }
+    ]
+  },
+  {
+    "pick": 50, "round": 2, "round_pick": 18,
+    "original_team": "Lions", "selecting_team": "Jets",
+    "player": "D'Angelo Ponds",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Lions", "to": "Jets",
+        "jets_sent": ["2026 second round pick (#44-Derrick Moore)"],
+        "lions_sent": ["2026 second round pick (#50-D'Angelo Ponds)", "2026 fourth round pick (#128-Connor Lew)"]
+      }
+    ]
+  },
+  {
+    "pick": 51, "round": 2, "round_pick": 19,
+    "original_team": "Panthers", "selecting_team": "Vikings",
+    "player": "Jake Golday",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Vikings", "to": "Panthers",
+        "panthers_sent": ["2026 second round pick (#49-Lee Hunter)", "2026 fifth round pick (#196-Dametrious Crownover)"],
+        "vikings_sent": ["2026 second round pick (#51-Jake Golday)", "2026 sixth round pick (#159-Max Bredeson)"]
+      }
+    ]
+  },
+  {"pick": 52, "round": 2, "round_pick": 20, "original_team": "Packers", "selecting_team": "Packers", "player": "Brandon Cisse"},
+  {
+    "pick": 53, "round": 2, "round_pick": 21,
+    "original_team": "Steelers", "selecting_team": "Colts",
+    "player": "C.J. Allen",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Colts", "to": "Steelers",
+        "steelers_sent": ["2026 second round pick (#47-Germie Bernard)", "2026 seventh round pick (#249-Garrett Nussmeier)"],
+        "colts_sent": ["2026 second round pick (#53-C.J. Allen)", "2026 fourth round pick (#135-Bryce Boettcher)", "2026 seventh round pick (#237-Seth McGowan)"]
+      }
+    ]
+  },
+  {"pick": 54, "round": 2, "round_pick": 22, "original_team": "Eagles", "selecting_team": "Eagles", "player": "Eli Stowers"},
+  {
+    "pick": 55, "round": 2, "round_pick": 23,
+    "original_team": "Chargers", "selecting_team": "Patriots",
+    "player": "Gabe Jacas",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Patriots", "to": "Chargers",
+        "chargers_sent": ["2026 second round pick (#63-Jake Slaughter)", "2026 fourth round pick (#131-Genesis Smith)", "2026 sixth round pick (#202-Logan Taylor)"],
+        "patriots_sent": ["2026 second round pick (#55-Gabe Jacas)"]
+      }
+    ]
+  },
+  {"pick": 56, "round": 2, "round_pick": 24, "original_team": "Jaguars", "selecting_team": "Jaguars", "player": "Nate Boerkircher"},
+  {"pick": 57, "round": 2, "round_pick": 25, "original_team": "Bears", "selecting_team": "Bears", "player": "Logan Jones"},
+  {
+    "pick": 57, "round": 2, "round_pick": 26,
+    "original_team": "49ers", "selecting_team": "Browns",
+    "player": "Emmanuel McNeil-Warren",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Browns", "to": "49ers",
+        "49ers_sent": ["2026 third round pick (#70-Romello Height)", "2026 fourth round pick (#107-Gracen Halton)"],
+        "browns_sent": ["2026 second round pick (#57-Emmanuel McNeil-Warren)", "2026 fifth round pick (#152-Justin Joly)"]
+      }
+    ]
+  },
+  {"pick": 58, "round": 2, "round_pick": 27, "original_team": "Texans", "selecting_team": "Texans", "player": "Marlin Klein"},
+  {
+    "pick": 60, "round": 2, "round_pick": 28,
+    "original_team": "Bills", "selecting_team": "Titans",
+    "player": "Anthony Hill Jr.",
+    "trades": [
+      {
+        "date": "2026-03-11",
+        "from": "Bills", "to": "Bears",
+        "bears_sent": ["D.J. Moore", "2026 fifth round pick (#165-Nicholas Singleton)"],
+        "bills_sent": ["2026 second round pick (#60-Anthony Hill Jr.)"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Bears", "to": "Titans",
+        "titans_sent": ["2026 third round pick (#69-Sam Roush)", "2026 fifth round pick (#144-Sam Hecht)"],
+        "bears_sent": ["2026 second round pick (#60-Anthony Hill Jr.)"]
+      }
+    ]
+  },
+  {"pick": 61, "round": 2, "round_pick": 29, "original_team": "Rams", "selecting_team": "Rams", "player": "Max Klare"},
+  {
+    "pick": 62, "round": 2, "round_pick": 30,
+    "original_team": "Broncos", "selecting_team": "Bills",
+    "player": "Davison Igbinosun",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Bills", "to": "Broncos",
+        "broncos_sent": ["2026 third round pick (#66-Tyler Onyedim)", "2026 sixth round pick (#182-Taylen Green)"],
+        "bills_sent": ["2026 second round pick (#62-Davison Igbinosun)"]
+      }
+    ]
+  },
+  {
+    "pick": 63, "round": 2, "round_pick": 31,
+    "original_team": "Patriots", "selecting_team": "Chargers",
+    "player": "Jake Slaughter",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Chargers", "to": "Patriots",
+        "patriots_sent": ["2026 second round pick (#55-Gabe Jacas)"],
+        "chargers_sent": ["2026 second round pick (#63-Jake Slaughter)", "2026 fourth round pick (#131-Genesis Smith)", "2026 sixth round pick (#202-Logan Taylor)"]
+      }
+    ]
+  },
+  {"pick": 64, "round": 2, "round_pick": 32, "original_team": "Seahawks", "selecting_team": "Seahawks", "player": "Bud Clark"},
+  {"pick": 65, "round": 3, "round_pick": 1, "original_team": "Cardinals", "selecting_team": "Cardinals", "player": "Carson Beck"},
+  {
+    "pick": 66, "round": 3, "round_pick": 2,
+    "original_team": "Titans", "selecting_team": "Broncos",
+    "player": "Tyler Onyedim",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Titans", "to": "Bills",
+        "bills_sent": ["2026 first round pick (#31-Keldric Faulk)", "2026 third round pick (#69-Sam Roush)", "2026 fifth round pick (#165-Nicholas Singleton)"],
+        "titans_sent": ["2026 second round pick (#35-T.J. Parker)", "2026 third round pick (#66-Tyler Onyedim)", "2026 fourth round pick (#101-Jermod McCoy)"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Bills", "to": "Broncos",
+        "broncos_sent": ["2026 second round pick (#62-Davison Igbinosun)"],
+        "bills_sent": ["2026 third round pick (#66-Tyler Onyedim)", "2026 sixth round pick (#182-Taylen Green)"]
+      }
+    ]
+  },
+  {"pick": 67, "round": 3, "round_pick": 3, "original_team": "Raiders", "selecting_team": "Raiders", "player": "Keyron Crawford"},
+  {
+    "pick": 68, "round": 3, "round_pick": 4,
+    "original_team": "Jets", "selecting_team": "Eagles",
+    "player": "Markel Bell",
+    "trades": [
+      {
+        "date": "2024-04-01",
+        "from": "Eagles", "to": "Jets",
+        "jets_sent": ["Haason Reddick"],
+        "eagles_sent": ["2026 conditional round pick (#68-Markel Bell)"]
+      }
+    ]
+  },
+  {
+    "pick": 69, "round": 3, "round_pick": 5,
+    "original_team": "Giants", "selecting_team": "Bears",
+    "player": "Sam Roush",
+    "trades": [
+      {
+        "date": "2025-04-24",
+        "from": "Giants", "to": "Texans",
+        "texans_sent": ["2025 first round pick (#25-Jaxson Dart)"],
+        "giants_sent": ["2025 second round pick (#34-Jayden Higgins)", "2025 third round pick (#99-Charles Grant)", "2026 third round pick (#69-Sam Roush)"]
+      },
+      {
+        "date": "2026-04-23",
+        "from": "Texans", "to": "Bills",
+        "bills_sent": ["2026 first round pick (#26-Keylan Rutledge)", "2026 third round pick (#91-Trey Zuhn III)"],
+        "texans_sent": ["2026 first round pick (#28-Caleb Lomu)", "2026 third round pick (#69-Sam Roush)", "2026 fifth round pick (#167-Jalon Kilgore)"]
+      },
+      {
+        "date": "2026-04-23",
+        "from": "Bills", "to": "Titans",
+        "titans_sent": ["2026 second round pick (#35-T.J. Parker)", "2026 third round pick (#66-Tyler Onyedim)", "2026 fourth round pick (#101-Jermod McCoy)"],
+        "bills_sent": ["2026 first round pick (#31-Keldric Faulk)", "2026 third round pick (#69-Sam Roush)", "2026 fifth round pick (#165-Nicholas Singleton)"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Titans", "to": "Bears",
+        "bears_sent": ["2026 second round pick (#60-Anthony Hill Jr.)"],
+        "titans_sent": ["2026 third round pick (#69-Sam Roush)", "2026 fifth round pick (#144-Sam Hecht)"]
+      }
+    ]
+  },
+  {
+    "pick": 70, "round": 3, "round_pick": 6,
+    "original_team": "Browns", "selecting_team": "49ers",
+    "player": "Romello Height",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "49ers", "to": "Browns",
+        "browns_sent": ["2026 second round pick (#57-Emmanuel McNeil-Warren)", "2026 fifth round pick (#152-Justin Joly)"],
+        "49ers_sent": ["2026 third round pick (#70-Romello Height)", "2026 fourth round pick (#107-Gracen Halton)"]
+      }
+    ]
+  },
+  {"pick": 71, "round": 3, "round_pick": 7, "original_team": "Commanders", "selecting_team": "Commanders", "player": "Antonio Williams"},
+  {"pick": 72, "round": 3, "round_pick": 8, "original_team": "Bengals", "selecting_team": "Bengals", "player": "Tacario Davis"},
+  {"pick": 73, "round": 3, "round_pick": 9, "original_team": "Saints", "selecting_team": "Saints", "player": "Oscar Delp"},
+  {
+    "pick": 74, "round": 3, "round_pick": 10,
+    "original_team": "Chiefs", "selecting_team": "Giants",
+    "player": "Malachi Fields",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Chiefs", "to": "Browns",
+        "browns_sent": ["2026 first round pick (#6-Mansoor Delane)"],
+        "chiefs_sent": ["2026 first round pick (#9-Spencer Fano)", "2026 third round pick (#74-Malachi Fields)", "2026 fifth round pick (#148-Beau Stephens)"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Browns", "to": "Giants",
+        "giants_sent": ["2026 fourth round pick (#105-Brenen Thompson)", "2026 fifth round pick (#145-Nick Barrett)", "2027 fourth round pick"],
+        "browns_sent": ["2026 third round pick (#74-Malachi Fields)"]
+      }
+    ]
+  },
+  {"pick": 75, "round": 3, "round_pick": 11, "original_team": "Dolphins", "selecting_team": "Dolphins", "player": "Caleb Douglas"},
+  {
+    "pick": 76, "round": 3, "round_pick": 12,
+    "original_team": "Cowboys", "selecting_team": "Steelers",
+    "player": "Drew Allar",
+    "trades": [
+      {
+        "date": "2025-05-07",
+        "from": "Cowboys", "to": "Steelers",
+        "steelers_sent": ["George Pickens", "2027 sixth round pick"],
+        "cowboys_sent": ["2026 third round pick (#76-Drew Allar)", "2027 fifth round pick"]
+      }
+    ]
+  },
+  {
+    "pick": 77, "round": 3, "round_pick": 13,
+    "original_team": "Buccaneers", "selecting_team": "Packers",
+    "player": "Chris McClellan",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Packers", "to": "Buccaneers",
+        "buccaneers_sent": ["2026 third round pick (#84-Ted Hurst)", "2026 fifth round pick (#160-Billy Schrauth)"],
+        "packers_sent": ["2026 third round pick (#77-Chris McClellan)"]
+      }
+    ]
+  },
+  {"pick": 78, "round": 3, "round_pick": 14, "original_team": "Colts", "selecting_team": "Colts", "player": "A.J. Haulcy"},
+  {"pick": 79, "round": 3, "round_pick": 15, "original_team": "Falcons", "selecting_team": "Falcons", "player": "Zachariah Branch"},
+  {"pick": 80, "round": 3, "round_pick": 16, "original_team": "Ravens", "selecting_team": "Ravens", "player": "Ja'Kobi Lane"},
+  {
+    "pick": 81, "round": 3, "round_pick": 17,
+    "original_team": "Lions", "selecting_team": "Jaguars",
+    "player": "Albert Regis",
+    "trades": [
+      {
+        "date": "2025-04-25",
+        "from": "Lions", "to": "Jaguars",
+        "jaguars_sent": ["2025 third round pick (#70-Isaac TeSlaa)", "2025 sixth round pick (#182-Andres Borregales)", "2026 sixth round pick (#213-Jordan van den Berg)"],
+        "lions_sent": ["2025 third round pick (#102-Tai Felton)", "2026 third round pick (#81-Albert Regis)", "2026 third round pick (#100-Jalen Huskey)"]
+      }
+    ]
+  },
+  {"pick": 82, "round": 3, "round_pick": 18, "original_team": "Vikings", "selecting_team": "Vikings", "player": "Domonique Orange"},
+  {"pick": 83, "round": 3, "round_pick": 19, "original_team": "Panthers", "selecting_team": "Panthers", "player": "Chris Brazzell II"},
+  {
+    "pick": 84, "round": 3, "round_pick": 20,
+    "original_team": "Packers", "selecting_team": "Buccaneers",
+    "player": "Ted Hurst",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Buccaneers", "to": "Packers",
+        "packers_sent": ["2026 third round pick (#77-Chris McClellan)"],
+        "buccaneers_sent": ["2026 third round pick (#84-Ted Hurst)", "2026 fifth round pick (#160-Billy Schrauth)"]
+      }
+    ]
+  },
+  {"pick": 85, "round": 3, "round_pick": 21, "original_team": "Steelers", "selecting_team": "Steelers", "player": "Daylen Everette"},
+  {
+    "pick": 86, "round": 3, "round_pick": 22,
+    "original_team": "Chargers", "selecting_team": "Browns",
+    "player": "Austin Barber",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Browns", "to": "Chargers",
+        "chargers_sent": ["2026 fourth round pick (#105-Brenen Thompson)", "2026 fourth round pick (#145-Nick Barrett)", "2026 sixth round pick (#206-Alex Harkey)"],
+        "browns_sent": ["2026 third round pick (#86-Austin Barber)"]
+      }
+    ]
+  },
+  {
+    "pick": 87, "round": 3, "round_pick": 23,
+    "original_team": "Eagles", "selecting_team": "Dolphins",
+    "player": "Will Kacmarek",
+    "trades": [
+      {
+        "date": "2025-11-04",
+        "from": "Eagles", "to": "Dolphins",
+        "dolphins_sent": ["Jaelan Phillips"],
+        "eagles_sent": ["2026 third round pick (#87-Will Kacmarek)"]
+      }
+    ]
+  },
+  {"pick": 88, "round": 3, "round_pick": 24, "original_team": "Jaguars", "selecting_team": "Jaguars", "player": "Emmanuel Pregnon"},
+  {"pick": 89, "round": 3, "round_pick": 25, "original_team": "Bears", "selecting_team": "Bears", "player": "Zavion Thomas"},
+  {
+    "pick": 90, "round": 3, "round_pick": 26,
+    "original_team": "Texans", "selecting_team": "49ers",
+    "player": "Kaelon Black",
+    "trades": [
+      {
+        "date": "2025-04-26",
+        "from": "Texans", "to": "Dolphins",
+        "dolphins_sent": ["2025 fourth round pick (#116-Woody Marks)", "2025 seventh round pick (#224-Kyonte Hamilton)"],
+        "texans_sent": ["2024 sixth round pick (#179-Ollie Gordon II)", "2026 third round pick (#90-Kaelon Black)"]
+      },
+      {
+        "date": "2026-04-23",
+        "from": "Dolphins", "to": "49ers",
+        "49ers_sent": ["2026 first round pick (#27-Chris Johnson)", "2026 fourth round pick (#138-Kyle Louis)"],
+        "dolphins_sent": ["2026 first round pick (#30-Omar Cooper)", "2026 third round pick (#90-Kaelon Black)"]
+      }
+    ]
+  },
+  {
+    "pick": 91, "round": 3, "round_pick": 27,
+    "original_team": "Bills", "selecting_team": "Raiders",
+    "player": "Trey Zuhn III",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Bills", "to": "Texans",
+        "texans_sent": ["2026 first round pick (#28-Caleb Lomu)", "2026 third round pick (#69-Sam Roush)", "2026 fifth round pick (#167-Jalon Kilgore)"],
+        "bills_sent": ["2026 first round pick (#26-Keylan Rutledge)", "2026 third round pick (#91-Trey Zuhn III)"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Texans", "to": "Raiders",
+        "raiders_sent": ["2026 second round pick (#38-Treydan Stukes)", "2026 third round pick (#91-Trey Zuhn III)"],
+        "texans_sent": ["2026 second round pick (#36-Kayden McDonald)", "2026 fourth round pick (#117-Travis Burke)"]
+      }
+    ]
+  },
+  {
+    "pick": 92, "round": 3, "round_pick": 28,
+    "original_team": "49ers", "selecting_team": "Cowboys",
+    "player": "Jaishawn Barham",
+    "trades": [
+      {
+        "date": "2026-03-11",
+        "from": "49ers", "to": "Cowboys",
+        "cowboys_sent": ["Osa Odighizuwa"],
+        "49ers_sent": ["2026 third round pick (#92-Jaishawn Barham)"]
+      }
+    ]
+  },
+  {"pick": 93, "round": 3, "round_pick": 29, "original_team": "Rams", "selecting_team": "Rams", "player": "Keagen Trost"},
+  {
+    "pick": 94, "round": 3, "round_pick": 30,
+    "original_team": "Broncos", "selecting_team": "Dolphins",
+    "player": "Chris Bell",
+    "trades": [
+      {
+        "date": "2026-03-18",
+        "from": "Broncos", "to": "Dolphins",
+        "dolphins_sent": ["Jaylen Waddle", "2026 fourth round pick (#111-Kage Casey)"],
+        "broncos_sent": ["2026 first round pick (#30-Omar Cooper)", "2026 third round pick (#94-Chris Bell)", "2026 fourth round pick (#130-Trey Moore)"]
+      }
+    ]
+  },
+  {"pick": 95, "round": 3, "round_pick": 31, "original_team": "Patriots", "selecting_team": "Patriots", "player": "Eli Raridon"},
+  {
+    "pick": 96, "round": 3, "round_pick": 32,
+    "original_team": "Seahawks", "selecting_team": "Steelers",
+    "player": "Gennings Dunker",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Steelers", "to": "Seahawks",
+        "seahawks_sent": ["2026 third round pick (#99-Julian Neal)", "2026 sixth round pick (#216-Trey Smack)"],
+        "steelers_sent": ["2026 third round pick (#96-Gennings Dunker)"]
+      }
+    ]
+  },
+  {"pick": 97, "round": 3, "round_pick": 33, "original_team": "Vikings", "selecting_team": "Vikings", "player": "Caleb Tiernan", "compensatory": true},
+  {
+    "pick": 98, "round": 3, "round_pick": 34,
+    "original_team": "Eagles", "selecting_team": "Vikings",
+    "player": "Jakobe Thomas",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Vikings", "to": "Eagles",
+        "eagles_sent": ["Jonathan Greenard", "2026 seventh round pick (#244-Cole Wisniewski)"],
+        "vikings_sent": ["2026 third round pick (#98-Jakobe Thomas)", "2027 third round pick"]
+      }
+    ]
+  },
+  {
+    "pick": 99, "round": 3, "round_pick": 35,
+    "original_team": "Steelers", "selecting_team": "Seahawks",
+    "player": "Julian Neal",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Seahawks", "to": "Steelers",
+        "steelers_sent": ["2026 third round pick (#96-Gennings Dunker)"],
+        "seahawks_sent": ["2026 third round pick (#99-Julian Neal)", "2026 sixth round pick (#216-Trey Smack)"]
+      }
+    ]
+  },
+  {
+    "pick": 100, "round": 3, "round_pick": 36,
+    "original_team": "Lions", "selecting_team": "Jaguars",
+    "player": "Jalen Huskey",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2025-04-25",
+        "from": "Lions", "to": "Jaguars",
+        "jaguars_sent": ["2025 third round pick (#70-Isaac TeSlaa)", "2025 sixth round pick (#182-Andres Borregales)", "2026 sixth round pick (#213-Jordan van den Berg)"],
+        "lions_sent": ["2025 third round pick (#102-Tai Felton)", "2026 third round pick (#81-Albert Regis)", "2026 third round pick (#100-Jalen Huskey)"]
+      }
+    ]
+  },
+  {
+    "pick": 101, "round": 4, "round_pick": 1,
+    "original_team": "Titans", "selecting_team": "Raiders",
+    "player": "Jermod McCoy",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Titans", "to": "Bills",
+        "bills_sent": ["2026 first round pick (#31-Keldric Faulk)", "2026 third round pick (#69-Sam Roush)", "2026 fifth round pick (#165-Nicholas Singleton)"],
+        "titans_sent": ["2026 second round pick (#35-T.J. Parker)", "2026 third round pick (#66-Tyler Onyedim)", "2026 fourth round pick (#101-Jermod McCoy)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Bills", "to": "Raiders",
+        "raiders_sent": ["2026 fourth round pick (#102-Jude Bowry)", "2027 seventh round pick"],
+        "bills_sent": ["2026 fourth round pick (#101-Jermod McCoy)"]
+      }
+    ]
+  },
+  {
+    "pick": 102, "round": 4, "round_pick": 2,
+    "original_team": "Raiders", "selecting_team": "Bills",
+    "player": "Jude Bowry",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Raiders", "to": "Bills",
+        "bills_sent": ["2026 fourth round pick (#101-Jermod McCoy)"],
+        "raiders_sent": ["2026 fourth round pick (#102-Jude Bowry)", "2027 seventh round pick"]
+      }
+    ]
+  },
+  {"pick": 103, "round": 4, "round_pick": 3, "original_team": "Jets", "selecting_team": "Jets", "player": "Darrell Jackson Jr."},
+  {"pick": 104, "round": 4, "round_pick": 4, "original_team": "Cardinals", "selecting_team": "Cardinals", "player": "Kaleb Proctor"},
+  {
+    "pick": 105, "round": 4, "round_pick": 5,
+    "original_team": "Giants", "selecting_team": "Chargers",
+    "player": "Brenen Thompson",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Giants", "to": "Browns",
+        "browns_sent": ["2026 third round pick (#74-Malachi Fields)"],
+        "giants_sent": ["2026 fourth round pick (#105-Brenen Thompson)", "2026 fifth round pick (#145-Nick Barrett)", "2027 fourth round pick"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Browns", "to": "Chargers",
+        "chargers_sent": ["2026 third round pick (#86-Austin Barber)"],
+        "browns_sent": ["2026 fourth round pick (#105-Brenen Thompson)", "2026 fourth round pick (#145-Nick Barrett)", "2026 sixth round pick (#206-Alex Harkey)"]
+      }
+    ]
+  },
+  {
+    "pick": 106, "round": 4, "round_pick": 6,
+    "original_team": "Commanders", "selecting_team": "Texans",
+    "player": "Febechi Nwaiwu",
+    "trades": [
+      {
+        "date": "2025-03-15",
+        "from": "Commanders", "to": "Texans",
+        "texans_sent": ["Laremy Tunsil", "2025 fourth round pick (#128-Jaylin Lane)"],
+        "commanders_sent": ["2025 third round pick (#79-Jaylin Noel)", "2025 seventh round pick (#236-LeQuint Allen)", "2026 second round pick (#38-Treydan Stukes)", "2026 fourth round pick (#106-Febechi Nwaiwu)"]
+      }
+    ]
+  },
+  {
+    "pick": 107, "round": 4, "round_pick": 7,
+    "original_team": "Browns", "selecting_team": "49ers",
+    "player": "Gracen Halton",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "49ers", "to": "Browns",
+        "browns_sent": ["2026 second round pick (#57-Emmanuel McNeil-Warren)", "2026 fifth round pick (#152-Justin Joly)"],
+        "49ers_sent": ["2026 third round pick (#70-Romello Height)", "2026 fourth round pick (#107-Gracen Halton)"]
+      }
+    ]
+  },
+  {
+    "pick": 108, "round": 4, "round_pick": 8,
+    "original_team": "Saints", "selecting_team": "Broncos",
+    "player": "Jonah Coleman",
+    "trades": [
+      {
+        "date": "2025-08-21",
+        "from": "Saints", "to": "Broncos",
+        "broncos_sent": ["Devaughn Vele"],
+        "saints_sent": ["2026 fourth round pick (#108-Jonah Coleman)", "2027 seventh round pick"]
+      }
+    ]
+  },
+  {"pick": 109, "round": 4, "round_pick": 9, "original_team": "Chiefs", "selecting_team": "Chiefs", "player": "Jadon Canady"},
+  {
+    "pick": 110, "round": 4, "round_pick": 10,
+    "original_team": "Bengals", "selecting_team": "Jets",
+    "player": "Cade Klubnik",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Jets", "to": "Bengals",
+        "bengals_sent": ["2026 fourth round pick (#128-Connor Lew)", "2026 fourth round pick (#140-Colbie Young)"],
+        "jets_sent": ["2026 fourth round pick (#110-Cade Klubnik)", "2026 sixth round pick (#199-Emmanuel Henderson Jr.)"]
+      }
+    ]
+  },
+  {
+    "pick": 111, "round": 4, "round_pick": 11,
+    "original_team": "Dolphins", "selecting_team": "Broncos",
+    "player": "Kage Casey",
+    "trades": [
+      {
+        "date": "2026-03-18",
+        "from": "Dolphins", "to": "Broncos",
+        "broncos_sent": ["2026 first round pick (#30-Omar Cooper)", "2026 third round pick (#94-Chris Bell)", "2026 fourth round pick (#130-Trey Moore)"],
+        "dolphins_sent": ["Jaylen Waddle", "2026 fourth round pick (#111-Kage Casey)"]
+      }
+    ]
+  },
+  {"pick": 112, "round": 4, "round_pick": 12, "original_team": "Cowboys", "selecting_team": "Cowboys", "player": "Drew Shelton"},
+  {"pick": 113, "round": 4, "round_pick": 13, "original_team": "Colts", "selecting_team": "Colts", "player": "Jalen Farmer"},
+  {
+    "pick": 114, "round": 4, "round_pick": 14,
+    "original_team": "Falcons", "selecting_team": "Cowboys",
+    "player": "Devin Moore",
+    "trades": [
+      {
+        "date": "2026-03-23",
+        "from": "Eagles", "to": "Falcons",
+        "falcons_sent": ["Sydney Brown", "2026 fourth round pick (#122-Mike Washington Jr.)", "2026 sixth round pick (#215-Harold Perkins Jr.)"],
+        "eagles_sent": ["2026 fourth round pick (#114-Devin Moore)", "2026 sixth round pick (#197-C.J. Daniels)"]
+      },
+      {
+        "date": "2026-04-23",
+        "from": "Cowboys", "to": "Eagles",
+        "eagles_sent": ["2026 first round pick (#23-Malachi Lawrence)", "2026 fourth round pick (#114-Devin Moore)", "2026 fourth round pick (#137-L.T. Overton)"],
+        "cowboys_sent": ["2026 first round pick (#20-Makai Lemon)", "2027 seventh round pick"]
+      }
+    ]
+  },
+  {"pick": 115, "round": 4, "round_pick": 15, "original_team": "Ravens", "selecting_team": "Ravens", "player": "Elijah Sarratt"},
+  {"pick": 116, "round": 4, "round_pick": 16, "original_team": "Buccaneers", "selecting_team": "Buccaneers", "player": "Keionte Scott"},
+  {
+    "pick": 117, "round": 4, "round_pick": 17,
+    "original_team": "Vikings", "selecting_team": "Chargers",
+    "player": "Travis Burke",
+    "trades": [
+      {
+        "date": "2024-10-31",
+        "from": "Vikings", "to": "Jaguars",
+        "jaguars_sent": ["Cam Robinson", "2026 conditional seventh round pick"],
+        "vikings_sent": ["2026 conditional round pick (#117-Travis Burke)"]
+      },
+      {
+        "date": "2025-11-04",
+        "from": "Jaguars", "to": "Raiders",
+        "raiders_sent": ["Jakobi Meyers"],
+        "jaguars_sent": ["2026 fourth round pick (#117-Travis Burke)", "2026 sixth round pick (#182-Taylen Green)"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Raiders", "to": "Texans",
+        "texans_sent": ["2026 second round pick (#38-Treydan Stukes)", "2026 third round pick (#91-Trey Zuhn III)"],
+        "raiders_sent": ["2026 second round pick (#36-Kayden McDonald)", "2026 fourth round pick (#117-Travis Burke)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Texans", "to": "Chargers",
+        "chargers_sent": ["2026 fourth round pick (#123-Wade Woodaz)", "2026 sixth round pick (#204-Lewis Bond)"],
+        "texans_sent": ["2026 fourth round pick (#117-Travis Burke)"]
+      }
+    ]
+  },
+  {"pick": 118, "round": 4, "round_pick": 18, "original_team": "Lions", "selecting_team": "Lions", "player": "Jimmy Rolder"},
+  {
+    "pick": 119, "round": 4, "round_pick": 19,
+    "original_team": "Panthers", "selecting_team": "Jaguars",
+    "player": "Wesley Williams",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Jaguars", "to": "Panthers",
+        "panthers_sent": ["2026 fourth round pick (#124-Malik Muhammad)", "2026 fifth round pick (#166-Keyshaun Elliott)"],
+        "jaguars_sent": ["2026 fourth round pick (#119-Wesley Williams)", "2026 sixth round pick (#196-Dametrious Crownover)"]
+      }
+    ]
+  },
+  {"pick": 120, "round": 4, "round_pick": 20, "original_team": "Packers", "selecting_team": "Packers", "player": "Dani Dennis-Sutton"},
+  {"pick": 121, "round": 4, "round_pick": 21, "original_team": "Steelers", "selecting_team": "Steelers", "player": "Kaden Wetjen"},
+  {
+    "pick": 122, "round": 4, "round_pick": 22,
+    "original_team": "Eagles", "selecting_team": "Raiders",
+    "player": "Mike Washington Jr.",
+    "trades": [
+      {
+        "date": "2026-03-23",
+        "from": "Falcons", "to": "Eagles",
+        "eagles_sent": ["2026 fourth round pick (#114-Devin Moore)", "2026 sixth round pick (#197-C.J. Daniels)"],
+        "falcons_sent": ["Sydney Brown", "2026 fourth round pick (#122-Mike Washington Jr.)", "2026 sixth round pick (#215-Harold Perkins Jr.)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Raiders", "to": "Falcons",
+        "falcons_sent": ["2026 fourth round pick (#134-Kendal Daniels)", "2026 sixth round pick (#208-Anterio Thompson)"],
+        "raiders_sent": ["2026 fourth round pick (#122-Mike Washington Jr.)"]
+      }
+    ]
+  },
+  {
+    "pick": 123, "round": 4, "round_pick": 23,
+    "original_team": "Chargers", "selecting_team": "Texans",
+    "player": "Wade Woodaz",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Texans", "to": "Chargers",
+        "chargers_sent": ["2026 fourth round pick (#123-Wade Woodaz)", "2026 sixth round pick (#204-Lewis Bond)"],
+        "texans_sent": ["2026 fourth round pick (#117-Travis Burke)"]
+      }
+    ]
+  },
+  {
+    "pick": 124, "round": 4, "round_pick": 24,
+    "original_team": "Jaguars", "selecting_team": "Bears",
+    "player": "Malik Muhammad",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Panthers", "to": "Jaguars",
+        "jaguars_sent": ["2026 fourth round pick (#119-Wesley Williams)", "2026 sixth round pick (#196-Dametrious Crownover)"],
+        "panthers_sent": ["2026 fourth round pick (#124-Malik Muhammad)", "2026 fifth round pick (#166-Keyshaun Elliott)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Panthers", "to": "Bears",
+        "bears_sent": ["2026 fourth round pick (#129-Will Lee III)", "2026 fifth round pick (#144-Sam Hecht)"],
+        "panthers_sent": ["2026 fourth round pick (#124-Malik Muhammad)", "2026 fifth round pick (#166-Keyshaun Elliott)"]
+      }
+    ]
+  },
+  {
+    "pick": 125, "round": 4, "round_pick": 25,
+    "original_team": "Bears", "selecting_team": "Bills",
+    "player": "Skyler Bell",
+    "trades": [
+      {
+        "date": "2025-03-12",
+        "from": "Bears", "to": "Chiefs",
+        "chiefs_sent": ["Joe Thuney"],
+        "bears_sent": ["2026 fourth round pick (#125-Skyler Bell)"]
+      },
+      {
+        "date": "2025-04-25",
+        "from": "Chiefs", "to": "Patriots",
+        "patriots_sent": ["2025 third round pick (#85-Nohl Williams)"],
+        "chiefs_sent": ["2025 third round pick (#95-Jared Wilson)", "2026 fourth round pick (#125-Skyler Bell)"]
+      },
+      {
+        "date": "2026-04-23",
+        "from": "Patriots", "to": "Bills",
+        "bills_sent": ["2026 first round pick (#28-Caleb Lomu)"],
+        "patriots_sent": ["2026 first round pick (#31-Keldric Faulk)", "2026 fourth round pick (#125-Skyler Bell)"]
+      }
+    ]
+  },
+  {"pick": 126, "round": 4, "round_pick": 26, "original_team": "Bills", "selecting_team": "Bills", "player": "Kaleb Elarms-Orr"},
+  {"pick": 127, "round": 4, "round_pick": 27, "original_team": "49ers", "selecting_team": "49ers", "player": "Carver Willis"},
+  {
+    "pick": 128, "round": 4, "round_pick": 28,
+    "original_team": "Texans", "selecting_team": "Bengals",
+    "player": "Connor Lew",
+    "trades": [
+      {
+        "date": "2026-03-11",
+        "from": "Texans", "to": "Lions",
+        "lions_sent": ["David Montgomery"],
+        "texans_sent": ["Juice Scruggs", "2026 fourth round pick (#128-Connor Lew)", "2027 seventh round pick"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Lions", "to": "Jets",
+        "jets_sent": ["2026 second round pick (#44-Derrick Moore)"],
+        "lions_sent": ["2026 second round pick (#50-D'Angelo Ponds)", "2026 fourth round pick (#128-Connor Lew)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Jets", "to": "Bengals",
+        "bengals_sent": ["2026 fourth round pick (#110-Cade Klubnik)", "2026 sixth round pick (#199-Emmanuel Henderson Jr.)"],
+        "jets_sent": ["2026 fourth round pick (#128-Connor Lew)", "2026 fourth round pick (#140-Colbie Young)"]
+      }
+    ]
+  },
+  {
+    "pick": 129, "round": 4, "round_pick": 29,
+    "original_team": "Rams", "selecting_team": "Panthers",
+    "player": "Will Lee III",
+    "trades": [
+      {
+        "date": "2025-04-26",
+        "from": "Rams", "to": "Bears",
+        "bears_sent": ["2025 fifth round pick (#148-Ty Hamilton)"],
+        "rams_sent": ["2025 sixth round pick (#195-Luke Newman)", "2026 fourth round pick (#129-Will Lee III)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Bears", "to": "Panthers",
+        "panthers_sent": ["2026 fourth round pick (#124-Malik Muhammad)", "2026 fifth round pick (#166-Keyshaun Elliott)"],
+        "bears_sent": ["2026 fourth round pick (#129-Will Lee III)", "2026 fifth round pick (#144-Sam Hecht)"]
+      }
+    ]
+  },
+  {
+    "pick": 130, "round": 4, "round_pick": 30,
+    "original_team": "Broncos", "selecting_team": "Dolphins",
+    "player": "Trey Moore",
+    "trades": [
+      {
+        "date": "2026-03-18",
+        "from": "Dolphins", "to": "Broncos",
+        "broncos_sent": ["2026 first round pick (#30-Omar Cooper)", "2026 third round pick (#94-Chris Bell)", "2026 fourth round pick (#130-Trey Moore)"],
+        "dolphins_sent": ["Jaylen Waddle", "2026 fourth round pick (#111-Kage Casey)"]
+      }
+    ]
+  },
+  {
+    "pick": 131, "round": 4, "round_pick": 31,
+    "original_team": "Patriots", "selecting_team": "Chargers",
+    "player": "Genesis Smith",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Chargers", "to": "Patriots",
+        "patriots_sent": ["2026 second round pick (#55-Gabe Jacas)"],
+        "chargers_sent": ["2026 second round pick (#63-Jake Slaughter)", "2026 fourth round pick (#131-Genesis Smith)", "2026 sixth round pick (#202-Logan Taylor)"]
+      }
+    ]
+  },
+  {
+    "pick": 132, "round": 4, "round_pick": 32,
+    "original_team": "Seahawks", "selecting_team": "Saints",
+    "player": "Jeremiah Wright",
+    "trades": [
+      {
+        "date": "2025-11-04",
+        "from": "Seahawks", "to": "Saints",
+        "saints_sent": ["Rashid Shaheed"],
+        "seahawks_sent": ["2026 fourth round pick (#132-Jeremiah Wright)", "2026 fifth round pick (#172-Lorenzo Styles Jr.)"]
+      }
+    ]
+  },
+  {
+    "pick": 133, "round": 4, "round_pick": 33,
+    "original_team": "49ers", "selecting_team": "Ravens",
+    "player": "Matthew Hibner",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Ravens", "to": "49ers",
+        "49ers_sent": ["2026 fifth round pick (#154-Jaden Dugger)", "2027 sixth round pick"],
+        "ravens_sent": ["2026 fourth round pick (#133-Matthew Hibner)"]
+      }
+    ]
+  },
+  {
+    "pick": 134, "round": 4, "round_pick": 34,
+    "original_team": "Raiders", "selecting_team": "Falcons",
+    "player": "Kendal Daniels",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Falcons", "to": "Raiders",
+        "raiders_sent": ["2026 fourth round pick (#122-Mike Washington Jr.)"],
+        "falcons_sent": ["2026 fourth round pick (#134-Kendal Daniels)", "2026 sixth round pick (#208-Anterio Thompson)"]
+      }
+    ]
+  },
+  {
+    "pick": 135, "round": 4, "round_pick": 35,
+    "original_team": "Steelers", "selecting_team": "Colts",
+    "player": "Bryce Boettcher",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Colts", "to": "Steelers",
+        "steelers_sent": ["2026 second round pick (#47-Germie Bernard)", "2026 seventh round pick (#249-Garrett Nussmeier)"],
+        "colts_sent": ["2026 second round pick (#53-C.J. Allen)", "2026 fourth round pick (#135-Bryce Boettcher)", "2026 seventh round pick (#237-Seth McGowan)"]
+      }
+    ]
+  },
+  {"pick": 136, "round": 4, "round_pick": 36, "original_team": "Saints", "selecting_team": "Saints", "player": "Bryce Lance", "compensatory": true},
+  {
+    "pick": 137, "round": 4, "round_pick": 37,
+    "original_team": "Eagles", "selecting_team": "Cowboys",
+    "player": "L.T. Overton",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Cowboys", "to": "Eagles",
+        "eagles_sent": ["2026 first round pick (#23-Malachi Lawrence)", "2026 fourth round pick (#114-Devin Moore)", "2026 fourth round pick (#137-L.T. Overton)"],
+        "cowboys_sent": ["2026 first round pick (#20-Makai Lemon)", "2027 seventh round pick"]
+      }
+    ]
+  },
+  {
+    "pick": 138, "round": 4, "round_pick": 38,
+    "original_team": "49ers", "selecting_team": "Dolphins",
+    "player": "Kyle Louis",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Dolphins", "to": "49ers",
+        "49ers_sent": ["2026 first round pick (#27-Chris Johnson)", "2026 fourth round pick (#138-Kyle Louis)"],
+        "dolphins_sent": ["2026 first round pick (#30-Omar Cooper)", "2026 third round pick (#90-Kaelon Black)"]
+      }
+    ]
+  },
+  {"pick": 139, "round": 4, "round_pick": 39, "original_team": "49ers", "selecting_team": "49ers", "player": "Ephesians Prysock", "compensatory": true},
+  {
+    "pick": 140, "round": 4, "round_pick": 40,
+    "original_team": "Jets", "selecting_team": "Bengals",
+    "player": "Colbie Young",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Bengals", "to": "Jets",
+        "jets_sent": ["2026 fourth round pick (#110-Cade Klubnik)", "2026 sixth round pick (#199-Emmanuel Henderson Jr.)"],
+        "bengals_sent": ["2026 fourth round pick (#128-Connor Lew)", "2026 fourth round pick (#140-Colbie Young)"]
+      }
+    ]
+  },
+  {
+    "pick": 141, "round": 5, "round_pick": 1,
+    "original_team": "Raiders", "selecting_team": "Texans",
+    "player": "Kamari Ramsey",
+    "trades": [
+      {
+        "date": "2025-08-26",
+        "from": "Raiders", "to": "Browns",
+        "browns_sent": ["Kenny Pickett"],
+        "raiders_sent": ["2026 fifth round pick (#141-Kamari Ramsey)"]
+      },
+      {
+        "date": "2026-03-11",
+        "from": "Browns", "to": "Texans",
+        "texans_sent": ["Tytus Howard"],
+        "browns_sent": ["2026 fifth round pick (#141-Kamari Ramsey)"]
+      }
+    ]
+  },
+  {
+    "pick": 142, "round": 5, "round_pick": 2,
+    "original_team": "Jets", "selecting_team": "Titans",
+    "player": "Fernando Carmona",
+    "trades": [
+      {
+        "date": "2025-04-26",
+        "from": "Jets", "to": "Ravens",
+        "ravens_sent": ["2025 fifth round pick (#176-Tyler Baron)", "2026 sixth round pick (#194-Pat Coogan)"],
+        "jets_sent": ["2025 sixth round pick (#186-Tyler Loop)", "2026 fifth round pick (#142-Fernando Carmona)"]
+      },
+      {
+        "date": "2025-11-04",
+        "from": "Ravens", "to": "Titans",
+        "titans_sent": ["Dre'Mont Jones"],
+        "ravens_sent": ["2026 conditional round pick (#142-Fernando Carmona)"]
+      }
+    ]
+  },
+  {"pick": 143, "round": 5, "round_pick": 3, "original_team": "Cardinals", "selecting_team": "Cardinals", "player": "Reggie Virgil"},
+  {
+    "pick": 144, "round": 5, "round_pick": 4,
+    "original_team": "Titans", "selecting_team": "Panthers",
+    "player": "Sam Hecht",
+    "trades": [
+      {
+        "date": "2024-08-27",
+        "from": "Titans", "to": "Rams",
+        "rams_sent": ["Ernest Jones", "2026 sixth round pick (#207-Micah Morris)"],
+        "titans_sent": ["2026 fifth round pick (#144-Sam Hecht)"]
+      },
+      {
+        "date": "2025-10-27",
+        "from": "Titans", "to": "Rams",
+        "rams_sent": ["Roger McCreary", "2026 sixth round pick (#207-Micah Morris)"],
+        "titans_sent": ["2026 fifth round pick (#144-Sam Hecht)"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Bears", "to": "Titans",
+        "titans_sent": ["2026 third round pick (#69-Sam Roush)", "2026 fifth round pick (#144-Sam Hecht)"],
+        "bears_sent": ["2026 second round pick (#60-Anthony Hill Jr.)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Panthers", "to": "Bears",
+        "bears_sent": ["2026 fourth round pick (#129-Will Lee III)", "2026 fifth round pick (#144-Sam Hecht)"],
+        "panthers_sent": ["2026 fourth round pick (#124-Malik Muhammad)", "2026 fifth round pick (#166-Keyshaun Elliott)"]
+      }
+    ]
+  },
+  {
+    "pick": 145, "round": 5, "round_pick": 5,
+    "original_team": "Giants", "selecting_team": "Chargers",
+    "player": "Nick Barrett",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Giants", "to": "Browns",
+        "browns_sent": ["2026 third round pick (#74-Malachi Fields)"],
+        "giants_sent": ["2026 fourth round pick (#105-Brenen Thompson)", "2026 fifth round pick (#145-Nick Barrett)", "2027 fourth round pick"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Browns", "to": "Chargers",
+        "chargers_sent": ["2026 third round pick (#86-Austin Barber)"],
+        "browns_sent": ["2026 fourth round pick (#105-Brenen Thompson)", "2026 fourth round pick (#145-Nick Barrett)", "2026 sixth round pick (#206-Alex Harkey)"]
+      }
+    ]
+  },
+  {"pick": 146, "round": 5, "round_pick": 6, "original_team": "Browns", "selecting_team": "Browns", "player": "Parker Brailsford"},
+  {"pick": 147, "round": 5, "round_pick": 7, "original_team": "Commanders", "selecting_team": "Commanders", "player": "Joshua Josephs"},
+  {
+    "pick": 148, "round": 5, "round_pick": 8,
+    "original_team": "Chiefs", "selecting_team": "Seahawks",
+    "player": "Beau Stephens",
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Chiefs", "to": "Browns",
+        "browns_sent": ["2026 first round pick (#6-Mansoor Delane)"],
+        "chiefs_sent": ["2026 first round pick (#9-Spencer Fano)", "2026 third round pick (#74-Malachi Fields)", "2026 fifth round pick (#148-Beau Stephens)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Browns", "to": "Seahawks",
+        "seahawks_sent": ["2027 fourth round pick"],
+        "browns_sent": ["2026 fifth round pick (#148-Beau Stephens)"]
+      }
+    ]
+  },
+  {
+    "pick": 149, "round": 5, "round_pick": 9,
+    "original_team": "Bengals", "selecting_team": "Browns",
+    "player": "Justin Jefferson",
+    "trades": [
+      {
+        "date": "2025-10-07",
+        "from": "Bengals", "to": "Browns",
+        "browns_sent": ["Joe Flacco", "2026 sixth round pick (#199-Emmanuel Henderson Jr.)"],
+        "bengals_sent": ["2026 fifth round pick (#149-Justin Jefferson)"]
+      }
+    ]
+  },
+  {
+    "pick": 150, "round": 5, "round_pick": 10,
+    "original_team": "Saints", "selecting_team": "Raiders",
+    "player": "Dalton Johnson",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Raiders", "to": "Saints",
+        "saints_sent": ["Tyree Wilson", "2026 seventh round pick (#219-T.J. Hall)"],
+        "raiders_sent": ["2026 fifth round pick (#150-Dalton Johnson)"]
+      }
+    ]
+  },
+  {
+    "pick": 151, "round": 5, "round_pick": 11,
+    "original_team": "Dolphins", "selecting_team": "Panthers",
+    "player": "Zakee Wheatley",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Panthers", "to": "Dolphins",
+        "dolphins_sent": ["2026 fifth round pick (#158-Michael Taaffe)", "2026 sixth round pick (#200-D.J. Campbell)"],
+        "panthers_sent": ["2026 fifth round pick (#151-Zakee Wheatley)", "2026 seventh round pick (#227-Jackson Kuwatch)"]
+      }
+    ]
+  },
+  {
+    "pick": 152, "round": 5, "round_pick": 12,
+    "original_team": "Cowboys", "selecting_team": "Broncos",
+    "player": "Justin Joly",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Cowboys", "to": "49ers",
+        "49ers_sent": ["Dee Winters"],
+        "cowboys_sent": ["2026 fifth round pick (#152-Justin Joly)"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "49ers", "to": "Browns",
+        "browns_sent": ["2026 second round pick (#57-Emmanuel McNeil-Warren)"],
+        "49ers_sent": ["2026 third round pick (#70-Romello Height)", "2026 fourth round pick (#107-Gracen Halton)", "2026 fifth round pick (#152-Justin Joly)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Browns", "to": "Broncos",
+        "broncos_sent": ["2026 fifth round pick (#170-Joe Royer)", "2026 sixth round pick (#182-Taylen Green)"],
+        "browns_sent": ["2026 fifth round pick (#152-Justin Joly)"]
+      }
+    ]
+  },
+  {
+    "pick": 153, "round": 5, "round_pick": 13,
+    "original_team": "Falcons", "selecting_team": "Packers",
+    "player": "Jager Burton",
+    "trades": [
+      {
+        "date": "2025-04-25",
+        "from": "Eagles", "to": "Falcons",
+        "falcons_sent": ["2025 third round pick (#96-Xavier Watts)"],
+        "eagles_sent": ["2025 third round pick (#101-Sai'vion Jones)", "2026 fifth round pick (#153-Jager Burton)"]
+      },
+      {
+        "date": "2026-04-13",
+        "from": "Packers", "to": "Eagles",
+        "eagles_sent": ["Dontayvion Wicks"],
+        "packers_sent": ["2026 fifth round pick (#153-Jager Burton)", "2027 sixth round pick"]
+      }
+    ]
+  },
+  {
+    "pick": 154, "round": 5, "round_pick": 14,
+    "original_team": "Ravens", "selecting_team": "49ers",
+    "player": "Jaden Dugger",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "49ers", "to": "Ravens",
+        "ravens_sent": ["2026 fourth round pick (#133-Matthew Hibner)"],
+        "49ers_sent": ["2026 fifth round pick (#154-Jaden Dugger)", "2027 sixth round pick"]
+      }
+    ]
+  },
+  {"pick": 155, "round": 5, "round_pick": 15, "original_team": "Buccaneers", "selecting_team": "Buccaneers", "player": "DeMonte Capehart"},
+  {"pick": 156, "round": 5, "round_pick": 16, "original_team": "Colts", "selecting_team": "Colts", "player": "George Gumbs Jr."},
+  {"pick": 157, "round": 5, "round_pick": 17, "original_team": "Lions", "selecting_team": "Lions", "player": "Keith Abney II"},
+  {
+    "pick": 158, "round": 5, "round_pick": 18,
+    "original_team": "Vikings", "selecting_team": "Dolphins",
+    "player": "Michael Taaffe",
+    "trades": [
+      {
+        "date": "2025-08-27",
+        "from": "Vikings", "to": "Panthers",
+        "panthers_sent": ["Adam Thielen", "2026 conditional round pick (#235-Gavin Gerhardt)", "2027 fifth round pick"],
+        "vikings_sent": ["2026 fifth round pick (#158-Michael Taaffe)", "2027 fourth round pick"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Panthers", "to": "Dolphins",
+        "dolphins_sent": ["2026 fifth round pick (#151-Zakee Wheatley)", "2026 seventh round pick (#227-Jackson Kuwatch)"],
+        "panthers_sent": ["2026 fifth round pick (#158-Michael Taaffe)", "2026 sixth round pick (#200-D.J. Campbell)"]
+      }
+    ]
+  },
+  {
+    "pick": 159, "round": 5, "round_pick": 19,
+    "original_team": "Panthers", "selecting_team": "Vikings",
+    "player": "Max Bredeson",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Panthers", "to": "Vikings",
+        "vikings_sent": ["2026 second round pick (#51-Jake Golday)", "2026 sixth round pick (#159-Max Bredeson)"],
+        "panthers_sent": ["2026 second round pick (#49-Lee Hunter)", "2026 fifth round pick (#196-Dametrious Crownover)"]
+      }
+    ]
+  },
+  {
+    "pick": 160, "round": 5, "round_pick": 20,
+    "original_team": "Packers", "selecting_team": "Buccaneers",
+    "player": "Billy Schrauth",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Buccaneers", "to": "Packers",
+        "packers_sent": ["2026 third round pick (#77-Chris McClellan)"],
+        "buccaneers_sent": ["2026 third round pick (#84-Ted Hurst)", "2026 fifth round pick (#160-Billy Schrauth)"]
+      }
+    ]
+  },
+  {
+    "pick": 161, "round": 5, "round_pick": 21,
+    "original_team": "Steelers", "selecting_team": "Chiefs",
+    "player": "Emmett Johnson",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Chiefs", "to": "Steelers",
+        "steelers_sent": ["2026 fifth round pick (#161-Emmett Johnson)", "2026 seventh round pick (#249-Garrett Nussmeier)"],
+        "chiefs_sent": ["2026 fifth round pick (#169-Riley Nowakowski)", "2026 sixth round pick (#210-Gabriel Rubio)"]
+      }
+    ]
+  },
+  {
+    "pick": 162, "round": 5, "round_pick": 22,
+    "original_team": "Chargers", "selecting_team": "Ravens",
+    "player": "Chandler Rivers",
+    "trades": [
+      {
+        "date": "2025-10-08",
+        "from": "Chargers", "to": "Ravens",
+        "ravens_sent": ["Odafe Oweh", "2027 seventh round pick"],
+        "chargers_sent": ["Alohi Gilman", "2026 fifth round pick (#162-Chandler Rivers)"]
+      }
+    ]
+  },
+  {
+    "pick": 163, "round": 5, "round_pick": 23,
+    "original_team": "Eagles", "selecting_team": "Vikings",
+    "player": "Charles Demmings",
+    "trades": [
+      {
+        "date": "2025-08-24",
+        "from": "Vikings", "to": "Eagles",
+        "eagles_sent": ["Sam Howell", "2026 sixth round pick (#211-Ryan Eckley)"],
+        "vikings_sent": ["2026 fifth round pick (#163-Charles Demmings)", "2027 seventh round pick"]
+      }
+    ]
+  },
+  {"pick": 164, "round": 5, "round_pick": 24, "original_team": "Jaguars", "selecting_team": "Jaguars", "player": "Tanner Koziol"},
+  {
+    "pick": 165, "round": 5, "round_pick": 25,
+    "original_team": "Bears", "selecting_team": "Titans",
+    "player": "Nicholas Singleton",
+    "trades": [
+      {
+        "date": "2026-03-11",
+        "from": "Bears", "to": "Bills",
+        "bills_sent": ["2026 second round pick (#60-Anthony Hill Jr.)"],
+        "bears_sent": ["D.J. Moore", "2026 fifth round pick (#165-Nicholas Singleton)"]
+      },
+      {
+        "date": "2026-04-23",
+        "from": "Bills", "to": "Titans",
+        "titans_sent": ["2026 second round pick (#35-T.J. Parker)", "2026 third round pick (#66-Tyler Onyedim)", "2026 fourth round pick (#101-Jermod McCoy)"],
+        "bills_sent": ["2026 first round pick (#31-Keldric Faulk)", "2026 third round pick (#69-Sam Roush)", "2026 fifth round pick (#165-Nicholas Singleton)"]
+      }
+    ]
+  },
+  {
+    "pick": 166, "round": 5, "round_pick": 26,
+    "original_team": "49ers", "selecting_team": "Bears",
+    "player": "Keyshaun Elliott",
+    "trades": [
+      {
+        "date": "2025-06-03",
+        "from": "49ers", "to": "Eagles",
+        "eagles_sent": ["Bryce Huff"],
+        "49ers_sent": ["2026 conditional round pick (#166-Keyshaun Elliott)"]
+      },
+      {
+        "date": "2025-09-09",
+        "from": "Jaguars", "to": "Eagles",
+        "eagles_sent": ["Tank Bigsby"],
+        "jaguars_sent": ["2026 conditional round pick (#166-Keyshaun Elliott)", "2026 sixth round pick (#203-C.J. Williams)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Panthers", "to": "Jaguars",
+        "jaguars_sent": ["2026 fourth round pick (#119-Wesley Williams)", "2026 sixth round pick (#196-Dametrious Crownover)"],
+        "panthers_sent": ["2026 fourth round pick (#124-Malik Muhammad)", "2026 fifth round pick (#166-Keyshaun Elliott)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Panthers", "to": "Bears",
+        "bears_sent": ["2026 fourth round pick (#129-Will Lee III)", "2026 fifth round pick (#144-Sam Hecht)"],
+        "panthers_sent": ["2026 fourth round pick (#124-Malik Muhammad)", "2026 fifth round pick (#166-Keyshaun Elliott)"]
+      }
+    ]
+  },
+  {
+    "pick": 167, "round": 5, "round_pick": 27,
+    "original_team": "Texans", "selecting_team": "Bills",
+    "player": "Jalon Kilgore",
+    "trades": [
+      {
+        "date": "2025-03-12",
+        "from": "Eagles", "to": "Texans",
+        "texans_sent": ["Chauncey Gardner-Johnson", "2026 sixth round pick (#203-C.J. Williams)"],
+        "eagles_sent": ["Kenyon Green", "2026 fifth round pick (#167-Jalon Kilgore)"]
+      },
+      {
+        "date": "2025-08-18",
+        "from": "Eagles", "to": "Texans",
+        "texans_sent": ["John Metchie III", "2026 sixth round pick (#203-C.J. Williams)"],
+        "eagles_sent": ["Harrison Bryant", "2026 fifth round pick (#167-Jalon Kilgore)"]
+      },
+      {
+        "date": "2026-04-23",
+        "from": "Texans", "to": "Bills",
+        "bills_sent": ["2026 first round pick (#26-Keylan Rutledge)", "2026 third round pick (#91-Trey Zuhn III)"],
+        "texans_sent": ["2026 first round pick (#28-Caleb Lomu)", "2026 third round pick (#69-Sam Roush)", "2026 fifth round pick (#167-Jalon Kilgore)"]
+      }
+    ]
+  },
+  {
+    "pick": 168, "round": 5, "round_pick": 28,
+    "original_team": "Bills", "selecting_team": "Lions",
+    "player": "Kendrick Law",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Lions", "to": "Bills",
+        "bills_sent": ["2026 fifth round pick (#168-Kendrick Law)"],
+        "lions_sent": ["2026 fifth round pick (#181-Zane Durant)", "2026 sixth round pick (#213-Jordan van den Berg)"]
+      }
+    ]
+  },
+  {
+    "pick": 169, "round": 5, "round_pick": 29,
+    "original_team": "Rams", "selecting_team": "Steelers",
+    "player": "Riley Nowakowski",
+    "trades": [
+      {
+        "date": "2026-03-11",
+        "from": "Rams", "to": "Chiefs",
+        "chiefs_sent": ["Trent McDuffie"],
+        "rams_sent": ["2026 first round pick (#29-Peter Woods)", "2026 fifth round pick (#169-Riley Nowakowski)", "2026 sixth round pick (#210-Gabriel Rubio)", "2027 third round pick"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Chiefs", "to": "Steelers",
+        "steelers_sent": ["2026 fifth round pick (#161-Emmett Johnson)", "2026 seventh round pick (#249-Garrett Nussmeier)"],
+        "chiefs_sent": ["2026 fifth round pick (#169-Riley Nowakowski)", "2026 sixth round pick (#210-Gabriel Rubio)"]
+      }
+    ]
+  },
+  {
+    "pick": 170, "round": 5, "round_pick": 30,
+    "original_team": "Broncos", "selecting_team": "Browns",
+    "player": "Joe Royer",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Browns", "to": "Broncos",
+        "broncos_sent": ["2026 fifth round pick (#170-Joe Royer)", "2026 sixth round pick (#182-Taylen Green)"],
+        "browns_sent": ["2026 fifth round pick (#152-Justin Joly)"]
+      }
+    ]
+  },
+  {"pick": 171, "round": 5, "round_pick": 31, "original_team": "Patriots", "selecting_team": "Patriots", "player": "Karon Prunty"},
+  {
+    "pick": 172, "round": 5, "round_pick": 32,
+    "original_team": "Seahawks", "selecting_team": "Saints",
+    "player": "Lorenzo Styles Jr.",
+    "trades": [
+      {
+        "date": "2025-11-04",
+        "from": "Seahawks", "to": "Saints",
+        "saints_sent": ["Rashid Shaheed"],
+        "seahawks_sent": ["2026 fourth round pick (#132-Jeremiah Wright)", "2026 fifth round pick (#172-Lorenzo Styles Jr.)"]
+      }
+    ]
+  },
+  {"pick": 173, "round": 5, "round_pick": 33, "original_team": "Ravens", "selecting_team": "Ravens", "player": "Josh Cuevas", "compensatory": true},
+  {"pick": 174, "round": 5, "round_pick": 34, "original_team": "Ravens", "selecting_team": "Ravens", "player": "Adam Randall", "compensatory": true},
+  {"pick": 175, "round": 5, "round_pick": 35, "original_team": "Raiders", "selecting_team": "Raiders", "player": "Hezekiah Masses", "compensatory": true},
+  {"pick": 176, "round": 5, "round_pick": 36, "original_team": "Chiefs", "selecting_team": "Chiefs", "player": "Cyrus Allen", "compensatory": true},
+  {
+    "pick": 177, "round": 5, "round_pick": 37,
+    "original_team": "Cowboys", "selecting_team": "Dolphins",
+    "player": "Kevin Coleman Jr.",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Cowboys", "to": "Dolphins",
+        "dolphins_sent": ["2026 first round pick (#11-Caleb Downs)"],
+        "cowboys_sent": ["2026 first round pick (#12-Kadyn Proctor)", "2026 fifth round pick (#177-Kevin Coleman Jr.)", "2026 fifth round pick (#180-Seydou Traore)"]
+      }
+    ]
+  },
+  {"pick": 178, "round": 5, "round_pick": 38, "original_team": "Eagles", "selecting_team": "Eagles", "player": "Cole Payton", "compensatory": true},
+  {
+    "pick": 179, "round": 5, "round_pick": 39,
+    "original_team": "Jets", "selecting_team": "49ers",
+    "player": "Enrique Cruz Jr.",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "49ers", "to": "Jets",
+        "jets_sent": ["2026 second round pick (#33-De'Zhaun Stribling)", "2026 fifth round pick (#179-Enrique Cruz Jr.)"],
+        "49ers_sent": ["2026 first round pick (#30-Omar Cooper)"]
+      }
+    ]
+  },
+  {
+    "pick": 180, "round": 5, "round_pick": 40,
+    "original_team": "Cowboys", "selecting_team": "Dolphins",
+    "player": "Seydou Traore",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-23",
+        "from": "Cowboys", "to": "Dolphins",
+        "dolphins_sent": ["2026 first round pick (#11-Caleb Downs)"],
+        "cowboys_sent": ["2026 first round pick (#12-Kadyn Proctor)", "2026 fifth round pick (#177-Kevin Coleman Jr.)", "2026 fifth round pick (#180-Seydou Traore)"]
+      }
+    ]
+  },
+  {
+    "pick": 181, "round": 5, "round_pick": 41,
+    "original_team": "Lions", "selecting_team": "Bills",
+    "player": "Zane Durant",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Bills", "to": "Lions",
+        "lions_sent": ["2026 fifth round pick (#168-Kendrick Law)"],
+        "bills_sent": ["2026 fifth round pick (#181-Zane Durant)", "2026 sixth round pick (#213-Jordan van den Berg)"]
+      }
+    ]
+  },
+  {
+    "pick": 182, "round": 6, "round_pick": 1,
+    "original_team": "Jets", "selecting_team": "Browns",
+    "player": "Taylen Green",
+    "trades": [
+      {"date": "2025-08-20", "note": "Jets pick traded to Browns via multiple intermediate trades through Jaguars, Raiders, Bills, Broncos, then Browns"},
+      {"date": "2026-04-25", "from": "Browns", "to": "Broncos", "broncos_sent": ["2026 fifth round pick (#170-Joe Royer)", "2026 sixth round pick (#182-Taylen Green)"], "browns_sent": ["2026 fifth round pick (#152-Justin Joly)"]}
+    ]
+  },
+  {"pick": 183, "round": 6, "round_pick": 2, "original_team": "Cardinals", "selecting_team": "Cardinals", "player": "Karson Sharar"},
+  {"pick": 184, "round": 6, "round_pick": 3, "original_team": "Titans", "selecting_team": "Titans", "player": "Jackie Marshall"},
+  {
+    "pick": 185, "round": 6, "round_pick": 4,
+    "original_team": "Raiders", "selecting_team": "Buccaneers",
+    "player": "Bauer Sharp",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Buccaneers", "to": "Raiders",
+        "raiders_sent": ["2026 sixth round pick (#195-Malik Benson)", "2026 seventh round pick (#229-Brandon Cleveland)"],
+        "buccaneers_sent": ["2026 sixth round pick (#185-Bauer Sharp)"]
+      }
+    ]
+  },
+  {"pick": 186, "round": 6, "round_pick": 5, "original_team": "Giants", "selecting_team": "Giants", "player": "Bobby Jamison-Travis"},
+  {"pick": 187, "round": 6, "round_pick": 6, "original_team": "Commanders", "selecting_team": "Commanders", "player": "Kaytron Allen"},
+  {
+    "pick": 188, "round": 6, "round_pick": 7,
+    "original_team": "Browns", "selecting_team": "Jets",
+    "player": "Anez Cooper",
+    "trades": [
+      {
+        "date": "2024-08-12",
+        "from": "Browns", "to": "Seahawks",
+        "seahawks_sent": ["Nick Harris", "2026 seventh round pick (#248-Carsen Ryan)"],
+        "browns_sent": ["2026 sixth round pick (#188-Anez Cooper)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Jets", "to": "Seahawks",
+        "seahawks_sent": ["2026 sixth round pick (#199-Emmanuel Henderson Jr.)", "2026 seventh round pick (#242-Deven Eastern)"],
+        "jets_sent": ["2026 sixth round pick (#188-Anez Cooper)"]
+      }
+    ]
+  },
+  {"pick": 189, "round": 6, "round_pick": 8, "original_team": "Bengals", "selecting_team": "Bengals", "player": "Brian Parker II"},
+  {"pick": 190, "round": 6, "round_pick": 9, "original_team": "Saints", "selecting_team": "Saints", "player": "Barion Brown"},
+  {
+    "pick": 191, "round": 6, "round_pick": 10,
+    "original_team": "Chiefs", "selecting_team": "Jaguars",
+    "player": "Josh Cameron",
+    "trades": [
+      {
+        "date": "2024-10-28",
+        "from": "Chiefs", "to": "Patriots",
+        "patriots_sent": ["Josh Uche"],
+        "chiefs_sent": ["2026 sixth round pick (#191-Josh Cameron)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Patriots", "to": "Jaguars",
+        "jaguars_sent": ["2026 sixth round pick (#196-Dametrious Crownover)", "2026 seventh round pick (#245-Jam Miller)"],
+        "patriots_sent": ["2026 sixth round pick (#191-Josh Cameron)"]
+      }
+    ]
+  },
+  {
+    "pick": 192, "round": 6, "round_pick": 11,
+    "original_team": "Dolphins", "selecting_team": "Giants",
+    "player": "J.C. Davis",
+    "trades": [
+      {
+        "date": "2025-07-07",
+        "from": "Dolphins", "to": "Giants",
+        "giants_sent": ["Darren Waller", "2027 conditional seventh round pick"],
+        "dolphins_sent": ["2026 sixth round pick (#192-J.C. Davis)"]
+      }
+    ]
+  },
+  {
+    "pick": 193, "round": 6, "round_pick": 12,
+    "original_team": "Cowboys", "selecting_team": "Giants",
+    "player": "Jack Kelly",
+    "trades": [
+      {
+        "date": "2024-08-15",
+        "from": "Cowboys", "to": "Giants",
+        "giants_sent": ["Jordan Phillips", "2026 seventh round pick (#221-Jack Endries)"],
+        "cowboys_sent": ["2026 sixth round pick (#193-Jack Kelly)"]
+      }
+    ]
+  },
+  {
+    "pick": 194, "round": 6, "round_pick": 13,
+    "original_team": "Ravens", "selecting_team": "Titans",
+    "player": "Pat Coogan",
+    "trades": [
+      {
+        "date": "2025-04-26",
+        "from": "Ravens", "to": "Jets",
+        "jets_sent": ["2025 fifth round pick (#176-Tyler Baron)", "2026 sixth round pick (#194-Pat Coogan)"],
+        "ravens_sent": ["2025 sixth round pick (#186-Tyler Loop)", "2026 fifth round pick (#142-Fernando Carmona)"]
+      },
+      {
+        "date": "2025-09-23",
+        "from": "Jets", "to": "Titans",
+        "titans_sent": ["Jarvis Brownlee Jr.", "2026 seventh round pick (#238-Max Llewellyn)"],
+        "jets_sent": ["2026 sixth round pick (#194-Pat Coogan)"]
+      }
+    ]
+  },
+  {
+    "pick": 195, "round": 6, "round_pick": 14,
+    "original_team": "Buccaneers", "selecting_team": "Raiders",
+    "player": "Malik Benson",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Raiders", "to": "Buccaneers",
+        "buccaneers_sent": ["2026 sixth round pick (#185-Bauer Sharp)"],
+        "raiders_sent": ["2026 sixth round pick (#195-Malik Benson)", "2026 seventh round pick (#229-Brandon Cleveland)"]
+      }
+    ]
+  },
+  {
+    "pick": 196, "round": 6, "round_pick": 15,
+    "original_team": "Colts", "selecting_team": "Patriots",
+    "player": "Dametrious Crownover",
+    "trades": [
+      {"date": "2025-08-26", "note": "Pick passed through Vikings, Panthers, Jaguars, then Patriots via multiple trades"},
+      {
+        "date": "2026-04-25",
+        "from": "Patriots", "to": "Jaguars",
+        "jaguars_sent": ["2026 sixth round pick (#191-Josh Cameron)"],
+        "patriots_sent": ["2026 sixth round pick (#196-Dametrious Crownover)", "2026 seventh round pick (#245-Jam Miller)"]
+      }
+    ]
+  },
+  {
+    "pick": 197, "round": 6, "round_pick": 16,
+    "original_team": "Falcons", "selecting_team": "Rams",
+    "player": "C.J. Daniels",
+    "trades": [
+      {
+        "date": "2026-03-23",
+        "from": "Eagles", "to": "Falcons",
+        "falcons_sent": ["Sydney Brown", "2026 fourth round pick (#122-Mike Washington Jr.)", "2026 sixth round pick (#215-Harold Perkins Jr.)"],
+        "eagles_sent": ["2026 fourth round pick (#114-Devin Moore)", "2026 sixth round pick (#197-C.J. Daniels)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Rams", "to": "Eagles",
+        "eagles_sent": ["2026 sixth round pick (#197-C.J. Daniels)"],
+        "rams_sent": ["2026 sixth round pick (#207-Micah Morris)", "2026 seventh round pick (#251-Uar Bernard)", "2026 seventh round pick (#252-Keyshawn James-Newby)"]
+      }
+    ]
+  },
+  {
+    "pick": 198, "round": 6, "round_pick": 17,
+    "original_team": "Vikings", "selecting_team": "Vikings",
+    "player": "Demond Claiborne",
+    "trades": [
+      {"date": "Various", "note": "Pick passed through Texans, Vikings, 49ers, Patriots, then back to Vikings via multiple trades"},
+      {
+        "date": "2026-04-25",
+        "from": "Vikings", "to": "Patriots",
+        "patriots_sent": ["2026 sixth round pick (#198-Demond Claiborne)"],
+        "vikings_sent": ["2026 seventh round pick (#234-Behren Morton)", "2027 sixth round pick"]
+      }
+    ]
+  },
+  {
+    "pick": 199, "round": 6, "round_pick": 18,
+    "original_team": "Lions", "selecting_team": "Seahawks",
+    "player": "Emmanuel Henderson Jr.",
+    "trades": [
+      {"date": "Various", "note": "Pick passed through Browns, Bengals, Jets, then Seahawks"},
+      {
+        "date": "2026-04-25",
+        "from": "Seahawks", "to": "Jets",
+        "jets_sent": ["2026 sixth round pick (#188-Anez Cooper)"],
+        "seahawks_sent": ["2026 sixth round pick (#199-Emmanuel Henderson Jr.)", "2026 seventh round pick (#242-Deven Eastern)"]
+      }
+    ]
+  },
+  {
+    "pick": 200, "round": 6, "round_pick": 19,
+    "original_team": "Panthers", "selecting_team": "Dolphins",
+    "player": "D.J. Campbell",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Dolphins", "to": "Panthers",
+        "panthers_sent": ["2026 fifth round pick (#151-Zakee Wheatley)", "2026 seventh round pick (#227-Jackson Kuwatch)"],
+        "dolphins_sent": ["2026 fifth round pick (#158-Michael Taaffe)", "2026 sixth round pick (#200-D.J. Campbell)"]
+      }
+    ]
+  },
+  {"pick": 201, "round": 6, "round_pick": 20, "original_team": "Packers", "selecting_team": "Packers", "player": "Domani Jackson"},
+  {
+    "pick": 202, "round": 6, "round_pick": 21,
+    "original_team": "Steelers", "selecting_team": "Chargers",
+    "player": "Logan Taylor",
+    "trades": [
+      {
+        "date": "2025-10-30",
+        "from": "Steelers", "to": "Patriots",
+        "patriots_sent": ["Kyle Dugger", "2026 seventh round pick (#224-Robert Spears-Jennings)"],
+        "steelers_sent": ["2026 sixth round pick (#202-Logan Taylor)"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Chargers", "to": "Patriots",
+        "patriots_sent": ["2026 second round pick (#55-Gabe Jacas)"],
+        "chargers_sent": ["2026 second round pick (#63-Jake Slaughter)", "2026 fourth round pick (#131-Genesis Smith)", "2026 sixth round pick (#202-Logan Taylor)"]
+      }
+    ]
+  },
+  {
+    "pick": 203, "round": 6, "round_pick": 22,
+    "original_team": "Eagles", "selecting_team": "Jaguars",
+    "player": "C.J. Williams",
+    "trades": [
+      {"date": "Various", "note": "Pick passed through Texans, Eagles, Texans, then Jaguars"}
+    ]
+  },
+  {
+    "pick": 204, "round": 6, "round_pick": 23,
+    "original_team": "Chargers", "selecting_team": "Texans",
+    "player": "Lewis Bond",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Texans", "to": "Chargers",
+        "chargers_sent": ["2026 fourth round pick (#123-Wade Woodaz)", "2026 sixth round pick (#204-Lewis Bond)"],
+        "texans_sent": ["2026 fourth round pick (#117-Travis Burke)"]
+      }
+    ]
+  },
+  {
+    "pick": 205, "round": 6, "round_pick": 24,
+    "original_team": "Jaguars", "selecting_team": "Lions",
+    "player": "Skyler Gill-Howard",
+    "trades": [
+      {
+        "date": "2025-08-27",
+        "from": "Jaguars", "to": "Lions",
+        "lions_sent": ["Tim Patrick"],
+        "jaguars_sent": ["2026 sixth round pick (#205-Skyler Gill-Howard)"]
+      }
+    ]
+  },
+  {
+    "pick": 206, "round": 6, "round_pick": 25,
+    "original_team": "Bears", "selecting_team": "Chargers",
+    "player": "Alex Harkey",
+    "trades": [
+      {
+        "date": "2025-11-04",
+        "from": "Bears", "to": "Browns",
+        "browns_sent": ["Joe Tryon-Shoyinka", "2026 seventh round pick (#239-Tommy Doman)"],
+        "bears_sent": ["2026 sixth round pick (#206-Alex Harkey)"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Browns", "to": "Chargers",
+        "chargers_sent": ["2026 third round pick (#86-Austin Barber)"],
+        "browns_sent": ["2026 fourth round pick (#105-Brenen Thompson)", "2026 fourth round pick (#145-Nick Barrett)", "2026 sixth round pick (#206-Alex Harkey)"]
+      }
+    ]
+  },
+  {
+    "pick": 207, "round": 6, "round_pick": 26,
+    "original_team": "Texans", "selecting_team": "Eagles",
+    "player": "Micah Morris",
+    "trades": [
+      {"date": "Various", "note": "Pick passed through Rams, Titans, Rams, Eagles via multiple trades"},
+      {
+        "date": "2026-04-25",
+        "from": "Eagles", "to": "Rams",
+        "rams_sent": ["2026 sixth round pick (#207-Micah Morris)", "2026 seventh round pick (#251-Uar Bernard)", "2026 seventh round pick (#252-Keyshawn James-Newby)"],
+        "eagles_sent": ["2026 sixth round pick (#197-C.J. Daniels)"]
+      }
+    ]
+  },
+  {
+    "pick": 208, "round": 6, "round_pick": 27,
+    "original_team": "Bills", "selecting_team": "Falcons",
+    "player": "Anterio Thompson",
+    "trades": [
+      {"date": "Various", "note": "Pick passed through Jets, Raiders, then Falcons"},
+      {
+        "date": "2026-04-25",
+        "from": "Falcons", "to": "Raiders",
+        "raiders_sent": ["2026 fourth round pick (#122-Mike Washington Jr.)"],
+        "falcons_sent": ["2026 fourth round pick (#134-Kendal Daniels)", "2026 sixth round pick (#208-Anterio Thompson)"]
+      }
+    ]
+  },
+  {
+    "pick": 209, "round": 6, "round_pick": 28,
+    "original_team": "49ers", "selecting_team": "Commanders",
+    "player": "Matt Gulbin",
+    "trades": [
+      {
+        "date": "2025-08-24",
+        "from": "49ers", "to": "Commanders",
+        "commanders_sent": ["Brian Robinson Jr."],
+        "49ers_sent": ["2026 sixth round pick (#209-Matt Gulbin)"]
+      }
+    ]
+  },
+  {
+    "pick": 210, "round": 6, "round_pick": 29,
+    "original_team": "Rams", "selecting_team": "Steelers",
+    "player": "Gabriel Rubio",
+    "trades": [
+      {
+        "date": "2026-03-11",
+        "from": "Rams", "to": "Chiefs",
+        "chiefs_sent": ["Trent McDuffie"],
+        "rams_sent": ["2026 first round pick (#29-Peter Woods)", "2026 fifth round pick (#169-Riley Nowakowski)", "2026 sixth round pick (#210-Gabriel Rubio)", "2027 third round pick"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Chiefs", "to": "Steelers",
+        "steelers_sent": ["2026 fifth round pick (#161-Emmett Johnson)", "2026 seventh round pick (#249-Garrett Nussmeier)"],
+        "chiefs_sent": ["2026 fifth round pick (#169-Riley Nowakowski)", "2026 sixth round pick (#210-Gabriel Rubio)"]
+      }
+    ]
+  },
+  {
+    "pick": 211, "round": 6, "round_pick": 30,
+    "original_team": "Broncos", "selecting_team": "Ravens",
+    "player": "Ryan Eckley",
+    "trades": [
+      {"date": "Various", "note": "Pick passed through Jets, Vikings, Eagles, then Ravens"},
+      {
+        "date": "2025-11-03",
+        "from": "Ravens", "to": "Eagles",
+        "eagles_sent": ["Jaire Alexander", "2027 seventh round pick"],
+        "ravens_sent": ["2026 sixth round pick (#211-Ryan Eckley)"]
+      }
+    ]
+  },
+  {"pick": 212, "round": 6, "round_pick": 31, "original_team": "Patriots", "selecting_team": "Patriots", "player": "Namdi Obiazor"},
+  {
+    "pick": 213, "round": 6, "round_pick": 32,
+    "original_team": "Seahawks", "selecting_team": "Bears",
+    "player": "Jordan van den Berg",
+    "trades": [
+      {"date": "Various", "note": "Pick passed through Jaguars, Lions, Bills, then Bears"},
+      {
+        "date": "2026-04-25",
+        "from": "Bears", "to": "Bills",
+        "bills_sent": ["2026 seventh round pick (#239-Tommy Doman)", "2026 seventh round pick (#241-Ar'maj Reed-Adams)"],
+        "bears_sent": ["2026 sixth round pick (#213-Jordan van den Berg)"]
+      }
+    ]
+  },
+  {
+    "pick": 214, "round": 6, "round_pick": 33,
+    "original_team": "Steelers", "selecting_team": "Colts",
+    "player": "Caden Curry",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-03-11",
+        "from": "Colts", "to": "Steelers",
+        "steelers_sent": ["Michael Pittman Jr.", "2026 seventh round pick (#230-Eli Heidenreich)"],
+        "colts_sent": ["2026 sixth round pick (#214-Caden Curry)"]
+      }
+    ]
+  },
+  {
+    "pick": 215, "round": 6, "round_pick": 34,
+    "original_team": "Eagles", "selecting_team": "Falcons",
+    "player": "Harold Perkins Jr.",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-03-23",
+        "from": "Falcons", "to": "Eagles",
+        "eagles_sent": ["2026 fourth round pick (#114-Devin Moore)", "2026 sixth round pick (#197-C.J. Daniels)"],
+        "falcons_sent": ["Sydney Brown", "2026 fourth round pick (#122-Mike Washington Jr.)", "2026 sixth round pick (#215-Harold Perkins Jr.)"]
+      }
+    ]
+  },
+  {
+    "pick": 216, "round": 6, "round_pick": 35,
+    "original_team": "Steelers", "selecting_team": "Packers",
+    "player": "Trey Smack",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Steelers", "to": "Seahawks",
+        "seahawks_sent": ["2026 third round pick (#99-Julian Neal)", "2026 sixth round pick (#216-Trey Smack)"],
+        "steelers_sent": ["2026 third round pick (#96-Gennings Dunker)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Seahawks", "to": "Packers",
+        "packers_sent": ["2026 seventh round pick (#236-Andre Fuller)", "2026 seventh round pick (#255-Michael Dansby)"],
+        "seahawks_sent": ["2026 sixth round pick (#216-Trey Smack)"]
+      }
+    ]
+  },
+  {"pick": 217, "round": 7, "round_pick": 1, "original_team": "Cardinals", "selecting_team": "Cardinals", "player": "Jayden Williams"},
+  {
+    "pick": 218, "round": 7, "round_pick": 2,
+    "original_team": "Titans", "selecting_team": "Cowboys",
+    "player": "Anthony Smith",
+    "trades": [
+      {
+        "date": "2026-03-11",
+        "from": "Cowboys", "to": "Titans",
+        "titans_sent": ["Solomon Thomas", "2027 seventh round pick"],
+        "cowboys_sent": ["2026 seventh round pick (#218-Anthony Smith)"]
+      }
+    ]
+  },
+  {
+    "pick": 219, "round": 7, "round_pick": 3,
+    "original_team": "Raiders", "selecting_team": "Saints",
+    "player": "T.J. Hall",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Saints", "to": "Raiders",
+        "raiders_sent": ["Tyree Wilson", "2026 seventh round pick (#219-T.J. Hall)"],
+        "saints_sent": ["2026 fifth round pick (#150-Dalton Johnson)"]
+      }
+    ]
+  },
+  {
+    "pick": 220, "round": 7, "round_pick": 4,
+    "original_team": "Jets", "selecting_team": "Bills",
+    "player": "Toriano Pride Jr.",
+    "trades": [
+      {
+        "date": "2024-08-27",
+        "from": "Jets", "to": "Bills",
+        "bills_sent": ["Brandon Codrington", "2026 seventh round pick (#220-Toriano Pride Jr.)"],
+        "jets_sent": ["2026 sixth round pick (#208-Anterio Thompson)"]
+      }
+    ]
+  },
+  {
+    "pick": 221, "round": 7, "round_pick": 5,
+    "original_team": "Giants", "selecting_team": "Bengals",
+    "player": "Jack Endries",
+    "trades": [
+      {
+        "date": "2024-08-15",
+        "from": "Giants", "to": "Cowboys",
+        "cowboys_sent": ["Jordan Phillips", "2026 seventh round pick (#221-Jack Endries)"],
+        "giants_sent": ["2026 sixth round pick (#193-Jack Kelly)"]
+      },
+      {
+        "date": "2025-11-04",
+        "from": "Bengals", "to": "Cowboys",
+        "cowboys_sent": ["Logan Wilson"],
+        "bengals_sent": ["2026 seventh round pick (#221-Jack Endries)"]
+      }
+    ]
+  },
+  {
+    "pick": 222, "round": 7, "round_pick": 6,
+    "original_team": "Browns", "selecting_team": "Lions",
+    "player": "Tyre West",
+    "trades": [
+      {
+        "date": "2024-11-05",
+        "from": "Browns", "to": "Lions",
+        "lions_sent": ["Za'Darius Smith", "2026 seventh round pick (#222-Tyre West)"],
+        "browns_sent": ["2025 fifth round pick (#164-Yahya Black)", "2026 sixth round pick (#199-Emmanuel Henderson Jr.)"]
+      }
+    ]
+  },
+  {"pick": 223, "round": 7, "round_pick": 7, "original_team": "Commanders", "selecting_team": "Commanders", "player": "Athan Kaliakmanis"},
+  {
+    "pick": 224, "round": 7, "round_pick": 8,
+    "original_team": "Saints", "selecting_team": "Steelers",
+    "player": "Robert Spears-Jennings",
+    "trades": [
+      {
+        "date": "2025-03-12",
+        "from": "Saints", "to": "Patriots",
+        "patriots_sent": ["Davon Godchaux"],
+        "saints_sent": ["2026 seventh round pick (#224-Robert Spears-Jennings)"]
+      },
+      {
+        "date": "2025-10-30",
+        "from": "Steelers", "to": "Patriots",
+        "patriots_sent": ["Kyle Dugger", "2026 seventh round pick (#224-Robert Spears-Jennings)"],
+        "steelers_sent": ["2026 sixth round pick (#202-Logan Taylor)"]
+      }
+    ]
+  },
+  {
+    "pick": 225, "round": 7, "round_pick": 9,
+    "original_team": "Chiefs", "selecting_team": "Titans",
+    "player": "Jaren Kanak",
+    "trades": [
+      {
+        "date": "2024-08-27",
+        "from": "Chiefs", "to": "Cowboys",
+        "cowboys_sent": ["Peyton Hendershot"],
+        "chiefs_sent": ["2026 conditional seventh round pick (#225-Jaren Kanak)"]
+      },
+      {
+        "date": "2026-03-11",
+        "from": "Cowboys", "to": "Titans",
+        "titans_sent": ["Solomon Thomas", "2027 seventh round pick"],
+        "cowboys_sent": ["2026 seventh round pick (#218-Anthony Smith)"]
+      }
+    ]
+  },
+  {"pick": 226, "round": 7, "round_pick": 10, "original_team": "Bengals", "selecting_team": "Bengals", "player": "Landon Robinson"},
+  {
+    "pick": 227, "round": 7, "round_pick": 11,
+    "original_team": "Dolphins", "selecting_team": "Panthers",
+    "player": "Jackson Kuwatch",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Panthers", "to": "Dolphins",
+        "dolphins_sent": ["2026 fifth round pick (#158-Michael Taaffe)", "2026 sixth round pick (#200-D.J. Campbell)"],
+        "panthers_sent": ["2026 fifth round pick (#151-Zakee Wheatley)", "2026 seventh round pick (#227-Jackson Kuwatch)"]
+      }
+    ]
+  },
+  {
+    "pick": 228, "round": 7, "round_pick": 12,
+    "original_team": "Cowboys", "selecting_team": "Jets",
+    "player": "V.J. Payne",
+    "trades": [
+      {"date": "Various", "note": "Pick passed through Bills, Raiders, then Jets via multiple trades"}
+    ]
+  },
+  {
+    "pick": 229, "round": 7, "round_pick": 13,
+    "original_team": "Buccaneers", "selecting_team": "Raiders",
+    "player": "Brandon Cleveland",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Raiders", "to": "Buccaneers",
+        "buccaneers_sent": ["2026 sixth round pick (#185-Bauer Sharp)"],
+        "raiders_sent": ["2026 sixth round pick (#195-Malik Benson)", "2026 seventh round pick (#229-Brandon Cleveland)"]
+      }
+    ]
+  },
+  {
+    "pick": 230, "round": 7, "round_pick": 14,
+    "original_team": "Colts", "selecting_team": "Steelers",
+    "player": "Eli Heidenreich",
+    "trades": [
+      {
+        "date": "2026-03-11",
+        "from": "Colts", "to": "Steelers",
+        "steelers_sent": ["2026 sixth round pick (#214-Caden Curry)"],
+        "colts_sent": ["Michael Pittman Jr.", "2026 seventh round pick (#230-Eli Heidenreich)"]
+      }
+    ]
+  },
+  {"pick": 231, "round": 7, "round_pick": 15, "original_team": "Falcons", "selecting_team": "Falcons", "player": "Ethan Onianwa"},
+  {
+    "pick": 232, "round": 7, "round_pick": 16,
+    "original_team": "Ravens", "selecting_team": "Rams",
+    "player": "Tim Keenan III",
+    "trades": [
+      {
+        "date": "2024-11-05",
+        "from": "Ravens", "to": "Rams",
+        "rams_sent": ["Tre'Davious White", "2027 seventh round pick"],
+        "ravens_sent": ["2026 seventh round pick (#232-Tim Keenan III)"]
+      }
+    ]
+  },
+  {
+    "pick": 233, "round": 7, "round_pick": 17,
+    "original_team": "Lions", "selecting_team": "Jaguars",
+    "player": "Zach Durfee",
+    "trades": [
+      {
+        "date": "2023-05-25",
+        "from": "Lions", "to": "Jaguars",
+        "jaguars_sent": ["Riley Patterson"],
+        "lions_sent": ["2026 conditional seventh round pick (#233-Zach Durfee)"]
+      }
+    ]
+  },
+  {
+    "pick": 234, "round": 7, "round_pick": 18,
+    "original_team": "Vikings", "selecting_team": "Patriots",
+    "player": "Behren Morton",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Vikings", "to": "Patriots",
+        "patriots_sent": ["2026 sixth round pick (#198-Demond Claiborne)"],
+        "vikings_sent": ["2026 seventh round pick (#234-Behren Morton)", "2027 sixth round pick"]
+      }
+    ]
+  },
+  {
+    "pick": 235, "round": 7, "round_pick": 19,
+    "original_team": "Panthers", "selecting_team": "Vikings",
+    "player": "Gavin Gerhardt",
+    "trades": [
+      {
+        "date": "2025-08-27",
+        "from": "Panthers", "to": "Vikings",
+        "vikings_sent": ["2026 fifth round pick (#158-Michael Taaffe)", "2027 fourth round pick"],
+        "panthers_sent": ["Adam Thielen", "2026 conditional round pick (#235-Gavin Gerhardt)", "2027 fifth round pick"]
+      }
+    ]
+  },
+  {
+    "pick": 236, "round": 7, "round_pick": 20,
+    "original_team": "Packers", "selecting_team": "Seahawks",
+    "player": "Andre Fuller",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Seahawks", "to": "Packers",
+        "packers_sent": ["2026 seventh round pick (#236-Andre Fuller)", "2026 seventh round pick (#255-Michael Dansby)"],
+        "seahawks_sent": ["2026 sixth round pick (#216-Trey Smack)"]
+      }
+    ]
+  },
+  {
+    "pick": 237, "round": 7, "round_pick": 21,
+    "original_team": "Steelers", "selecting_team": "Colts",
+    "player": "Seth McGowan",
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Colts", "to": "Steelers",
+        "steelers_sent": ["2026 second round pick (#47-Germie Bernard)", "2026 seventh round pick (#249-Garrett Nussmeier)"],
+        "colts_sent": ["2026 second round pick (#53-C.J. Allen)", "2026 fourth round pick (#135-Bryce Boettcher)", "2026 seventh round pick (#237-Seth McGowan)"]
+      }
+    ]
+  },
+  {
+    "pick": 238, "round": 7, "round_pick": 22,
+    "original_team": "Chargers", "selecting_team": "Dolphins",
+    "player": "Max Llewellyn",
+    "trades": [
+      {"date": "Various", "note": "Pick passed through Titans, Jets, then Dolphins"},
+      {
+        "date": "2026-03-11",
+        "from": "Jets", "to": "Dolphins",
+        "dolphins_sent": ["Minkah Fitzpatrick"],
+        "jets_sent": ["2026 seventh round pick (#238-Max Llewellyn)"]
+      }
+    ]
+  },
+  {
+    "pick": 239, "round": 7, "round_pick": 23,
+    "original_team": "Eagles", "selecting_team": "Bills",
+    "player": "Tommy Doman",
+    "trades": [
+      {"date": "Various", "note": "Pick passed through Jaguars, Browns, Bears, then Bills"},
+      {
+        "date": "2026-04-25",
+        "from": "Bears", "to": "Bills",
+        "bills_sent": ["2026 sixth round pick (#213-Jordan van den Berg)"],
+        "bears_sent": ["2026 seventh round pick (#239-Tommy Doman)", "2026 seventh round pick (#241-Ar'maj Reed-Adams)"]
+      }
+    ]
+  },
+  {"pick": 240, "round": 7, "round_pick": 24, "original_team": "Jaguars", "selecting_team": "Jaguars", "player": "Parker Hughes"},
+  {
+    "pick": 241, "round": 7, "round_pick": 25,
+    "original_team": "Bears", "selecting_team": "Bills",
+    "player": "Ar'maj Reed-Adams",
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Bears", "to": "Bills",
+        "bills_sent": ["2026 sixth round pick (#213-Jordan van den Berg)"],
+        "bears_sent": ["2026 seventh round pick (#239-Tommy Doman)", "2026 seventh round pick (#241-Ar'maj Reed-Adams)"]
+      }
+    ]
+  },
+  {
+    "pick": 242, "round": 7, "round_pick": 26,
+    "original_team": "Bills", "selecting_team": "Seahawks",
+    "player": "Deven Eastern",
+    "trades": [
+      {"date": "Various", "note": "Pick passed through Browns, Jets, then Seahawks"},
+      {
+        "date": "2026-04-25",
+        "from": "Jets", "to": "Seahawks",
+        "seahawks_sent": ["2026 sixth round pick (#188-Anez Cooper)"],
+        "jets_sent": ["2026 sixth round pick (#199-Emmanuel Henderson Jr.)", "2026 seventh round pick (#242-Deven Eastern)"]
+      }
+    ]
+  },
+  {
+    "pick": 243, "round": 7, "round_pick": 27,
+    "original_team": "49ers", "selecting_team": "Texans",
+    "player": "Aiden Fisher",
+    "trades": [
+      {
+        "date": "2024-11-05",
+        "from": "49ers", "to": "Texans",
+        "texans_sent": ["Khalil Davis"],
+        "49ers_sent": ["2026 seventh round pick (#243-Aiden Fisher)"]
+      }
+    ]
+  },
+  {
+    "pick": 244, "round": 7, "round_pick": 28,
+    "original_team": "Texans", "selecting_team": "Eagles",
+    "player": "Cole Wisniewski",
+    "trades": [
+      {
+        "date": "2024-10-16",
+        "from": "Texans", "to": "Vikings",
+        "vikings_sent": ["Cam Akers", "2026 conditional seventh round pick (#244-Cole Wisniewski)"],
+        "texans_sent": ["2026 conditional sixth round pick (#198-Demond Claiborne)"]
+      },
+      {
+        "date": "2026-04-24",
+        "from": "Vikings", "to": "Eagles",
+        "eagles_sent": ["Jonathan Greenard", "2026 seventh round pick (#244-Cole Wisniewski)"],
+        "vikings_sent": ["2026 third round pick (#98-Jakobe Thomas)", "2027 third round pick"]
+      }
+    ]
+  },
+  {
+    "pick": 245, "round": 7, "round_pick": 29,
+    "original_team": "Rams", "selecting_team": "Patriots",
+    "player": "Jam Miller",
+    "trades": [
+      {"date": "Various", "note": "Pick passed through Texans, Jaguars, then Patriots"},
+      {
+        "date": "2026-04-25",
+        "from": "Patriots", "to": "Jaguars",
+        "jaguars_sent": ["2026 sixth round pick (#191-Josh Cameron)"],
+        "patriots_sent": ["2026 sixth round pick (#196-Dametrious Crownover)", "2026 seventh round pick (#245-Jam Miller)"]
+      }
+    ]
+  },
+  {"pick": 246, "round": 7, "round_pick": 30, "original_team": "Broncos", "selecting_team": "Broncos", "player": "Miles Scott"},
+  {"pick": 247, "round": 7, "round_pick": 31, "original_team": "Patriots", "selecting_team": "Patriots", "player": "Quintayvious Hutchins"},
+  {
+    "pick": 248, "round": 7, "round_pick": 32,
+    "original_team": "Seahawks", "selecting_team": "Browns",
+    "player": "Carsen Ryan",
+    "trades": [
+      {
+        "date": "2024-08-12",
+        "from": "Seahawks", "to": "Browns",
+        "browns_sent": ["Nick Harris", "2026 seventh round pick (#248-Carsen Ryan)"],
+        "seahawks_sent": ["2026 sixth round pick (#188-Anez Cooper)"]
+      }
+    ]
+  },
+  {
+    "pick": 249, "round": 7, "round_pick": 33,
+    "original_team": "Colts", "selecting_team": "Chiefs",
+    "player": "Garrett Nussmeier",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-24",
+        "from": "Steelers", "to": "Colts",
+        "colts_sent": ["2026 second round pick (#53-C.J. Allen)", "2026 fourth round pick (#135-Bryce Boettcher)", "2026 seventh round pick (#237-Seth McGowan)"],
+        "steelers_sent": ["2026 second round pick (#47-Germie Bernard)", "2026 seventh round pick (#249-Garrett Nussmeier)"]
+      },
+      {
+        "date": "2026-04-25",
+        "from": "Chiefs", "to": "Steelers",
+        "steelers_sent": ["2026 fifth round pick (#161-Emmett Johnson)", "2026 seventh round pick (#249-Garrett Nussmeier)"],
+        "chiefs_sent": ["2026 fifth round pick (#169-Riley Nowakowski)", "2026 sixth round pick (#210-Gabriel Rubio)"]
+      }
+    ]
+  },
+  {"pick": 250, "round": 7, "round_pick": 34, "original_team": "Ravens", "selecting_team": "Ravens", "player": "Rayshaun Benny", "compensatory": true},
+  {
+    "pick": 251, "round": 7, "round_pick": 35,
+    "original_team": "Rams", "selecting_team": "Eagles",
+    "player": "Uar Bernard",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Rams", "to": "Eagles",
+        "eagles_sent": ["2026 sixth round pick (#197-C.J. Daniels)"],
+        "rams_sent": ["2026 sixth round pick (#207-Micah Morris)", "2026 seventh round pick (#251-Uar Bernard)", "2026 seventh round pick (#252-Keyshawn James-Newby)"]
+      }
+    ]
+  },
+  {
+    "pick": 252, "round": 7, "round_pick": 36,
+    "original_team": "Rams", "selecting_team": "Eagles",
+    "player": "Keyshawn James-Newby",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Rams", "to": "Eagles",
+        "eagles_sent": ["2026 sixth round pick (#197-C.J. Daniels)"],
+        "rams_sent": ["2026 sixth round pick (#207-Micah Morris)", "2026 seventh round pick (#251-Uar Bernard)", "2026 seventh round pick (#252-Keyshawn James-Newby)"]
+      }
+    ]
+  },
+  {"pick": 253, "round": 7, "round_pick": 37, "original_team": "Ravens", "selecting_team": "Ravens", "player": "Evan Beerntsen", "compensatory": true},
+  {"pick": 254, "round": 7, "round_pick": 38, "original_team": "Colts", "selecting_team": "Colts", "player": "Deion Burks", "compensatory": true},
+  {
+    "pick": 255, "round": 7, "round_pick": 39,
+    "original_team": "Packers", "selecting_team": "Seahawks",
+    "player": "Michael Dansby",
+    "compensatory": true,
+    "trades": [
+      {
+        "date": "2026-04-25",
+        "from": "Seahawks", "to": "Packers",
+        "packers_sent": ["2026 seventh round pick (#236-Andre Fuller)", "2026 seventh round pick (#255-Michael Dansby)"],
+        "seahawks_sent": ["2026 sixth round pick (#216-Trey Smack)"]
+      }
+    ]
+  },
+  {"pick": 256, "round": 7, "round_pick": 40, "original_team": "Broncos", "selecting_team": "Broncos", "player": "Dallen Bentley", "compensatory": true},
+  {"pick": 257, "round": 7, "round_pick": 41, "original_team": "Broncos", "selecting_team": "Broncos", "player": "Red Murdock", "compensatory": true}
+]

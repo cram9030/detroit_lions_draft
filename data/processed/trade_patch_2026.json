@@ -1,0 +1,2355 @@
+{
+  "metadata": {
+    "year": 2026,
+    "created": "2026-05-16"
+  },
+  "patches": [
+    {
+      "trade_id": 1780.0,
+      "gave": "DET",
+      "received": "JAX",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "pick_number": 233.0,
+      "pfr_name": "Zach Durfee"
+    },
+    {
+      "trade_id": 1878.0,
+      "gave": "TEN",
+      "received": "LA",
+      "pick_season": 2026.0,
+      "pick_round": 5.0,
+      "pick_number": 144.0,
+      "pfr_name": "Sam Hecht"
+    },
+    {
+      "trade_id": 1878.0,
+      "gave": "LA",
+      "received": "TEN",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "pick_number": 207.0,
+      "pfr_name": "Micah Morris"
+    },
+    {
+      "trade_id": 1879.0,
+      "gave": "KC",
+      "received": "DAL",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "pick_number": 225.0,
+      "pfr_name": "Jaren Kanak"
+    },
+    {
+      "trade_id": 1891.0,
+      "gave": "KC",
+      "received": "NE",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "pick_number": 191.0,
+      "pfr_name": "Josh Cameron"
+    },
+    {
+      "trade_id": 1901.0,
+      "gave": "BAL",
+      "received": "LA",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "pick_number": 232.0,
+      "pfr_name": "Tim Keenan III"
+    },
+    {
+      "trade_id": 1902.0,
+      "gave": "SF",
+      "received": "HOU",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "pick_number": 243.0,
+      "pfr_name": "Aiden Fisher"
+    },
+    {
+      "trade_id": 1920.0,
+      "gave": "NYG",
+      "received": "HOU",
+      "pick_season": 2026.0,
+      "pick_round": 3.0,
+      "pick_number": 69.0,
+      "pfr_name": "Sam Roush"
+    },
+    {
+      "trade_id": 1929.0,
+      "gave": "JAX",
+      "received": "DET",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "pick_number": 213.0,
+      "pfr_name": "Jordan van den Berg"
+    },
+    {
+      "trade_id": 1929.0,
+      "gave": "DET",
+      "received": "JAX",
+      "pick_season": 2026.0,
+      "pick_round": 3.0,
+      "pick_number": 81.0,
+      "pfr_name": "Albert Regis"
+    },
+    {
+      "trade_id": 1929.0,
+      "gave": "DET",
+      "received": "JAX",
+      "pick_season": 2026.0,
+      "pick_round": 3.0,
+      "pick_number": 100.0,
+      "pfr_name": "Jalen Huskey"
+    },
+    {
+      "trade_id": 1931.0,
+      "gave": "KC",
+      "received": "NE",
+      "pick_season": 2026.0,
+      "pick_round": 4.0,
+      "pick_number": 125.0,
+      "pfr_name": "Skyler Bell"
+    },
+    {
+      "trade_id": 1937.0,
+      "gave": "HOU",
+      "received": "MIA",
+      "pick_season": 2026.0,
+      "pick_round": 3.0,
+      "pick_number": 90.0,
+      "pfr_name": "Kaelon Black"
+    },
+    {
+      "trade_id": 1944.0,
+      "gave": "LA",
+      "received": "CHI",
+      "pick_season": 2026.0,
+      "pick_round": 4.0,
+      "pick_number": 129.0,
+      "pfr_name": "Will Lee III"
+    },
+    {
+      "trade_id": 1950.0,
+      "gave": "NYJ",
+      "received": "BAL",
+      "pick_season": 2026.0,
+      "pick_round": 5.0,
+      "pick_number": 142.0,
+      "pfr_name": "Fernando Carmona"
+    },
+    {
+      "trade_id": 1950.0,
+      "gave": "BAL",
+      "received": "NYJ",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "pick_number": 194.0,
+      "pfr_name": "Pat Coogan"
+    },
+    {
+      "trade_id": 1953.0,
+      "gave": "DAL",
+      "received": "PIT",
+      "pick_season": 2026.0,
+      "pick_round": 3.0,
+      "pick_number": 76.0,
+      "pfr_name": "Drew Allar"
+    },
+    {
+      "trade_id": 1974.0,
+      "gave": "JAX",
+      "received": "DET",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "pick_number": 205.0,
+      "pfr_name": "Skyler Gill-Howard"
+    },
+    {
+      "trade_id": 1975.0,
+      "gave": "MIN",
+      "received": "CAR",
+      "pick_season": 2026.0,
+      "pick_round": 5.0,
+      "pick_number": 158.0,
+      "pfr_name": "Michael Taaffe"
+    }
+  ],
+  "new_trades": [
+    {
+      "trade_date": "2026-03-11",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "LA",
+          "received": "KC",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 29.0,
+          "pfr_name": "Peter Woods"
+        },
+        {
+          "gave": "LA",
+          "received": "KC",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 169.0,
+          "pfr_name": "Riley Nowakowski"
+        },
+        {
+          "gave": "LA",
+          "received": "KC",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 210.0,
+          "pfr_name": "Gabriel Rubio"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-03-11",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "CHI",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 165.0,
+          "pfr_name": "Nicholas Singleton"
+        },
+        {
+          "gave": "BUF",
+          "received": "CHI",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 60.0,
+          "pfr_name": "Anthony Hill Jr."
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-03-11",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "SF",
+          "received": "DAL",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 92.0,
+          "pfr_name": "Jaishawn Barham"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-03-11",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "HOU",
+          "received": "DET",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 128.0,
+          "pfr_name": "Connor Lew"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-03-11",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "CLE",
+          "received": "HOU",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 141.0,
+          "pfr_name": "Kamari Ramsey"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-03-11",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "IND",
+          "received": "PIT",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 230.0,
+          "pfr_name": "Eli Heidenreich"
+        },
+        {
+          "gave": "PIT",
+          "received": "IND",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 214.0,
+          "pfr_name": "Caden Curry"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-03-11",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "TEN",
+          "received": "DAL",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 218.0,
+          "pfr_name": "Anthony Smith"
+        },
+        {
+          "gave": "DAL",
+          "received": "TEN",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 218.0,
+          "pfr_name": "Anthony Smith"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-03-11",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "NYJ",
+          "received": "MIA",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 238.0,
+          "pfr_name": "Max Llewellyn"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-03-18",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "MIA",
+          "received": "DEN",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 111.0,
+          "pfr_name": "Kage Casey"
+        },
+        {
+          "gave": "DEN",
+          "received": "MIA",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 30.0,
+          "pfr_name": "Omar Cooper"
+        },
+        {
+          "gave": "DEN",
+          "received": "MIA",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 94.0,
+          "pfr_name": "Chris Bell"
+        },
+        {
+          "gave": "DEN",
+          "received": "MIA",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 130.0,
+          "pfr_name": "Trey Moore"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-03-23",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "ATL",
+          "received": "PHI",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 114.0,
+          "pfr_name": "Devin Moore"
+        },
+        {
+          "gave": "ATL",
+          "received": "PHI",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 122.0,
+          "pfr_name": "Mike Washington Jr."
+        },
+        {
+          "gave": "ATL",
+          "received": "PHI",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 197.0,
+          "pfr_name": "C.J. Daniels"
+        },
+        {
+          "gave": "ATL",
+          "received": "PHI",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 215.0,
+          "pfr_name": "Harold Perkins Jr."
+        },
+        {
+          "gave": "PHI",
+          "received": "ATL",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 114.0,
+          "pfr_name": "Devin Moore"
+        },
+        {
+          "gave": "PHI",
+          "received": "ATL",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 122.0,
+          "pfr_name": "Mike Washington Jr."
+        },
+        {
+          "gave": "PHI",
+          "received": "ATL",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 197.0,
+          "pfr_name": "C.J. Daniels"
+        },
+        {
+          "gave": "PHI",
+          "received": "ATL",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 215.0,
+          "pfr_name": "Harold Perkins Jr."
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-13",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "PHI",
+          "received": "GB",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 153.0,
+          "pfr_name": "Jager Burton"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-20",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "CIN",
+          "received": "NYG",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 10.0,
+          "pfr_name": "Francis Mauigoa"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-23",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "KC",
+          "received": "CLE",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 9.0,
+          "pfr_name": "Spencer Fano"
+        },
+        {
+          "gave": "KC",
+          "received": "CLE",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 74.0,
+          "pfr_name": "Malachi Fields"
+        },
+        {
+          "gave": "KC",
+          "received": "CLE",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 148.0,
+          "pfr_name": "Beau Stephens"
+        },
+        {
+          "gave": "CLE",
+          "received": "KC",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 6.0,
+          "pfr_name": "Mansoor Delane"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-23",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "DAL",
+          "received": "MIA",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 12.0,
+          "pfr_name": "Kadyn Proctor"
+        },
+        {
+          "gave": "DAL",
+          "received": "MIA",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 177.0,
+          "pfr_name": "Kevin Coleman Jr."
+        },
+        {
+          "gave": "DAL",
+          "received": "MIA",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 180.0,
+          "pfr_name": "Seydou Traore"
+        },
+        {
+          "gave": "MIA",
+          "received": "DAL",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 11.0,
+          "pfr_name": "Caleb Downs"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-23",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "DAL",
+          "received": "PHI",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 20.0,
+          "pfr_name": "Makai Lemon"
+        },
+        {
+          "gave": "PHI",
+          "received": "DAL",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 23.0,
+          "pfr_name": "Malachi Lawrence"
+        },
+        {
+          "gave": "PHI",
+          "received": "DAL",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 114.0,
+          "pfr_name": "Devin Moore"
+        },
+        {
+          "gave": "PHI",
+          "received": "DAL",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 137.0,
+          "pfr_name": "L.T. Overton"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-23",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "HOU",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 28.0,
+          "pfr_name": "Caleb Lomu"
+        },
+        {
+          "gave": "HOU",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 69.0,
+          "pfr_name": "Sam Roush"
+        },
+        {
+          "gave": "HOU",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 167.0,
+          "pfr_name": "Jalon Kilgore"
+        },
+        {
+          "gave": "BUF",
+          "received": "HOU",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 26.0,
+          "pfr_name": "Keylan Rutledge"
+        },
+        {
+          "gave": "BUF",
+          "received": "HOU",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 91.0,
+          "pfr_name": "Trey Zuhn III"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-23",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "MIA",
+          "received": "SF",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 30.0,
+          "pfr_name": "Omar Cooper"
+        },
+        {
+          "gave": "MIA",
+          "received": "SF",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 90.0,
+          "pfr_name": "Kaelon Black"
+        },
+        {
+          "gave": "SF",
+          "received": "MIA",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 27.0,
+          "pfr_name": "Chris Johnson"
+        },
+        {
+          "gave": "SF",
+          "received": "MIA",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 138.0,
+          "pfr_name": "Kyle Louis"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-23",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "NE",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 31.0,
+          "pfr_name": "Keldric Faulk"
+        },
+        {
+          "gave": "NE",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 125.0,
+          "pfr_name": "Skyler Bell"
+        },
+        {
+          "gave": "BUF",
+          "received": "NE",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 28.0,
+          "pfr_name": "Caleb Lomu"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-23",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "NYJ",
+          "received": "SF",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 33.0,
+          "pfr_name": "De'Zhaun Stribling"
+        },
+        {
+          "gave": "NYJ",
+          "received": "SF",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 179.0,
+          "pfr_name": "Enrique Cruz Jr."
+        },
+        {
+          "gave": "SF",
+          "received": "NYJ",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 30.0,
+          "pfr_name": "Omar Cooper"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-23",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "TEN",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 35.0,
+          "pfr_name": "T.J. Parker"
+        },
+        {
+          "gave": "TEN",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 66.0,
+          "pfr_name": "Tyler Onyedim"
+        },
+        {
+          "gave": "TEN",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 101.0,
+          "pfr_name": "Jermod McCoy"
+        },
+        {
+          "gave": "BUF",
+          "received": "TEN",
+          "pick_season": 2026.0,
+          "pick_round": 1.0,
+          "pick_number": 31.0,
+          "pfr_name": "Keldric Faulk"
+        },
+        {
+          "gave": "BUF",
+          "received": "TEN",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 69.0,
+          "pfr_name": "Sam Roush"
+        },
+        {
+          "gave": "BUF",
+          "received": "TEN",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 165.0,
+          "pfr_name": "Nicholas Singleton"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-24",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "HOU",
+          "received": "LV",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 38.0,
+          "pfr_name": "Treydan Stukes"
+        },
+        {
+          "gave": "HOU",
+          "received": "LV",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 91.0,
+          "pfr_name": "Trey Zuhn III"
+        },
+        {
+          "gave": "LV",
+          "received": "HOU",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 36.0,
+          "pfr_name": "Kayden McDonald"
+        },
+        {
+          "gave": "LV",
+          "received": "HOU",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 117.0,
+          "pfr_name": "Travis Burke"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-24",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "DET",
+          "received": "NYJ",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 50.0,
+          "pfr_name": "D'Angelo Ponds"
+        },
+        {
+          "gave": "DET",
+          "received": "NYJ",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 128.0,
+          "pfr_name": "Connor Lew"
+        },
+        {
+          "gave": "NYJ",
+          "received": "DET",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 44.0,
+          "pfr_name": "Derrick Moore"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-24",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "PIT",
+          "received": "IND",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 47.0,
+          "pfr_name": "Germie Bernard"
+        },
+        {
+          "gave": "PIT",
+          "received": "IND",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 53.0,
+          "pfr_name": "C.J. Allen"
+        },
+        {
+          "gave": "PIT",
+          "received": "IND",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 135.0,
+          "pfr_name": "Bryce Boettcher"
+        },
+        {
+          "gave": "PIT",
+          "received": "IND",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 237.0,
+          "pfr_name": "Seth McGowan"
+        },
+        {
+          "gave": "PIT",
+          "received": "IND",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 249.0,
+          "pfr_name": "Garrett Nussmeier"
+        },
+        {
+          "gave": "IND",
+          "received": "PIT",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 47.0,
+          "pfr_name": "Germie Bernard"
+        },
+        {
+          "gave": "IND",
+          "received": "PIT",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 53.0,
+          "pfr_name": "C.J. Allen"
+        },
+        {
+          "gave": "IND",
+          "received": "PIT",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 135.0,
+          "pfr_name": "Bryce Boettcher"
+        },
+        {
+          "gave": "IND",
+          "received": "PIT",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 237.0,
+          "pfr_name": "Seth McGowan"
+        },
+        {
+          "gave": "IND",
+          "received": "PIT",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 249.0,
+          "pfr_name": "Garrett Nussmeier"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-24",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "CAR",
+          "received": "MIN",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 51.0,
+          "pfr_name": "Jake Golday"
+        },
+        {
+          "gave": "CAR",
+          "received": "MIN",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 159.0,
+          "pfr_name": "Max Bredeson"
+        },
+        {
+          "gave": "MIN",
+          "received": "CAR",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 49.0,
+          "pfr_name": "Lee Hunter"
+        },
+        {
+          "gave": "MIN",
+          "received": "CAR",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 196.0,
+          "pfr_name": "Dametrious Crownover"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-24",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "NE",
+          "received": "LAC",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 63.0,
+          "pfr_name": "Jake Slaughter"
+        },
+        {
+          "gave": "NE",
+          "received": "LAC",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 131.0,
+          "pfr_name": "Genesis Smith"
+        },
+        {
+          "gave": "NE",
+          "received": "LAC",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 202.0,
+          "pfr_name": "Logan Taylor"
+        },
+        {
+          "gave": "LAC",
+          "received": "NE",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 55.0,
+          "pfr_name": "Gabe Jacas"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-24",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "CLE",
+          "received": "SF",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 57.0,
+          "pfr_name": "Emmanuel McNeil-Warren"
+        },
+        {
+          "gave": "CLE",
+          "received": "SF",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 70.0,
+          "pfr_name": "Romello Height"
+        },
+        {
+          "gave": "CLE",
+          "received": "SF",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 107.0,
+          "pfr_name": "Gracen Halton"
+        },
+        {
+          "gave": "SF",
+          "received": "CLE",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 57.0,
+          "pfr_name": "Emmanuel McNeil-Warren"
+        },
+        {
+          "gave": "SF",
+          "received": "CLE",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 70.0,
+          "pfr_name": "Romello Height"
+        },
+        {
+          "gave": "SF",
+          "received": "CLE",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 107.0,
+          "pfr_name": "Gracen Halton"
+        },
+        {
+          "gave": "SF",
+          "received": "CLE",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 152.0,
+          "pfr_name": "Justin Joly"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-24",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "TEN",
+          "received": "CHI",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 69.0,
+          "pfr_name": "Sam Roush"
+        },
+        {
+          "gave": "TEN",
+          "received": "CHI",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 144.0,
+          "pfr_name": "Sam Hecht"
+        },
+        {
+          "gave": "CHI",
+          "received": "TEN",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 60.0,
+          "pfr_name": "Anthony Hill Jr."
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-24",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "BUF",
+          "received": "DEN",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 66.0,
+          "pfr_name": "Tyler Onyedim"
+        },
+        {
+          "gave": "BUF",
+          "received": "DEN",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 182.0,
+          "pfr_name": "Taylen Green"
+        },
+        {
+          "gave": "DEN",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 2.0,
+          "pick_number": 62.0,
+          "pfr_name": "Davison Igbinosun"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-24",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "NYG",
+          "received": "CLE",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 105.0,
+          "pfr_name": "Brenen Thompson"
+        },
+        {
+          "gave": "NYG",
+          "received": "CLE",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 145.0,
+          "pfr_name": "Nick Barrett"
+        },
+        {
+          "gave": "CLE",
+          "received": "NYG",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 74.0,
+          "pfr_name": "Malachi Fields"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-24",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "GB",
+          "received": "TB",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 84.0,
+          "pfr_name": "Ted Hurst"
+        },
+        {
+          "gave": "GB",
+          "received": "TB",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 160.0,
+          "pfr_name": "Billy Schrauth"
+        },
+        {
+          "gave": "TB",
+          "received": "GB",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 77.0,
+          "pfr_name": "Chris McClellan"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-24",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "CLE",
+          "received": "LAC",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 105.0,
+          "pfr_name": "Brenen Thompson"
+        },
+        {
+          "gave": "CLE",
+          "received": "LAC",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 145.0,
+          "pfr_name": "Nick Barrett"
+        },
+        {
+          "gave": "CLE",
+          "received": "LAC",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 206.0,
+          "pfr_name": "Alex Harkey"
+        },
+        {
+          "gave": "LAC",
+          "received": "CLE",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 86.0,
+          "pfr_name": "Austin Barber"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-24",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "PIT",
+          "received": "SEA",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 96.0,
+          "pfr_name": "Gennings Dunker"
+        },
+        {
+          "gave": "PIT",
+          "received": "SEA",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 99.0,
+          "pfr_name": "Julian Neal"
+        },
+        {
+          "gave": "PIT",
+          "received": "SEA",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 216.0,
+          "pfr_name": "Trey Smack"
+        },
+        {
+          "gave": "SEA",
+          "received": "PIT",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 96.0,
+          "pfr_name": "Gennings Dunker"
+        },
+        {
+          "gave": "SEA",
+          "received": "PIT",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 99.0,
+          "pfr_name": "Julian Neal"
+        },
+        {
+          "gave": "SEA",
+          "received": "PIT",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 216.0,
+          "pfr_name": "Trey Smack"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-24",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "MIN",
+          "received": "PHI",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 244.0,
+          "pfr_name": "Cole Wisniewski"
+        },
+        {
+          "gave": "PHI",
+          "received": "MIN",
+          "pick_season": 2026.0,
+          "pick_round": 3.0,
+          "pick_number": 98.0,
+          "pfr_name": "Jakobe Thomas"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-24",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "DAL",
+          "received": "SF",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 152.0,
+          "pfr_name": "Justin Joly"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "LV",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 102.0,
+          "pfr_name": "Jude Bowry"
+        },
+        {
+          "gave": "BUF",
+          "received": "LV",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 101.0,
+          "pfr_name": "Jermod McCoy"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "NYJ",
+          "received": "CIN",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 128.0,
+          "pfr_name": "Connor Lew"
+        },
+        {
+          "gave": "NYJ",
+          "received": "CIN",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 140.0,
+          "pfr_name": "Colbie Young"
+        },
+        {
+          "gave": "CIN",
+          "received": "NYJ",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 110.0,
+          "pfr_name": "Cade Klubnik"
+        },
+        {
+          "gave": "CIN",
+          "received": "NYJ",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 199.0,
+          "pfr_name": "Emmanuel Henderson Jr."
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "LAC",
+          "received": "HOU",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 123.0,
+          "pfr_name": "Wade Woodaz"
+        },
+        {
+          "gave": "LAC",
+          "received": "HOU",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 204.0,
+          "pfr_name": "Lewis Bond"
+        },
+        {
+          "gave": "HOU",
+          "received": "LAC",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 117.0,
+          "pfr_name": "Travis Burke"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "JAX",
+          "received": "CAR",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 119.0,
+          "pfr_name": "Wesley Williams"
+        },
+        {
+          "gave": "JAX",
+          "received": "CAR",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 124.0,
+          "pfr_name": "Malik Muhammad"
+        },
+        {
+          "gave": "JAX",
+          "received": "CAR",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 166.0,
+          "pfr_name": "Keyshaun Elliott"
+        },
+        {
+          "gave": "JAX",
+          "received": "CAR",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 196.0,
+          "pfr_name": "Dametrious Crownover"
+        },
+        {
+          "gave": "CAR",
+          "received": "JAX",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 119.0,
+          "pfr_name": "Wesley Williams"
+        },
+        {
+          "gave": "CAR",
+          "received": "JAX",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 124.0,
+          "pfr_name": "Malik Muhammad"
+        },
+        {
+          "gave": "CAR",
+          "received": "JAX",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 166.0,
+          "pfr_name": "Keyshaun Elliott"
+        },
+        {
+          "gave": "CAR",
+          "received": "JAX",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 196.0,
+          "pfr_name": "Dametrious Crownover"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "LV",
+          "received": "ATL",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 134.0,
+          "pfr_name": "Kendal Daniels"
+        },
+        {
+          "gave": "LV",
+          "received": "ATL",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 208.0,
+          "pfr_name": "Anterio Thompson"
+        },
+        {
+          "gave": "ATL",
+          "received": "LV",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 122.0,
+          "pfr_name": "Mike Washington Jr."
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "CHI",
+          "received": "CAR",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 129.0,
+          "pfr_name": "Will Lee III"
+        },
+        {
+          "gave": "CHI",
+          "received": "CAR",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 144.0,
+          "pfr_name": "Sam Hecht"
+        },
+        {
+          "gave": "CAR",
+          "received": "CHI",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 124.0,
+          "pfr_name": "Malik Muhammad"
+        },
+        {
+          "gave": "CAR",
+          "received": "CHI",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 166.0,
+          "pfr_name": "Keyshaun Elliott"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "BAL",
+          "received": "SF",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 154.0,
+          "pfr_name": "Jaden Dugger"
+        },
+        {
+          "gave": "SF",
+          "received": "BAL",
+          "pick_season": 2026.0,
+          "pick_round": 4.0,
+          "pick_number": 133.0,
+          "pfr_name": "Matthew Hibner"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "CLE",
+          "received": "SEA",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 148.0,
+          "pfr_name": "Beau Stephens"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "LV",
+          "received": "NO",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 219.0,
+          "pfr_name": "T.J. Hall"
+        },
+        {
+          "gave": "NO",
+          "received": "LV",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 150.0,
+          "pfr_name": "Dalton Johnson"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "CAR",
+          "received": "MIA",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 158.0,
+          "pfr_name": "Michael Taaffe"
+        },
+        {
+          "gave": "CAR",
+          "received": "MIA",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 200.0,
+          "pfr_name": "D.J. Campbell"
+        },
+        {
+          "gave": "MIA",
+          "received": "CAR",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 151.0,
+          "pfr_name": "Zakee Wheatley"
+        },
+        {
+          "gave": "MIA",
+          "received": "CAR",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 227.0,
+          "pfr_name": "Jackson Kuwatch"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "DEN",
+          "received": "CLE",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 170.0,
+          "pfr_name": "Joe Royer"
+        },
+        {
+          "gave": "DEN",
+          "received": "CLE",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 182.0,
+          "pfr_name": "Taylen Green"
+        },
+        {
+          "gave": "CLE",
+          "received": "DEN",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 152.0,
+          "pfr_name": "Justin Joly"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "PIT",
+          "received": "KC",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 161.0,
+          "pfr_name": "Emmett Johnson"
+        },
+        {
+          "gave": "PIT",
+          "received": "KC",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 249.0,
+          "pfr_name": "Garrett Nussmeier"
+        },
+        {
+          "gave": "KC",
+          "received": "PIT",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 169.0,
+          "pfr_name": "Riley Nowakowski"
+        },
+        {
+          "gave": "KC",
+          "received": "PIT",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 210.0,
+          "pfr_name": "Gabriel Rubio"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "BUF",
+          "received": "DET",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 168.0,
+          "pfr_name": "Kendrick Law"
+        },
+        {
+          "gave": "DET",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 5.0,
+          "pick_number": 181.0,
+          "pfr_name": "Zane Durant"
+        },
+        {
+          "gave": "DET",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 213.0,
+          "pfr_name": "Jordan van den Berg"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "TB",
+          "received": "LV",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 195.0,
+          "pfr_name": "Malik Benson"
+        },
+        {
+          "gave": "TB",
+          "received": "LV",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 229.0,
+          "pfr_name": "Brandon Cleveland"
+        },
+        {
+          "gave": "LV",
+          "received": "TB",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 185.0,
+          "pfr_name": "Bauer Sharp"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "NYJ",
+          "received": "SEA",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 199.0,
+          "pfr_name": "Emmanuel Henderson Jr."
+        },
+        {
+          "gave": "NYJ",
+          "received": "SEA",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 242.0,
+          "pfr_name": "Deven Eastern"
+        },
+        {
+          "gave": "SEA",
+          "received": "NYJ",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 188.0,
+          "pfr_name": "Anez Cooper"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "JAX",
+          "received": "NE",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 196.0,
+          "pfr_name": "Dametrious Crownover"
+        },
+        {
+          "gave": "JAX",
+          "received": "NE",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 245.0,
+          "pfr_name": "Jam Miller"
+        },
+        {
+          "gave": "NE",
+          "received": "JAX",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 191.0,
+          "pfr_name": "Josh Cameron"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "PHI",
+          "received": "LA",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 197.0,
+          "pfr_name": "C.J. Daniels"
+        },
+        {
+          "gave": "LA",
+          "received": "PHI",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 207.0,
+          "pfr_name": "Micah Morris"
+        },
+        {
+          "gave": "LA",
+          "received": "PHI",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 251.0,
+          "pfr_name": "Uar Bernard"
+        },
+        {
+          "gave": "LA",
+          "received": "PHI",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 252.0,
+          "pfr_name": "Keyshawn James-Newby"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "NE",
+          "received": "MIN",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 198.0,
+          "pfr_name": "Demond Claiborne"
+        },
+        {
+          "gave": "MIN",
+          "received": "NE",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 234.0,
+          "pfr_name": "Behren Morton"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "CHI",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 239.0,
+          "pfr_name": "Tommy Doman"
+        },
+        {
+          "gave": "CHI",
+          "received": "BUF",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 241.0,
+          "pfr_name": "Ar'maj Reed-Adams"
+        },
+        {
+          "gave": "BUF",
+          "received": "CHI",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 213.0,
+          "pfr_name": "Jordan van den Berg"
+        }
+      ]
+    },
+    {
+      "trade_date": "2026-04-25",
+      "season": 2026,
+      "rows": [
+        {
+          "gave": "GB",
+          "received": "SEA",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 236.0,
+          "pfr_name": "Andre Fuller"
+        },
+        {
+          "gave": "GB",
+          "received": "SEA",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 255.0,
+          "pfr_name": "Michael Dansby"
+        },
+        {
+          "gave": "SEA",
+          "received": "GB",
+          "pick_season": 2026.0,
+          "pick_round": 6.0,
+          "pick_number": 216.0,
+          "pfr_name": "Trey Smack"
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "trade_id": 1799.0,
+      "gave": "MIN",
+      "received": "LA",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1799.0,
+      "gave": "LA",
+      "received": "MIN",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1831.0,
+      "gave": "NYJ",
+      "received": "PHI",
+      "pick_season": 2026.0,
+      "pick_round": 3.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1865.0,
+      "gave": "DEN",
+      "received": "NYJ",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1866.0,
+      "gave": "LA",
+      "received": "HOU",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1866.0,
+      "gave": "HOU",
+      "received": "LA",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1868.0,
+      "gave": "SEA",
+      "received": "CLE",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1868.0,
+      "gave": "CLE",
+      "received": "SEA",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1870.0,
+      "gave": "NYG",
+      "received": "DAL",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1870.0,
+      "gave": "DAL",
+      "received": "NYG",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1881.0,
+      "gave": "NYJ",
+      "received": "BUF",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1881.0,
+      "gave": "BUF",
+      "received": "NYJ",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1883.0,
+      "gave": "LAC",
+      "received": "TEN",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1885.0,
+      "gave": "SEA",
+      "received": "JAX",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1887.0,
+      "gave": "BUF",
+      "received": "CLE",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1888.0,
+      "gave": "MIN",
+      "received": "HOU",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1888.0,
+      "gave": "HOU",
+      "received": "MIN",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1893.0,
+      "gave": "MIN",
+      "received": "JAX",
+      "pick_season": 2026.0,
+      "pick_round": 4.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1893.0,
+      "gave": "JAX",
+      "received": "MIN",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1895.0,
+      "gave": "DET",
+      "received": "CLE",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1895.0,
+      "gave": "CLE",
+      "received": "DET",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1911.0,
+      "gave": "CHI",
+      "received": "KC",
+      "pick_season": 2026.0,
+      "pick_round": 4.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1909.0,
+      "gave": "HOU",
+      "received": "JAX",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1904.0,
+      "gave": "WAS",
+      "received": "HOU",
+      "pick_season": 2026.0,
+      "pick_round": 2.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1904.0,
+      "gave": "WAS",
+      "received": "HOU",
+      "pick_season": 2026.0,
+      "pick_round": 4.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1906.0,
+      "gave": "NO",
+      "received": "NE",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1903.0,
+      "gave": "PHI",
+      "received": "HOU",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1903.0,
+      "gave": "HOU",
+      "received": "PHI",
+      "pick_season": 2026.0,
+      "pick_round": 5.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1913.0,
+      "gave": "DAL",
+      "received": "BUF",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1915.0,
+      "gave": "HOU",
+      "received": "MIN",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1916.0,
+      "gave": "MIN",
+      "received": "SF",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1919.0,
+      "gave": "JAX",
+      "received": "CLE",
+      "pick_season": 2026.0,
+      "pick_round": 1.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1921.0,
+      "gave": "ATL",
+      "received": "LA",
+      "pick_season": 2026.0,
+      "pick_round": 1.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1933.0,
+      "gave": "ATL",
+      "received": "PHI",
+      "pick_season": 2026.0,
+      "pick_round": 5.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1954.0,
+      "gave": "SF",
+      "received": "PHI",
+      "pick_season": 2026.0,
+      "pick_round": 4.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1956.0,
+      "gave": "MIA",
+      "received": "NYG",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1958.0,
+      "gave": "PHI",
+      "received": "HOU",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1958.0,
+      "gave": "HOU",
+      "received": "PHI",
+      "pick_season": 2026.0,
+      "pick_round": 5.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1960.0,
+      "gave": "NYJ",
+      "received": "CLE",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1960.0,
+      "gave": "CLE",
+      "received": "NYJ",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1962.0,
+      "gave": "NYJ",
+      "received": "MIN",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1963.0,
+      "gave": "NO",
+      "received": "DEN",
+      "pick_season": 2026.0,
+      "pick_round": 4.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1964.0,
+      "gave": "SF",
+      "received": "WAS",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1965.0,
+      "gave": "PHI",
+      "received": "MIN",
+      "pick_season": 2026.0,
+      "pick_round": 5.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1965.0,
+      "gave": "MIN",
+      "received": "PHI",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1967.0,
+      "gave": "PHI",
+      "received": "JAX",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1969.0,
+      "gave": "LV",
+      "received": "CLE",
+      "pick_season": 2026.0,
+      "pick_round": 5.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1970.0,
+      "gave": "IND",
+      "received": "MIN",
+      "pick_season": 2026.0,
+      "pick_round": 6.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1975.0,
+      "gave": "CAR",
+      "received": "MIN",
+      "pick_season": 2026.0,
+      "pick_round": 7.0,
+      "message": "no matching pick found in draft JSON"
+    },
+    {
+      "trade_id": 1976.0,
+      "gave": "GB",
+      "received": "DAL",
+      "pick_season": 2026.0,
+      "pick_round": 1.0,
+      "message": "no matching pick found in draft JSON"
+    }
+  ]
+}
