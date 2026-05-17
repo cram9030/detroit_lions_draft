@@ -47,29 +47,13 @@ import plotly.graph_objects as go
 
 from src.annual_av_analysis import exponential_av_fit_stat
 from src.models.factory import make_career_av_model
+from src.surplus_av import _normalize_pos, load_team_draft_class, project_player_seasons
 
-RAW_DIR = PROJECT_ROOT / "data/raw/stathead/annual_av"
 MODELS_DIR = PROJECT_ROOT / "models"
 FIGURES_DIR = PROJECT_ROOT / "outputs/figures"
 PROCESSED_DIR = PROJECT_ROOT / "data/processed"
 
 _DRAFT_YEAR = 2024
-_OBS_SEASONS = [2024, 2025]  # years_from_draft 0 and 1
-
-# Normalized position mapping matching _POSITION_GROUPS in annual_av_analysis
-_POSITION_GROUPS: dict[str, str] = {
-    "FL": "WR", "SE": "WR",
-    "HB": "RB", "FB": "RB", "RH": "RB", "LH": "RB",
-    "LDE": "DE", "RDE": "DE",
-    "NT": "DT", "LDT": "DT", "RDT": "DT",
-    "LG": "OG", "RG": "OG", "G": "OG",
-    "LT": "OT", "RT": "OT", "T": "OT",
-    "C": "OC",
-    "LCB": "CB", "RCB": "CB",
-    "LILB": "LB", "RILB": "LB", "LOLB": "LB", "ROLB": "LB",
-    "LLB": "LB", "ILB": "LB", "OLB": "LB", "RLB": "LB", "MLB": "LB",
-    "FS": "S", "SS": "S", "DB": "S",
-}
 
 # Generalist codes (OL, DL) aren't resolvable without knowing the specific position.
 # Override per-player where the actual position is known.
@@ -80,29 +64,7 @@ _PLAYER_POSITION_OVERRIDES: dict[str, str] = {
 }
 
 
-def _normalize_pos(player: str, pos: str) -> str:
-    """Return the normalized position, applying per-player overrides first."""
-    if player in _PLAYER_POSITION_OVERRIDES:
-        return _PLAYER_POSITION_OVERRIDES[player]
-    first = pos.replace("-", "/").split("/")[0].strip()
-    return _POSITION_GROUPS.get(first, first)
-
-
 def _check_prerequisites() -> None:
-    missing = []
-    for season in _OBS_SEASONS:
-        path = RAW_DIR / f"draft{_DRAFT_YEAR}_season{season}.parquet"
-        if not path.exists():
-            missing.append(str(path))
-    if missing:
-        raise FileNotFoundError(
-            f"Missing 2024 draft data files:\n  " + "\n  ".join(missing) + "\n\n"
-            "To download, update config/stathead_annual_av.json:\n"
-            '  "draft_year_start": 2024, "draft_year_end": 2024\n'
-            "then run:\n"
-            "  python -m src.stathead_downloader --config config/stathead_annual_av.json"
-        )
-
     params_path = MODELS_DIR / "parametric" / "params.json"
     if not params_path.exists():
         raise FileNotFoundError(
@@ -128,41 +90,6 @@ def _check_prerequisites() -> None:
         )
 
 
-def _load_lions_observed() -> pl.DataFrame:
-    """Load DET 2024 picks with their observed AV for years 0 and 1."""
-    frames = []
-    for season in _OBS_SEASONS:
-        path = RAW_DIR / f"draft{_DRAFT_YEAR}_season{season}.parquet"
-        df = pl.read_parquet(path)
-        frames.append(df.filter(pl.col("Draft Team") == "DET"))
-
-    raw = pl.concat(frames)
-
-    prepared = (
-        raw
-        .with_columns([
-            pl.col("Pick").cast(pl.Int64, strict=False),
-            pl.col("Season").cast(pl.Int64, strict=False),
-            pl.col("Draft Year").cast(pl.Int64, strict=False),
-            pl.col("AV.1").cast(pl.Float64, strict=False).fill_null(0.0),
-            pl.col("Pos").str.strip_chars(),
-        ])
-        .with_columns(
-            (pl.col("Season") - pl.col("Draft Year")).alias("years_from_draft")
-        )
-        .filter(pl.col("years_from_draft").is_in([0, 1]))
-    )
-
-    # Normalize positions so compound/variant codes resolve consistently across seasons
-    # (e.g. "RCB" and "CB" both become "CB" for the same player)
-    prepared = prepared.with_columns(
-        pl.struct(["Player", "Pos"]).map_elements(
-            lambda s: _normalize_pos(s["Player"], s["Pos"]),
-            return_dtype=pl.String,
-        ).alias("Pos")
-    )
-
-    return prepared.select(["Player", "Pos", "Pick", "Draft Year", "years_from_draft", "AV.1"])
 
 
 def _build_pick_expectation(max_pick: int = 260) -> dict[int, float]:
@@ -183,28 +110,13 @@ def _build_pick_expectation(max_pick: int = 260) -> dict[int, float]:
     return {int(p): float(max(0.0, a * np.exp(-b * p) + c)) for p in picks}
 
 
-def _project_player(
-    model,
-    player: str,
-    pos: str,
-    obs_av: list[float],
-) -> tuple[float, float] | None:
-    """Return (proj_yr2, proj_yr3) or None if position unknown to model."""
-    norm_pos = _normalize_pos(player, pos)
-    try:
-        result = model.predict(norm_pos, obs_av)
-    except ValueError:
-        return None
-    preds = dict(zip(result["predicted_years"], result["y_pred"]))
-    return preds.get(2, 0.0), preds.get(3, 0.0)
-
 
 def main() -> None:
     _check_prerequisites()
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
     print("Loading Lions 2024 observed AV...")
-    obs_df = _load_lions_observed()
+    obs_df = load_team_draft_class("DET", _DRAFT_YEAR)
 
     # Pivot to one row per player with yr0 and yr1 AV
     wide = (
@@ -244,28 +156,28 @@ def main() -> None:
         obs_av = [obs0, obs1]
 
         # Parametric projection
-        param_proj = _project_player(parametric_model, player, pos, obs_av)
+        param_proj = project_player_seasons(parametric_model, player, pos, obs_av, _PLAYER_POSITION_OVERRIDES)
         if param_proj is None:
             param_yr2, param_yr3 = 0.0, 0.0
-            param_note = f"(pos '{_normalize_pos(player, pos)}' not in parametric model)"
+            param_note = f"(pos '{_normalize_pos(player, pos, _PLAYER_POSITION_OVERRIDES)}' not in parametric model)"
         else:
             param_yr2, param_yr3 = param_proj
             param_note = ""
 
         # KNN projection
-        knn_proj = _project_player(knn_model, player, pos, obs_av)
+        knn_proj = project_player_seasons(knn_model, player, pos, obs_av, _PLAYER_POSITION_OVERRIDES)
         if knn_proj is None:
             knn_yr2, knn_yr3 = 0.0, 0.0
-            knn_note = f"(pos '{_normalize_pos(player, pos)}' not in KNN model)"
+            knn_note = f"(pos '{_normalize_pos(player, pos, _PLAYER_POSITION_OVERRIDES)}' not in KNN model)"
         else:
             knn_yr2, knn_yr3 = knn_proj
             knn_note = ""
 
         # Ridge projection
-        ridge_proj = _project_player(ridge_model, player, pos, obs_av)
+        ridge_proj = project_player_seasons(ridge_model, player, pos, obs_av, _PLAYER_POSITION_OVERRIDES)
         if ridge_proj is None:
             ridge_yr2, ridge_yr3 = 0.0, 0.0
-            ridge_note = f"(pos '{_normalize_pos(player, pos)}' not in ridge model)"
+            ridge_note = f"(pos '{_normalize_pos(player, pos, _PLAYER_POSITION_OVERRIDES)}' not in ridge model)"
         else:
             ridge_yr2, ridge_yr3 = ridge_proj
             ridge_note = ""
