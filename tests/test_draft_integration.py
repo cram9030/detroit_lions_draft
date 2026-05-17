@@ -205,3 +205,87 @@ class TestNewTrades2026_DETvsBUF:
         original = result.filter(pl.col("trade_id") == 1977.0)
         assert len(original) == 1
         assert original["gave"][0] == "KC"
+
+
+# ---------------------------------------------------------------------------
+# TestGenerateTradePatch_KCvsLA
+# ---------------------------------------------------------------------------
+
+class TestGenerateTradePatch_KCvsLA:
+    """Verify generate_trade_patch includes veteran players and future picks.
+
+    Trade: LA gave picks #29, #169, #210 (2026) + 2027 third round pick to KC.
+           KC gave Trent McDuffie to LA. Dated 2026-03-11.
+    """
+
+    @pytest.fixture(scope="class")
+    def patched_df(self):
+        base = _make_base_trades()
+        patch = generate_trade_patch(_DRAFT_JSON_PATH, 2026, base)
+        return apply_trade_patch(base, patch)
+
+    def test_kc_gave_trent_mcduffie_to_la(self, patched_df):
+        row = patched_df.filter(
+            (pl.col("gave") == "KC") &
+            (pl.col("received") == "LA") &
+            (pl.col("pfr_name") == "Trent McDuffie")
+        )
+        assert len(row) == 1
+
+    def test_la_gave_2027_third_round_to_kc(self, patched_df):
+        row = patched_df.filter(
+            (pl.col("gave") == "LA") &
+            (pl.col("received") == "KC") &
+            (pl.col("pick_season") == 2027.0) &
+            (pl.col("pick_round") == 3.0)
+        )
+        assert len(row) == 1
+
+    def test_la_gave_pick_29_peter_woods_to_kc(self, patched_df):
+        row = patched_df.filter(
+            (pl.col("gave") == "LA") &
+            (pl.col("received") == "KC") &
+            (pl.col("pick_number") == 29.0)
+        )
+        assert len(row) == 1
+        assert row["pfr_name"][0] == "Peter Woods"
+
+    def test_la_gave_pick_169_riley_nowakowski_to_kc(self, patched_df):
+        row = patched_df.filter(
+            (pl.col("gave") == "LA") &
+            (pl.col("received") == "KC") &
+            (pl.col("pick_number") == 169.0)
+        )
+        assert len(row) == 1
+        assert row["pfr_name"][0] == "Riley Nowakowski"
+
+    def test_la_gave_pick_210_gabriel_rubio_to_kc(self, patched_df):
+        row = patched_df.filter(
+            (pl.col("gave") == "LA") &
+            (pl.col("received") == "KC") &
+            (pl.col("pick_number") == 210.0)
+        )
+        assert len(row) == 1
+        assert row["pfr_name"][0] == "Gabriel Rubio"
+
+    def test_all_five_rows_share_trade_id(self, patched_df):
+        kc_la_rows = patched_df.filter(
+            (
+                (pl.col("gave") == "KC") & (pl.col("received") == "LA") &
+                (pl.col("pfr_name") == "Trent McDuffie")
+            ) | (
+                (pl.col("gave") == "LA") & (pl.col("received") == "KC") &
+                (pl.col("pick_season") == 2027.0) & (pl.col("pick_round") == 3.0)
+            ) | (
+                (pl.col("gave") == "LA") & (pl.col("received") == "KC") &
+                (pl.col("pick_number") == 29.0)
+            ) | (
+                (pl.col("gave") == "LA") & (pl.col("received") == "KC") &
+                (pl.col("pick_number") == 169.0)
+            ) | (
+                (pl.col("gave") == "LA") & (pl.col("received") == "KC") &
+                (pl.col("pick_number") == 210.0)
+            )
+        )
+        assert len(kc_la_rows) == 5
+        assert kc_la_rows["trade_id"].n_unique() == 1

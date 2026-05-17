@@ -1,7 +1,7 @@
 {
   "metadata": {
     "year": 2026,
-    "created": "2026-05-16"
+    "created": "2026-05-17"
   },
   "patches": [
     {
@@ -182,6 +182,14 @@
       "season": 2026,
       "rows": [
         {
+          "gave": "KC",
+          "received": "LA",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Trent McDuffie"
+        },
+        {
           "gave": "LA",
           "received": "KC",
           "pick_season": 2026.0,
@@ -204,6 +212,14 @@
           "pick_round": 6.0,
           "pick_number": 210.0,
           "pfr_name": "Gabriel Rubio"
+        },
+        {
+          "gave": "LA",
+          "received": "KC",
+          "pick_season": 2027.0,
+          "pick_round": 3.0,
+          "pick_number": null,
+          "pfr_name": null
         }
       ]
     },
@@ -211,6 +227,14 @@
       "trade_date": "2026-03-11",
       "season": 2026,
       "rows": [
+        {
+          "gave": "CHI",
+          "received": "BUF",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "D.J. Moore"
+        },
         {
           "gave": "CHI",
           "received": "BUF",
@@ -234,6 +258,14 @@
       "season": 2026,
       "rows": [
         {
+          "gave": "DAL",
+          "received": "SF",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Osa Odighizuwa"
+        },
+        {
           "gave": "SF",
           "received": "DAL",
           "pick_season": 2026.0,
@@ -248,12 +280,36 @@
       "season": 2026,
       "rows": [
         {
+          "gave": "DET",
+          "received": "HOU",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "David Montgomery"
+        },
+        {
+          "gave": "HOU",
+          "received": "DET",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Juice Scruggs"
+        },
+        {
           "gave": "HOU",
           "received": "DET",
           "pick_season": 2026.0,
           "pick_round": 4.0,
           "pick_number": 128.0,
           "pfr_name": "Connor Lew"
+        },
+        {
+          "gave": "HOU",
+          "received": "DET",
+          "pick_season": 2027.0,
+          "pick_round": 7.0,
+          "pick_number": null,
+          "pfr_name": null
         }
       ]
     },
@@ -261,6 +317,14 @@
       "trade_date": "2026-03-11",
       "season": 2026,
       "rows": [
+        {
+          "gave": "HOU",
+          "received": "CLE",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Tytus Howard"
+        },
         {
           "gave": "CLE",
           "received": "HOU",
@@ -275,6 +339,14 @@
       "trade_date": "2026-03-11",
       "season": 2026,
       "rows": [
+        {
+          "gave": "IND",
+          "received": "PIT",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Michael Pittman Jr."
+        },
         {
           "gave": "IND",
           "received": "PIT",
@@ -298,12 +370,12 @@
       "season": 2026,
       "rows": [
         {
-          "gave": "TEN",
-          "received": "DAL",
-          "pick_season": 2026.0,
-          "pick_round": 7.0,
-          "pick_number": 218.0,
-          "pfr_name": "Anthony Smith"
+          "gave": "DAL",
+          "received": "TEN",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Solomon Thomas"
         },
         {
           "gave": "DAL",
@@ -312,6 +384,38 @@
           "pick_round": 7.0,
           "pick_number": 218.0,
           "pfr_name": "Anthony Smith"
+        },
+        {
+          "gave": "DAL",
+          "received": "TEN",
+          "pick_season": 2027.0,
+          "pick_round": 7.0,
+          "pick_number": null,
+          "pfr_name": null
+        },
+        {
+          "gave": "TEN",
+          "received": "DAL",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Solomon Thomas"
+        },
+        {
+          "gave": "TEN",
+          "received": "DAL",
+          "pick_season": 2026.0,
+          "pick_round": 7.0,
+          "pick_number": 218.0,
+          "pfr_name": "Anthony Smith"
+        },
+        {
+          "gave": "TEN",
+          "received": "DAL",
+          "pick_season": 2027.0,
+          "pick_round": 7.0,
+          "pick_number": null,
+          "pfr_name": null
         }
       ]
     },
@@ -319,6 +423,14 @@
       "trade_date": "2026-03-11",
       "season": 2026,
       "rows": [
+        {
+          "gave": "MIA",
+          "received": "NYJ",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Minkah Fitzpatrick"
+        },
         {
           "gave": "NYJ",
           "received": "MIA",
@@ -333,6 +445,14 @@
       "trade_date": "2026-03-18",
       "season": 2026,
       "rows": [
+        {
+          "gave": "MIA",
+          "received": "DEN",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Jaylen Waddle"
+        },
         {
           "gave": "MIA",
           "received": "DEN",
@@ -374,6 +494,14 @@
         {
           "gave": "ATL",
           "received": "PHI",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Sydney Brown"
+        },
+        {
+          "gave": "ATL",
+          "received": "PHI",
           "pick_season": 2026.0,
           "pick_round": 4.0,
           "pick_number": 114.0,
@@ -402,6 +530,14 @@
           "pick_round": 6.0,
           "pick_number": 215.0,
           "pfr_name": "Harold Perkins Jr."
+        },
+        {
+          "gave": "PHI",
+          "received": "ATL",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Sydney Brown"
         },
         {
           "gave": "PHI",
@@ -442,12 +578,28 @@
       "season": 2026,
       "rows": [
         {
+          "gave": "GB",
+          "received": "PHI",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Dontayvion Wicks"
+        },
+        {
           "gave": "PHI",
           "received": "GB",
           "pick_season": 2026.0,
           "pick_round": 5.0,
           "pick_number": 153.0,
           "pfr_name": "Jager Burton"
+        },
+        {
+          "gave": "PHI",
+          "received": "GB",
+          "pick_season": 2027.0,
+          "pick_round": 6.0,
+          "pick_number": null,
+          "pfr_name": null
         }
       ]
     },
@@ -455,6 +607,14 @@
       "trade_date": "2026-04-20",
       "season": 2026,
       "rows": [
+        {
+          "gave": "NYG",
+          "received": "CIN",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Dexter Lawrence"
+        },
         {
           "gave": "CIN",
           "received": "NYG",
@@ -552,6 +712,14 @@
           "pick_round": 1.0,
           "pick_number": 20.0,
           "pfr_name": "Makai Lemon"
+        },
+        {
+          "gave": "DAL",
+          "received": "PHI",
+          "pick_season": 2027.0,
+          "pick_round": 7.0,
+          "pick_number": null,
+          "pfr_name": null
         },
         {
           "gave": "PHI",
@@ -1150,6 +1318,14 @@
           "pfr_name": "Nick Barrett"
         },
         {
+          "gave": "NYG",
+          "received": "CLE",
+          "pick_season": 2027.0,
+          "pick_round": 4.0,
+          "pick_number": null,
+          "pfr_name": null
+        },
+        {
           "gave": "CLE",
           "received": "NYG",
           "pick_season": 2026.0,
@@ -1288,6 +1464,14 @@
         {
           "gave": "MIN",
           "received": "PHI",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Jonathan Greenard"
+        },
+        {
+          "gave": "MIN",
+          "received": "PHI",
           "pick_season": 2026.0,
           "pick_round": 7.0,
           "pick_number": 244.0,
@@ -1300,6 +1484,14 @@
           "pick_round": 3.0,
           "pick_number": 98.0,
           "pfr_name": "Jakobe Thomas"
+        },
+        {
+          "gave": "PHI",
+          "received": "MIN",
+          "pick_season": 2027.0,
+          "pick_round": 3.0,
+          "pick_number": null,
+          "pfr_name": null
         }
       ]
     },
@@ -1307,6 +1499,14 @@
       "trade_date": "2026-04-24",
       "season": 2026,
       "rows": [
+        {
+          "gave": "SF",
+          "received": "DAL",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Dee Winters"
+        },
         {
           "gave": "DAL",
           "received": "SF",
@@ -1328,6 +1528,14 @@
           "pick_round": 4.0,
           "pick_number": 102.0,
           "pfr_name": "Jude Bowry"
+        },
+        {
+          "gave": "LV",
+          "received": "BUF",
+          "pick_season": 2027.0,
+          "pick_round": 7.0,
+          "pick_number": null,
+          "pfr_name": null
         },
         {
           "gave": "BUF",
@@ -1558,6 +1766,14 @@
           "pfr_name": "Jaden Dugger"
         },
         {
+          "gave": "BAL",
+          "received": "SF",
+          "pick_season": 2027.0,
+          "pick_round": 6.0,
+          "pick_number": null,
+          "pfr_name": null
+        },
+        {
           "gave": "SF",
           "received": "BAL",
           "pick_season": 2026.0,
@@ -1572,6 +1788,14 @@
       "season": 2026,
       "rows": [
         {
+          "gave": "SEA",
+          "received": "CLE",
+          "pick_season": 2027.0,
+          "pick_round": 4.0,
+          "pick_number": null,
+          "pfr_name": null
+        },
+        {
           "gave": "CLE",
           "received": "SEA",
           "pick_season": 2026.0,
@@ -1585,6 +1809,14 @@
       "trade_date": "2026-04-25",
       "season": 2026,
       "rows": [
+        {
+          "gave": "LV",
+          "received": "NO",
+          "pick_season": null,
+          "pick_round": null,
+          "pick_number": null,
+          "pfr_name": "Tyree Wilson"
+        },
         {
           "gave": "LV",
           "received": "NO",
@@ -1886,6 +2118,14 @@
           "pick_round": 7.0,
           "pick_number": 234.0,
           "pfr_name": "Behren Morton"
+        },
+        {
+          "gave": "MIN",
+          "received": "NE",
+          "pick_season": 2027.0,
+          "pick_round": 6.0,
+          "pick_number": null,
+          "pfr_name": null
         }
       ]
     },

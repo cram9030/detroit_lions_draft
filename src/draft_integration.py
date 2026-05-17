@@ -31,6 +31,7 @@ _ORDINAL_TO_NUM: dict[str, int] = {
 }
 
 _PICK_REF_RE = re.compile(r"(\d{4})\s+(\w+)\s+round\s+pick\s+\(#(\d+)-(.+)\)")
+_ANY_PICK_RE = re.compile(r"(\d{4})\s+(\w+)\s+round\s+pick(?:\s*\(#(\d+)-(.+)\))?")
 
 
 def _team_to_abbr(name: str) -> str | None:
@@ -54,6 +55,25 @@ def _parse_pick_ref(item: str, year: int) -> tuple[int, int, str] | None:
     if round_num is None:
         return None
     return (round_num, int(m.group(3)), m.group(4).strip())
+
+
+def _parse_any_pick(item: str) -> tuple[int, int, int | None, str | None] | None:
+    """Parse any pick reference regardless of year, returning (year, round, pick_num, player).
+
+    Returns None for non-pick items (e.g. veteran player names).
+    Handles picks with known numbers ('2026 first round pick (#29-Peter Woods)')
+    and future picks without numbers ('2027 third round pick').
+    """
+    cleaned = item.strip().replace("conditional ", "")
+    m = _ANY_PICK_RE.match(cleaned)
+    if not m:
+        return None
+    round_num = _ORDINAL_TO_NUM.get(m.group(2).lower())
+    if round_num is None:
+        return None
+    pick_num = int(m.group(3)) if m.group(3) else None
+    player = m.group(4).strip() if m.group(4) else None
+    return (int(m.group(1)), round_num, pick_num, player)
 
 
 def _build_sent_lookup(
@@ -162,14 +182,19 @@ def _build_pick_selector_lookup(draft_picks: list[dict]) -> dict[int, str | None
 def _collect_year_new_trades(
     draft_picks: list[dict],
     year: int,
-) -> dict[tuple, dict[str, set[tuple[int, int, str]]]]:
+) -> dict[tuple, dict[str, set[tuple[int | None, int | None, int | None, str | None]]]]:
     """Return unique year-dated trades not already representing prior-year entries.
 
     Uses the primary-pick convention check to correct inverted {team}_sent labels:
     if the primary pick appears in {team}_sent and that team IS the selecting_team,
     the entire trade's sent labels are inverted.
 
-    Returns {(frozenset_teams, date_str): {gave_abbr: set((round, pick_num, player))}}
+    Each item in the per-team set is (pick_season, pick_round, pick_number, name):
+    - Current-year picks:  (year, round, pick_num, pfr_name)
+    - Future picks:        (future_year, round, None, None)
+    - Veteran players:     (None, None, None, player_name)
+
+    Returns {(frozenset_teams, date_str): {gave_abbr: set(item_tuple)}}
     """
     selector = _build_pick_selector_lookup(draft_picks)
     trade_map: dict = defaultdict(lambda: defaultdict(set))
@@ -215,17 +240,17 @@ def _collect_year_new_trades(
                 other = to_abbr if sent_by == from_abbr else from_abbr
 
                 for item in items:
-                    parsed = _parse_pick_ref(item, year)
-                    if not parsed:
-                        continue
-                    rnd, pnum, player = parsed
-
                     if inverted:
-                        actual_gave, actual_received = other, sent_by
+                        actual_gave = other
                     else:
-                        actual_gave, actual_received = sent_by, other
+                        actual_gave = sent_by
 
-                    trade_map[trade_key][actual_gave].add((rnd, pnum, player))
+                    any_pick = _parse_any_pick(item)
+                    if any_pick is None:
+                        trade_map[trade_key][actual_gave].add((None, None, None, item.strip()))
+                    else:
+                        pick_year, rnd, pnum, player = any_pick
+                        trade_map[trade_key][actual_gave].add((pick_year, rnd, pnum, player))
 
     return trade_map
 
@@ -265,16 +290,18 @@ def add_new_trades(
         rows_for_trade: list[dict] = []
         for gave_abbr, picks_given in sent_by_dict.items():
             rcv = next(iter(teams_frozen - {gave_abbr}))
-            for rnd, pnum, player in sorted(picks_given, key=lambda x: x[1]):
+            for pick_season, rnd, pnum, player in sorted(
+                picks_given, key=lambda x: (x[0] or 0, x[1] or 0, x[2] or 0)
+            ):
                 rows_for_trade.append({
                     "trade_id": float(next_id),
                     "season": year,
                     "trade_date": trade_date,
                     "gave": gave_abbr,
                     "received": rcv,
-                    "pick_season": float(year),
-                    "pick_round": float(rnd),
-                    "pick_number": float(pnum),
+                    "pick_season": float(pick_season) if pick_season is not None else None,
+                    "pick_round": float(rnd) if rnd is not None else None,
+                    "pick_number": float(pnum) if pnum is not None else None,
                     "conditional": 0.0,
                     "pfr_name": player,
                 })
@@ -348,8 +375,8 @@ def apply_trade_patch(trades_df: pl.DataFrame, patch: dict) -> pl.DataFrame:
                 "trade_date":  trade_date,
                 "gave":        r["gave"],
                 "received":    r["received"],
-                "pick_season": float(r["pick_season"]),
-                "pick_round":  float(r["pick_round"]),
+                "pick_season": float(r["pick_season"]) if r.get("pick_season") is not None else None,
+                "pick_round":  float(r["pick_round"])  if r.get("pick_round")  is not None else None,
                 "pick_number": float(r["pick_number"]) if r.get("pick_number") is not None else None,
                 "conditional": 0.0,
                 "pfr_id":      None,
@@ -461,11 +488,15 @@ def generate_trade_patch(
         trade_rows: list[dict] = []
         for gave_abbr, picks_given in sent_by_dict.items():
             rcv = next(iter(teams_frozen - {gave_abbr}))
-            for rnd, pnum, player in sorted(picks_given, key=lambda x: x[1]):
+            for pick_season, rnd, pnum, player in sorted(
+                picks_given, key=lambda x: (x[0] or 0, x[1] or 0, x[2] or 0)
+            ):
                 trade_rows.append({
                     "gave": gave_abbr, "received": rcv,
-                    "pick_season": float(year), "pick_round": float(rnd),
-                    "pick_number": float(pnum), "pfr_name": player,
+                    "pick_season": float(pick_season) if pick_season is not None else None,
+                    "pick_round": float(rnd) if rnd is not None else None,
+                    "pick_number": float(pnum) if pnum is not None else None,
+                    "pfr_name": player,
                 })
 
         if trade_rows:
