@@ -12,6 +12,7 @@ detroit_lions_draft/
 │   ├── raw/              # Raw source data (not tracked by git)
 │   └── processed/        # Cleaned and transformed data
 ├── docs/                 # Extended documentation
+│   ├── draft-integration.md
 │   ├── fetching-data.md
 │   ├── modeling.md
 │   ├── running-analysis.md
@@ -26,15 +27,20 @@ detroit_lions_draft/
 │   └── reports/
 ├── scripts/              # Runnable entry points
 │   ├── example_lions_2024.py
+│   ├── generate_trade_patch.py
 │   ├── run_analysis.py
 │   └── train_models.py
 ├── secrets/              # Local credentials — gitignored, never committed
 │   └── cookies.json      # (you create this — see Fetching Data below)
 ├── src/                  # Python source modules
 │   ├── models/           # CareerAV model implementations
-│   └── stathead_downloader.py
+│   ├── draft_integration.py
+│   ├── stathead_downloader.py
+│   └── trade_value.py
 ├── tests/                # Unit tests
-│   └── models/
+│   ├── models/
+│   ├── test_draft_integration.py
+│   └── test_draft_trade_analysis.py
 ├── requirements.txt
 └── README.md
 ```
@@ -138,6 +144,7 @@ deactivate
 | Running the analysis pipeline and output plots | [docs/running-analysis.md](docs/running-analysis.md) |
 | Career trajectory models (Parametric, KNN, Ridge) | [docs/modeling.md](docs/modeling.md) |
 | Draft trade analysis across 5 trade charts | [docs/trade-analysis.md](docs/trade-analysis.md) |
+| Integrating draft JSON into nflreadpy trades | [docs/draft-integration.md](docs/draft-integration.md) |
 
 ---
 
@@ -172,3 +179,35 @@ Each row in the output represents one trade. Output columns:
 | `eaar_picks` | String | Equivalent picks |
 
 A trade is excluded when any player asset was not drafted in `year`, or when no picks were exchanged. See [docs/trade-analysis.md](docs/trade-analysis.md) for full details.
+
+---
+
+# Draft Integration
+
+`src/draft_integration.py` fills in missing data that nflreadpy doesn't have: prior-year trades with null pick numbers, and draft-day trades that don't exist in nflreadpy at all. It reads from a season draft JSON (e.g. `data/processed/nfl_draft_2026.json`).
+
+**Generate a patch file from the command line:**
+
+```bash
+python scripts/generate_trade_patch.py data/processed/nfl_draft_2026.json 2026
+# Writes data/processed/trade_patch_2026.json
+```
+
+**Apply in Python:**
+
+```python
+import json
+import nflreadpy
+from src.draft_integration import populate_pick_numbers, add_new_trades
+
+with open("data/processed/nfl_draft_2026.json") as f:
+    draft_picks = json.load(f)
+
+trades = nflreadpy.load_trades()
+trades = populate_pick_numbers(trades, draft_picks, 2026)  # fill null pick_numbers
+trades = add_new_trades(trades, draft_picks, 2026)         # add draft-day trades
+
+# Then pass the enriched trades DataFrame to analyze_draft_trades or your own analysis
+```
+
+See [docs/draft-integration.md](docs/draft-integration.md) for the full API, patch JSON format, and workflow details.

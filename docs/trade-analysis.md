@@ -107,7 +107,40 @@ The negative `jj_value` indicates PHI gave more Jimmy Johnson value than it rece
 
 ---
 
+## Using with current-year data
+
+nflreadpy's `load_trades()` has two gaps for the current draft year:
+
+1. Prior-year trades with future picks have `pick_number = null`.
+2. Draft-day trades from the current year are absent entirely.
+
+Use `src/draft_integration.py` to fill both before calling `analyze_draft_trades`:
+
+```python
+import json
+import nflreadpy
+from src.draft_integration import populate_pick_numbers, add_new_trades
+from src.trade_value import analyze_draft_trades
+
+with open("data/processed/nfl_draft_2026.json") as f:
+    draft_picks = json.load(f)
+
+trades = nflreadpy.load_trades()
+trades = populate_pick_numbers(trades, draft_picks, 2026)
+trades = add_new_trades(trades, draft_picks, 2026)
+
+# analyze_draft_trades calls nflreadpy internally, so pass the enriched df directly
+# by patching or using the lower-level functions — see docs/draft-integration.md
+```
+
+See [docs/draft-integration.md](docs/draft-integration.md) for the full workflow.
+
+---
+
 ## Related functions
 
 - `load_trade_chart(chart_name)` — load any of the six charts as a normalized `[Pick, Value]` DataFrame
 - `find_pick_combination(target, chart_name)` — find the set of picks whose chart values sum closest to a target
+- `src.draft_integration.populate_pick_numbers` — fill null pick_numbers from a draft JSON
+- `src.draft_integration.add_new_trades` — append draft-day trades not in nflreadpy
+- `src.draft_integration.apply_trade_patch` — apply a pre-generated patch file
