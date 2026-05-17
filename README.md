@@ -7,9 +7,13 @@ Analysis of Detroit Lions NFL draft history and data. The project fetches histor
 ```
 detroit_lions_draft/
 ├── config/               # Query configurations (version-controlled)
-│   └── stathead_annual_av.json
+│   ├── stathead_annual_av.json
+│   ├── pfr_executives.json   # PFR team executives / staff history
+│   └── pfr_standings.json    # PFR AFC + NFC standings by year
 ├── data/
 │   ├── raw/              # Raw source data (not tracked by git)
+│   │   ├── stathead/         # Output of stathead_downloader.py
+│   │   └── pfr/              # Output of pfr_downloader.py
 │   └── processed/        # Cleaned and transformed data
 ├── docs/                 # Extended documentation
 │   ├── draft-integration.md
@@ -31,15 +35,20 @@ detroit_lions_draft/
 │   ├── run_analysis.py
 │   └── train_models.py
 ├── secrets/              # Local credentials — gitignored, never committed
-│   └── cookies.json      # (you create this — see Fetching Data below)
+│   └── cookies.json      # (you create this — required for Stathead only)
 ├── src/                  # Python source modules
 │   ├── models/           # CareerAV model implementations
 │   ├── draft_integration.py
+│   ├── pfr_downloader.py     # Config-driven PFR scraper (no auth required)
+│   ├── scraper_utils.py      # Shared HTTP / retry / progress utilities
 │   ├── stathead_downloader.py
 │   └── trade_value.py
 ├── tests/                # Unit tests
+│   ├── fixtures/pfr/         # Reference HTML fixtures for PFR tests
 │   ├── models/
 │   ├── test_draft_integration.py
+│   ├── test_pfr_downloader.py
+│   ├── test_stathead_downloader.py
 │   └── test_draft_trade_analysis.py
 ├── requirements.txt
 └── README.md
@@ -120,15 +129,26 @@ deactivate
 
 # Quick Start
 
-1. **Fetch data** — export Stathead cookies and run the downloader. See [docs/fetching-data.md](docs/fetching-data.md).
+1. **Fetch Stathead data** — export browser cookies and run the downloader. Requires a Stathead subscription. See [docs/fetching-data.md](docs/fetching-data.md#stathead).
 
-2. **Run analysis**:
+   ```bash
+   python src/stathead_downloader.py --config config/stathead_annual_av.json
+   ```
+
+2. **Fetch PFR data** — no subscription or cookies needed. See [docs/fetching-data.md](docs/fetching-data.md#pro-football-reference-pfr).
+
+   ```bash
+   python src/pfr_downloader.py --config config/pfr_executives.json
+   python src/pfr_downloader.py --config config/pfr_standings.json
+   ```
+
+3. **Run analysis**:
    ```bash
    python scripts/run_analysis.py
    ```
    See [docs/running-analysis.md](docs/running-analysis.md) for pipeline flags and output plot descriptions.
 
-3. **Train models**:
+4. **Train models**:
    ```bash
    python scripts/train_models.py --model all
    ```
@@ -140,7 +160,9 @@ deactivate
 
 | Topic | File |
 |---|---|
-| Fetching data from Stathead | [docs/fetching-data.md](docs/fetching-data.md) |
+| Fetching data from Stathead (subscription) | [docs/fetching-data.md](docs/fetching-data.md#stathead) |
+| Fetching data from PFR (public, no auth) | [docs/fetching-data.md](docs/fetching-data.md#pro-football-reference-pfr) |
+| Adding a new PFR data source (config-only) | [docs/fetching-data.md](docs/fetching-data.md#adding-a-new-pfr-data-source) |
 | Running the analysis pipeline and output plots | [docs/running-analysis.md](docs/running-analysis.md) |
 | Career trajectory models (Parametric, KNN, Ridge) | [docs/modeling.md](docs/modeling.md) |
 | Draft trade analysis across 5 trade charts | [docs/trade-analysis.md](docs/trade-analysis.md) |
