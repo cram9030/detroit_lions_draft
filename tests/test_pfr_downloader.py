@@ -222,6 +222,19 @@ class TestIsPfrBlocked:
         html = "<html><body><h1>Access Denied</h1><p>You do not have permission.</p></body></html>"
         assert is_pfr_blocked(html)
 
+    def test_login_wall_without_table_detected(self):
+        html = "<html><body><p>Please sign in to view this content.</p></body></html>"
+        assert is_pfr_blocked(html)
+
+    def test_subscribe_wall_without_table_detected(self):
+        html = "<html><body><p>Subscribe to access this page.</p></body></html>"
+        assert is_pfr_blocked(html)
+
+    def test_login_text_with_table_not_flagged(self):
+        # A page that happens to mention "sign in" in a nav bar but still has table data
+        html = "<html><body><nav>Sign in</nav><table><tr><th>Tm</th></tr><tr><td>BUF</td></tr></table></body></html>"
+        assert not is_pfr_blocked(html)
+
 
 # =============================================================================
 # Output path naming
@@ -436,7 +449,11 @@ class TestStandingsContent:
 # =============================================================================
 
 
-def _pfr_cfg(tmp_path: Path, iterate: dict, tables: list) -> str:
+def _pfr_cfg(tmp_path: Path, iterate: dict, tables: list) -> tuple[str, str]:
+    """Write a minimal PFR config and cookies file; return (cfg_path, cookies_path)."""
+    cookies_path = tmp_path / "cookies.json"
+    cookies_path.write_text(json.dumps({"session": "fake"}))
+
     cfg = {
         "source_name": "test",
         "url_template": "https://www.pro-football-reference.com/teams/{team}/executives.htm",
@@ -449,7 +466,7 @@ def _pfr_cfg(tmp_path: Path, iterate: dict, tables: list) -> str:
     }
     p = tmp_path / "cfg.json"
     p.write_text(json.dumps(cfg))
-    return str(p)
+    return str(p), str(cookies_path)
 
 
 class TestPfrRunIntegration:
@@ -463,15 +480,15 @@ class TestPfrRunIntegration:
         )
         assert result.returncode == 0, f"Direct invocation failed:\n{result.stderr}"
         assert "--config" in result.stdout
+        assert "--cookies" in result.stdout
 
     def test_run_writes_output_file(self, tmp_path, monkeypatch):
         fixture_html = (FIXTURE_DIR / "executives_det.html").read_text()
         monkeypatch.setattr("requests.Session.get", lambda self, url, **kw: Mock(status_code=200, text=fixture_html))
         monkeypatch.setattr("time.sleep", lambda _: None)
+        cfg_path, cookies_path = _pfr_cfg(tmp_path, {"team": ["det"]}, [{"id": "executives", "output_suffix": "executives"}])
         monkeypatch.setattr("sys.argv", [
-            "pfr_downloader",
-            "--config", _pfr_cfg(tmp_path, {"team": ["det"]}, [{"id": "executives", "output_suffix": "executives"}]),
-            "--csv",
+            "pfr_downloader", "--config", cfg_path, "--cookies", cookies_path, "--csv",
         ])
 
         pfr_run()
@@ -484,10 +501,9 @@ class TestPfrRunIntegration:
         fixture_html = (FIXTURE_DIR / "executives_det.html").read_text()
         monkeypatch.setattr("requests.Session.get", lambda self, url, **kw: Mock(status_code=200, text=fixture_html))
         monkeypatch.setattr("time.sleep", lambda _: None)
+        cfg_path, cookies_path = _pfr_cfg(tmp_path, {"team": ["det"]}, [{"id": "executives", "output_suffix": "executives"}])
         monkeypatch.setattr("sys.argv", [
-            "pfr_downloader",
-            "--config", _pfr_cfg(tmp_path, {"team": ["det"]}, [{"id": "executives", "output_suffix": "executives"}]),
-            "--csv",
+            "pfr_downloader", "--config", cfg_path, "--cookies", cookies_path, "--csv",
         ])
 
         pfr_run()
@@ -496,6 +512,8 @@ class TestPfrRunIntegration:
 
     def test_run_multi_table_page_writes_separate_files(self, tmp_path, monkeypatch):
         fixture_html = (FIXTURE_DIR / "standings_2025.html").read_text()
+        cookies_path = tmp_path / "cookies.json"
+        cookies_path.write_text(json.dumps({"session": "fake"}))
         cfg_path = tmp_path / "cfg.json"
         cfg_path.write_text(json.dumps({
             "source_name": "test",
@@ -512,7 +530,9 @@ class TestPfrRunIntegration:
         }))
         monkeypatch.setattr("requests.Session.get", lambda self, url, **kw: Mock(status_code=200, text=fixture_html))
         monkeypatch.setattr("time.sleep", lambda _: None)
-        monkeypatch.setattr("sys.argv", ["pfr_downloader", "--config", str(cfg_path), "--csv"])
+        monkeypatch.setattr("sys.argv", [
+            "pfr_downloader", "--config", str(cfg_path), "--cookies", str(cookies_path), "--csv",
+        ])
 
         pfr_run()
 
@@ -533,13 +553,13 @@ class TestPfrRunIntegration:
 
         monkeypatch.setattr("requests.Session.get", counting_get)
         monkeypatch.setattr("time.sleep", lambda _: None)
-        cfg_path = _pfr_cfg(tmp_path, {"team": ["det"]}, [{"id": "executives", "output_suffix": "executives"}])
+        cfg_path, cookies_path = _pfr_cfg(tmp_path, {"team": ["det"]}, [{"id": "executives", "output_suffix": "executives"}])
 
-        # Pre-populate progress so the combination is already done
-        from src.scraper_utils import save_progress
         save_progress(tmp_path, {"det_executives"})
 
-        monkeypatch.setattr("sys.argv", ["pfr_downloader", "--config", cfg_path, "--csv"])
+        monkeypatch.setattr("sys.argv", [
+            "pfr_downloader", "--config", cfg_path, "--cookies", cookies_path, "--csv",
+        ])
         pfr_run()
 
         assert fetch_count["n"] == 0, "HTTP fetch should be skipped for cached key"

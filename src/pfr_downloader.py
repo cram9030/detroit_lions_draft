@@ -8,9 +8,14 @@ year range, or any custom list defined in a JSON config file. Multiple tables
 can be extracted per page by specifying table IDs. PFR's comment-wrapped tables
 are handled automatically.
 
+PFR is part of the sports-reference.com subscription family. Export your
+browser session cookies with Cookie-Editor and save to secrets/cookies.json
+(the same file used by stathead_downloader.py).
+
 Usage:
     python src/pfr_downloader.py --config config/pfr_executives.json
     python src/pfr_downloader.py --config config/pfr_standings.json --csv
+    python src/pfr_downloader.py --config config/pfr_executives.json --cookies secrets/cookies.json
 
 Adding a new PFR data source:
     1. Create a new JSON config in config/ (copy an existing one as a template).
@@ -36,7 +41,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 import pandas as pd
 from bs4 import BeautifulSoup
 
-from src.scraper_utils import build_session, fetch_page, load_progress, save_progress
+from src.scraper_utils import build_session, fetch_page, load_cookies, load_progress, save_progress
 
 PROJECT_ROOT = _PROJECT_ROOT
 
@@ -70,6 +75,11 @@ def parse_args() -> argparse.Namespace:
         "--config",
         required=True,
         help="Path to query config JSON (e.g. config/pfr_executives.json)",
+    )
+    p.add_argument(
+        "--cookies",
+        default=str(PROJECT_ROOT / "secrets" / "cookies.json"),
+        help="Path to Cookie-Editor export (default: secrets/cookies.json)",
     )
     p.add_argument(
         "--csv",
@@ -191,8 +201,11 @@ def parse_pfr_table(
 
 def is_pfr_blocked(html: str) -> bool:
     text = BeautifulSoup(html, "html.parser").get_text(" ", strip=True).lower()
-    signals = ["rate limited", "too many requests", "please slow down", "access denied"]
-    return any(s in text for s in signals)
+    signals = [
+        "rate limited", "too many requests", "please slow down", "access denied",
+        "sign in", "log in", "subscribe",
+    ]
+    return any(s in text for s in signals) and "<table" not in html.lower()
 
 
 # =============================================================================
@@ -234,15 +247,18 @@ def run() -> None:
 
     log.info("=" * 60)
     log.info("PFR downloader starting")
-    log.info("Config : %s", args.config)
-    log.info("Format : %s", "CSV" if args.csv else "Parquet")
+    log.info("Config  : %s", args.config)
+    log.info("Cookies : %s", args.cookies)
+    log.info("Format  : %s", "CSV" if args.csv else "Parquet")
     log.info("=" * 60)
 
     cfg = load_pfr_config(args.config)
     output_dir = PROJECT_ROOT / cfg.get("output_dir", "data/raw/pfr")
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    cookies = load_cookies(args.cookies)
     session = build_session(
+        cookies=cookies,
         extra_headers={"Referer": "https://www.pro-football-reference.com/"},
     )
     completed = load_progress(output_dir)
@@ -280,8 +296,9 @@ def run() -> None:
 
         if is_pfr_blocked(html):
             log.error(
-                "  BLOCKED RESPONSE DETECTED — you may be rate-limited.\n"
-                "  Wait a few minutes before retrying."
+                "  BLOCKED RESPONSE DETECTED — cookies may have expired or you are rate-limited.\n"
+                "  Re-export cookies with Cookie-Editor and replace secrets/cookies.json,\n"
+                "  or wait a few minutes before retrying."
             )
             return
 

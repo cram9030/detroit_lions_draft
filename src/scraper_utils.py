@@ -65,6 +65,27 @@ def fetch_page(
     return None
 
 
+def load_cookies(path: str) -> dict:
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(
+            f"Cookie file not found: {p.resolve()}\n"
+            "Export cookies with Cookie-Editor and save to secrets/cookies.json"
+        )
+    with p.open(encoding="utf-8") as f:
+        raw = json.load(f)
+    if isinstance(raw, list):
+        cookies = {c["name"]: c["value"] for c in raw if "name" in c and "value" in c}
+    elif isinstance(raw, dict):
+        cookies = raw
+    else:
+        raise ValueError("Unrecognised cookie file format.")
+    if not cookies:
+        raise ValueError("No cookies found — double-check the export.")
+    log.info("Loaded %d cookies from %s", len(cookies), path)
+    return cookies
+
+
 def load_progress(output_dir: Path) -> set:
     p = output_dir / ".progress.json"
     if p.exists():

@@ -170,12 +170,17 @@ automation of data you are entitled to access as a subscriber.
 
 # Pro-Football-Reference (PFR)
 
-PFR is a publicly accessible site — no subscription or cookies are required.
+PFR is part of the sports-reference.com subscription family. The same login
+and cookies that grant access to Stathead also authenticate PFR. The
+`secrets/cookies.json` file you created for Stathead works here too — no
+separate export is needed unless your session has expired.
 
 ## Prerequisites
 
 - Python 3.10 or later
 - Dependencies installed (`pip install -r requirements.txt`)
+- A valid sports-reference.com subscription (logged in via your browser)
+- `secrets/cookies.json` exported with Cookie-Editor (same file as Stathead — see [Step 2 of the Stathead section](#step-2--export-your-browser-session-cookies))
 
 ---
 
@@ -203,16 +208,23 @@ python src/pfr_downloader.py --config config/pfr_standings.json
 
 # Save as CSV instead of Parquet (useful for quick inspection)
 python src/pfr_downloader.py --config config/pfr_standings.json --csv
+
+# Explicit cookies path (default is secrets/cookies.json)
+python src/pfr_downloader.py --config config/pfr_executives.json --cookies secrets/cookies.json
 ```
 
 The script will:
 
-1. Load the config and expand the iteration list.
-2. For each iteration value, build the URL and fetch the page.
-3. Extract each configured table (unwrapping PFR comment-hidden tables automatically).
-4. Write one file per `(iteration_value, table)` pair.
-5. Log progress to the terminal and to `pfr_downloader.log`.
-6. Record completed keys in `.progress.json` so interrupted runs resume without re-downloading.
+1. Load cookies from `secrets/cookies.json` and attach them to every request.
+2. Load the config and expand the iteration list.
+3. For each iteration value, build the URL and fetch the page.
+4. Extract each configured table (unwrapping PFR comment-hidden tables automatically).
+5. Write one file per `(iteration_value, table)` pair.
+6. Log progress to the terminal and to `pfr_downloader.log`.
+7. Record completed keys in `.progress.json` so interrupted runs resume without re-downloading.
+
+> **Blocked response detected?** Your cookies have expired. Re-export them
+> from your browser with Cookie-Editor and replace `secrets/cookies.json`, then re-run.
 
 ---
 
@@ -340,7 +352,9 @@ Examples:
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `BLOCKED RESPONSE DETECTED` | Rate-limited by PFR | Wait a few minutes; increase `sleep_between_requests` to `6.0` or higher |
+| `BLOCKED RESPONSE DETECTED` | Cookies expired or rate-limited | Re-export cookies (see Stathead Step 2); if cookies are fresh, wait a few minutes and increase `sleep_between_requests` |
+| `Cookie file not found` | Wrong path or file not yet created | Confirm `secrets/cookies.json` exists; follow Stathead Step 2 |
+| `HTTP 403` | No cookies / expired cookies | Re-export cookies with Cookie-Editor |
 | Table not found or empty | Wrong table `id`, or table is seasonal and absent for that year | Inspect the page in DevTools to find the correct `id` |
 | All rows are strings | Expected — raw schema stores everything as `str` | Cast columns after loading |
 | Script is slow | Intentional rate limiting | Keep `sleep_between_requests` ≥ 4.0; PFR can throttle aggressive bots |

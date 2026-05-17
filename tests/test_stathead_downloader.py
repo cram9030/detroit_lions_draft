@@ -19,7 +19,7 @@ from src.stathead_downloader import (
     parse_table,
     run as stathead_run,
 )
-from src.scraper_utils import load_progress, save_progress
+from src.scraper_utils import load_cookies, load_progress, save_progress
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -195,6 +195,47 @@ class TestParseTable:
     def test_correct_row_count(self):
         df = parse_table(self._SIMPLE_TABLE)
         assert len(df) == 3
+
+
+# =============================================================================
+# load_cookies (promoted to scraper_utils; tested here for stathead context)
+# =============================================================================
+
+
+class TestLoadCookies:
+    def test_list_format_parsed(self, tmp_path):
+        p = tmp_path / "cookies.json"
+        p.write_text(json.dumps([{"name": "session", "value": "abc"}, {"name": "user", "value": "123"}]))
+        cookies = load_cookies(str(p))
+        assert cookies == {"session": "abc", "user": "123"}
+
+    def test_dict_format_parsed(self, tmp_path):
+        p = tmp_path / "cookies.json"
+        p.write_text(json.dumps({"session": "abc", "user": "123"}))
+        cookies = load_cookies(str(p))
+        assert cookies == {"session": "abc", "user": "123"}
+
+    def test_list_entries_missing_name_or_value_skipped(self, tmp_path):
+        p = tmp_path / "cookies.json"
+        p.write_text(json.dumps([{"name": "good", "value": "ok"}, {"name": "no_value"}, {"value": "no_name"}]))
+        cookies = load_cookies(str(p))
+        assert cookies == {"good": "ok"}
+
+    def test_missing_file_raises_file_not_found(self, tmp_path):
+        with pytest.raises(FileNotFoundError):
+            load_cookies(str(tmp_path / "nonexistent.json"))
+
+    def test_empty_result_raises_value_error(self, tmp_path):
+        p = tmp_path / "cookies.json"
+        p.write_text(json.dumps([]))
+        with pytest.raises(ValueError, match="No cookies found"):
+            load_cookies(str(p))
+
+    def test_unrecognised_format_raises_value_error(self, tmp_path):
+        p = tmp_path / "cookies.json"
+        p.write_text(json.dumps("not-a-list-or-dict"))
+        with pytest.raises(ValueError, match="Unrecognised"):
+            load_cookies(str(p))
 
 
 # =============================================================================
