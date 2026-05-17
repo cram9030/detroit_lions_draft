@@ -484,7 +484,7 @@ class TestPfrRunIntegration:
 
     def test_run_writes_output_file(self, tmp_path, monkeypatch):
         fixture_html = (FIXTURE_DIR / "executives_det.html").read_text()
-        monkeypatch.setattr("requests.Session.get", lambda self, url, **kw: Mock(status_code=200, text=fixture_html))
+        monkeypatch.setattr("src.pfr_downloader.fetch_page", lambda session, url, **kw: fixture_html)
         monkeypatch.setattr("time.sleep", lambda _: None)
         cfg_path, cookies_path = _pfr_cfg(tmp_path, {"team": ["det"]}, [{"id": "executives", "output_suffix": "executives"}])
         monkeypatch.setattr("sys.argv", [
@@ -499,7 +499,7 @@ class TestPfrRunIntegration:
 
     def test_run_writes_progress_file(self, tmp_path, monkeypatch):
         fixture_html = (FIXTURE_DIR / "executives_det.html").read_text()
-        monkeypatch.setattr("requests.Session.get", lambda self, url, **kw: Mock(status_code=200, text=fixture_html))
+        monkeypatch.setattr("src.pfr_downloader.fetch_page", lambda session, url, **kw: fixture_html)
         monkeypatch.setattr("time.sleep", lambda _: None)
         cfg_path, cookies_path = _pfr_cfg(tmp_path, {"team": ["det"]}, [{"id": "executives", "output_suffix": "executives"}])
         monkeypatch.setattr("sys.argv", [
@@ -528,7 +528,7 @@ class TestPfrRunIntegration:
             "max_retries": 1,
             "retry_backoff": 0.0,
         }))
-        monkeypatch.setattr("requests.Session.get", lambda self, url, **kw: Mock(status_code=200, text=fixture_html))
+        monkeypatch.setattr("src.pfr_downloader.fetch_page", lambda session, url, **kw: fixture_html)
         monkeypatch.setattr("time.sleep", lambda _: None)
         monkeypatch.setattr("sys.argv", [
             "pfr_downloader", "--config", str(cfg_path), "--cookies", str(cookies_path), "--csv",
@@ -544,14 +544,13 @@ class TestPfrRunIntegration:
         assert len(pd.read_csv(nfc_out)) > 0
 
     def test_run_skips_already_completed_keys(self, tmp_path, monkeypatch):
-        fixture_html = (FIXTURE_DIR / "executives_det.html").read_text()
         fetch_count = {"n": 0}
 
-        def counting_get(self, url, **kw):
+        def counting_fetch(session, url, **kw):
             fetch_count["n"] += 1
-            return Mock(status_code=200, text=fixture_html)
+            return (FIXTURE_DIR / "executives_det.html").read_text()
 
-        monkeypatch.setattr("requests.Session.get", counting_get)
+        monkeypatch.setattr("src.pfr_downloader.fetch_page", counting_fetch)
         monkeypatch.setattr("time.sleep", lambda _: None)
         cfg_path, cookies_path = _pfr_cfg(tmp_path, {"team": ["det"]}, [{"id": "executives", "output_suffix": "executives"}])
 

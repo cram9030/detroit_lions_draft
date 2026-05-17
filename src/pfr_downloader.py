@@ -260,6 +260,7 @@ def run() -> None:
     session = build_session(
         cookies=cookies,
         extra_headers={"Referer": "https://www.pro-football-reference.com/"},
+        impersonate="chrome124",
     )
     completed = load_progress(output_dir)
 

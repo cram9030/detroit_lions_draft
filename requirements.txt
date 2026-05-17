@@ -6,6 +6,7 @@ seaborn
 jupyter
 ipykernel
 requests
+curl_cffi
 nflreadpy
 plotly
 beautifulsoup4

@@ -14,6 +14,13 @@ import requests
 
 log = logging.getLogger(__name__)
 
+
+def _make_session(impersonate: str | None) -> requests.Session:
+    if impersonate:
+        from curl_cffi.requests import Session as CurlSession
+        return CurlSession(impersonate=impersonate)
+    return requests.Session()
+
 _DEFAULT_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -27,8 +34,17 @@ _DEFAULT_HEADERS = {
 def build_session(
     cookies: dict | None = None,
     extra_headers: dict | None = None,
+    impersonate: str | None = None,
 ) -> requests.Session:
-    session = requests.Session()
+    """
+    Build an HTTP session.
+
+    Pass impersonate="chrome124" (or another curl_cffi browser tag) to use
+    Chrome TLS fingerprint impersonation — required for sites protected by
+    Cloudflare Bot Management (e.g. pro-football-reference.com).
+    Omit or pass None to use a plain requests.Session (sufficient for Stathead).
+    """
+    session = _make_session(impersonate)
     if cookies:
         session.cookies.update(cookies)
     headers = dict(_DEFAULT_HEADERS)
