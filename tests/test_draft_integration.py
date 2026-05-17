@@ -16,6 +16,7 @@ from src.draft_integration import (
 )
 
 _DRAFT_JSON_PATH = Path(__file__).resolve().parents[1] / "data" / "processed" / "nfl_draft_2026.json"
+_PATCH_JSON_PATH = Path(__file__).resolve().parents[1] / "data" / "processed" / "trade_patch_2026.json"
 
 
 def _load_2026_picks() -> list[dict]:
@@ -205,6 +206,52 @@ class TestNewTrades2026_DETvsBUF:
         original = result.filter(pl.col("trade_id") == 1977.0)
         assert len(original) == 1
         assert original["gave"][0] == "KC"
+
+
+# ---------------------------------------------------------------------------
+# TestApplyTradePatch_Trade1929
+# ---------------------------------------------------------------------------
+
+class TestApplyTradePatch_Trade1929:
+    """Verify apply_trade_patch handles multiple patches in the same round correctly.
+
+    Trade 1929 (DET ↔ JAX) has two round-3 patches for DET→JAX (picks #81 and #100).
+    The bug caused both rows to receive pick_number=100.0 (last patch applied twice).
+    """
+
+    @pytest.fixture(scope="class")
+    def result(self):
+        df = _make_trade_1929()
+        with open(_PATCH_JSON_PATH) as f:
+            patch = json.load(f)
+        return apply_trade_patch(df, patch)
+
+    def test_det_to_jax_third_round_has_two_distinct_picks(self, result):
+        rows = result.filter(
+            (pl.col("trade_id") == 1929.0) &
+            (pl.col("gave") == "DET") &
+            (pl.col("received") == "JAX") &
+            (pl.col("pick_season") == 2026.0) &
+            (pl.col("pick_round") == 3.0)
+        )
+        assert len(rows) == 2
+        assert set(rows["pick_number"].to_list()) == {81.0, 100.0}
+
+    def test_pick_81_is_albert_regis(self, result):
+        row = result.filter(
+            (pl.col("trade_id") == 1929.0) &
+            (pl.col("pick_number") == 81.0)
+        )
+        assert len(row) == 1
+        assert row["pfr_name"][0] == "Albert Regis"
+
+    def test_pick_100_is_jalen_huskey(self, result):
+        row = result.filter(
+            (pl.col("trade_id") == 1929.0) &
+            (pl.col("pick_number") == 100.0)
+        )
+        assert len(row) == 1
+        assert row["pfr_name"][0] == "Jalen Huskey"
 
 
 # ---------------------------------------------------------------------------

@@ -356,9 +356,13 @@ def apply_trade_patch(trades_df: pl.DataFrame, patch: dict) -> pl.DataFrame:
             )
             row_index[key].append(i)
 
+    patch_groups: dict[tuple, list[dict]] = defaultdict(list)
     for p in patch.get("patches", []):
         key = (p["trade_id"], p["gave"], p["received"], p["pick_season"], p["pick_round"])
-        for idx in row_index.get(key, []):
+        patch_groups[key].append(p)
+
+    for key, patches_list in patch_groups.items():
+        for idx, p in zip(row_index.get(key, []), patches_list):
             rows[idx]["pick_number"] = float(p["pick_number"])
             if "pfr_name" in p and p["pfr_name"] is not None:
                 rows[idx]["pfr_name"] = p["pfr_name"]
