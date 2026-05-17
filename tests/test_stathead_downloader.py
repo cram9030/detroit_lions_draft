@@ -4,6 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 from src.stathead_downloader import (
@@ -170,7 +171,7 @@ class TestParseTable:
     def test_all_columns_are_strings(self):
         df = parse_table(self._SIMPLE_TABLE)
         for col in df.columns:
-            assert df[col].dtype == object, f"Column {col!r} is not string/object"
+            assert pd.api.types.is_string_dtype(df[col]), f"Column {col!r} is not a string dtype"
 
     def test_correct_row_count(self):
         df = parse_table(self._SIMPLE_TABLE)

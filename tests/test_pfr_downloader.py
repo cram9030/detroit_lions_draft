@@ -193,7 +193,7 @@ class TestParsePfrTable:
     def test_all_columns_are_strings(self):
         df = parse_pfr_table(self._execs_html(), table_id="executives")
         for col in df.columns:
-            assert df[col].dtype == object, f"Column {col!r} is not string/object"
+            assert pd.api.types.is_string_dtype(df[col]), f"Column {col!r} is not a string dtype"
 
 
 # =============================================================================

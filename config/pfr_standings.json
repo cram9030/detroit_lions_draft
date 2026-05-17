@@ -1,0 +1,27 @@
+{
+  "_comment": "Downloads AFC and NFC standings tables for each season year.",
+
+  "source_name": "pfr_standings",
+  "url_template": "https://www.pro-football-reference.com/years/{year}/",
+
+  "iterate": {
+    "year": { "start": 2000, "end": 2025 }
+  },
+
+  "tables": [
+    {
+      "id": "AFC",
+      "output_suffix": "afc"
+    },
+    {
+      "id": "NFC",
+      "output_suffix": "nfc"
+    }
+  ],
+
+  "output_dir": "data/raw/pfr/standings",
+
+  "sleep_between_requests": 4.0,
+  "max_retries": 3,
+  "retry_backoff": 10.0
+}

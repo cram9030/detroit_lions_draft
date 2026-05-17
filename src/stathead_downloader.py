@@ -25,6 +25,13 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
+from src.scraper_utils import (
+    build_session as _build_session,
+    fetch_page as _fetch_page,
+    load_progress,
+    save_progress,
+)
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 BASE_URL = (
@@ -121,18 +128,10 @@ def load_cookies(path: str) -> dict:
 
 
 def build_session(cookies: dict) -> requests.Session:
-    session = requests.Session()
-    session.cookies.update(cookies)
-    session.headers.update({
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/124.0.0.0 Safari/537.36"
-        ),
-        "Referer": "https://www.sports-reference.com/",
-        "Accept-Language": "en-US,en;q=0.9",
-    })
-    return session
+    return _build_session(
+        cookies=cookies,
+        extra_headers={"Referer": "https://www.sports-reference.com/"},
+    )
 
 
 # =============================================================================
@@ -223,25 +222,7 @@ def is_login_wall(html: str) -> bool:
 # =============================================================================
 
 def fetch_page(session: requests.Session, url: str, cfg: dict) -> str | None:
-    backoff = cfg["retry_backoff"]
-    for attempt in range(1, cfg["max_retries"] + 1):
-        try:
-            resp = session.get(url, timeout=30)
-            if resp.status_code == 200:
-                return resp.text
-            elif resp.status_code == 429:
-                wait = backoff * attempt
-                log.warning("Rate limited (429). Waiting %.0fs before retry %d…", wait, attempt)
-                time.sleep(wait)
-            else:
-                log.warning("HTTP %d on attempt %d: %s", resp.status_code, attempt, url)
-                time.sleep(backoff)
-        except requests.RequestException as exc:
-            log.warning("Request error on attempt %d: %s", attempt, exc)
-            time.sleep(backoff)
-        backoff *= 2
-    log.error("Giving up after %d attempts: %s", cfg["max_retries"], url)
-    return None
+    return _fetch_page(session, url, cfg["max_retries"], cfg["retry_backoff"])
 
 
 # =============================================================================
@@ -272,24 +253,6 @@ def make_output_path(
 
 def combo_key(dy_min: int, dy_max: int, sy_min: int, sy_max: int) -> str:
     return f"draft{dy_min}-{dy_max}_season{sy_min}-{sy_max}"
-
-
-# =============================================================================
-# PROGRESS TRACKING
-# =============================================================================
-
-def load_progress(output_dir: Path) -> set:
-    p = output_dir / ".progress.json"
-    if p.exists():
-        with p.open(encoding="utf-8") as f:
-            return set(json.load(f))
-    return set()
-
-
-def save_progress(output_dir: Path, completed: set) -> None:
-    p = output_dir / ".progress.json"
-    with p.open("w", encoding="utf-8") as f:
-        json.dump(sorted(completed), f, indent=2)
 
 
 # =============================================================================
