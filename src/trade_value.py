@@ -7,7 +7,7 @@ import nflreadpy
 import polars as pl
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_PROCESSED_DATA_DIR = _REPO_ROOT / "assets" / "data"
+_PROCESSED_DATA_DIR = _REPO_ROOT / "data" / "processed"
 
 # Registry: chart_name -> (filename, pick_col, value_col, deduplicate_on_pick)
 _CHART_REGISTRY: dict[str, tuple[str, str, str, bool]] = {
@@ -225,6 +225,8 @@ def _empty_trade_df() -> pl.DataFrame:
         "team_traded_with": pl.String,
         "picks_received": pl.String,
         "picks_gave": pl.String,
+        "picks_received_seasons": pl.String,
+        "picks_gave_seasons": pl.String,
     }
     for prefix, _ in _TRADE_CHARTS:
         schema[f"{prefix}_value"] = pl.Float64
@@ -312,22 +314,25 @@ def analyze_draft_trades(
         ):
             continue
 
-        rcv_picks: list[int] = []
-        gave_picks: list[int] = []
+        rcv_pick_data: list[tuple[int, int]] = []  # (overall, season)
+        gave_pick_data: list[tuple[int, int]] = []  # (overall, season)
         for row in trade_rows.iter_rows(named=True):
             resolved = _resolve_pick_number(row["pick_number"], row["pick_round"])
             if resolved is None:
                 continue
+            season = int(row["pick_season"]) if row["pick_season"] is not None else year
             if row["received"] == team:
-                rcv_picks.append(resolved)
+                rcv_pick_data.append((resolved, season))
             if row["gave"] == team:
-                gave_picks.append(resolved)
+                gave_pick_data.append((resolved, season))
 
-        if not rcv_picks and not gave_picks:
+        if not rcv_pick_data and not gave_pick_data:
             continue
 
-        rcv_picks.sort()
-        gave_picks.sort()
+        rcv_pick_data.sort()
+        gave_pick_data.sort()
+        rcv_picks = [p for p, _ in rcv_pick_data]
+        gave_picks = [p for p, _ in gave_pick_data]
 
         other_teams: set[str] = set()
         for gave_col, rcv_col in zip(
@@ -341,8 +346,10 @@ def analyze_draft_trades(
         row_dict: dict = {
             "trade_id": int(tid),
             "team_traded_with": ",".join(sorted(other_teams)),
-            "picks_received": ",".join(str(p) for p in rcv_picks),
-            "picks_gave": ",".join(str(p) for p in gave_picks),
+            "picks_received": ",".join(str(p) for p, _ in rcv_pick_data),
+            "picks_gave": ",".join(str(p) for p, _ in gave_pick_data),
+            "picks_received_seasons": ",".join(str(s) for _, s in rcv_pick_data),
+            "picks_gave_seasons": ",".join(str(s) for _, s in gave_pick_data),
         }
 
         for prefix, chart_name in _TRADE_CHARTS:
