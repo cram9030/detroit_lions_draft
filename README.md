@@ -30,6 +30,7 @@ detroit_lions_draft/
 │   ├── figures/          # Generated interactive HTML plots
 │   └── reports/
 ├── scripts/              # Runnable entry points
+│   ├── draft_class_surplus_av.py  # Draft class surplus AV analysis (any team/year)
 │   ├── example_lions_2024.py
 │   ├── generate_trade_patch.py
 │   ├── run_analysis.py
@@ -154,6 +155,14 @@ deactivate
    ```
    See [docs/modeling.md](docs/modeling.md) for model details, training options, and how to add a new model.
 
+5. **Evaluate a draft class** — compare each player's projected 4-year AV against
+   the Expected AV Above Replacement (EAVAR) for their pick:
+   ```bash
+   python scripts/draft_class_surplus_av.py --team DET --year 2024
+   python scripts/draft_class_surplus_av.py --team DET --year 2024 --model knn
+   ```
+   See [docs/surplus-av.md](docs/surplus-av.md) for metric details and interpretation.
+
 ---
 
 # Documentation
@@ -165,6 +174,7 @@ deactivate
 | Adding a new PFR data source (config-only) | [docs/fetching-data.md](docs/fetching-data.md#adding-a-new-pfr-data-source) |
 | Running the analysis pipeline and output plots | [docs/running-analysis.md](docs/running-analysis.md) |
 | Career trajectory models (Parametric, KNN, Ridge) | [docs/modeling.md](docs/modeling.md) |
+| Draft class surplus AV vs EAVAR | [docs/surplus-av.md](docs/surplus-av.md) |
 | Draft trade analysis across 5 trade charts | [docs/trade-analysis.md](docs/trade-analysis.md) |
 | Integrating draft JSON into nflreadpy trades | [docs/draft-integration.md](docs/draft-integration.md) |
 

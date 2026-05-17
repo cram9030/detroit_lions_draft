@@ -26,7 +26,11 @@ python src/pfr_downloader.py --config config/pfr_executives.json   # team execut
 python src/pfr_downloader.py --config config/pfr_standings.json    # AFC + NFC standings by year
 python src/pfr_downloader.py --config config/pfr_executives.json --csv  # save as CSV instead of Parquet
 
-# Example inference
+# Draft class surplus AV analysis (any team/year with 2+ completed seasons)
+python scripts/draft_class_surplus_av.py --team DET --year 2024
+python scripts/draft_class_surplus_av.py --team DET --year 2024 --model knn
+
+# Example inference (Lions 2024 — 3-model comparison vs pick expectation)
 python scripts/example_lions_2024.py
 ```
 
@@ -70,6 +74,7 @@ Each Parquet file covers one `(draft_year, season_year)` pair. **All columns are
 | `stathead_downloader.py` | Paginated Stathead scraper; resumes via `.progress.json` |
 | `pfr_downloader.py` | Config-driven PFR scraper; URL template + {variable} substitution, team-list or year-range iteration, PFR comment-unwrapping, multi-table per page |
 | `models/` | `CareerAVModel` protocol + Parametric / KNN / Ridge implementations |
+| `surplus_av.py` | `load_team_draft_class(team, year)` — generalized draft class loader (requires 2+ completed seasons); `project_player_seasons(model, player, pos, obs_av)` — projects years 2/3 via any CareerAVModel; `aggregate_4yr_av(df, model)` — combines observed + projected into per-player 4yr totals; `compute_surplus_av(df)` — joins against `expected_av_above_replacement.csv`, adds `surplus_av = total_4yr_av − eavar` |
 | `trade_value.py` | `load_trade_chart(chart_name)` — normalises any of the 6 trade chart CSVs to `[Pick, Value]`; `find_pick_combination(target, chart_name)` — extended two-pointer search returning the set of picks summing closest to `target`; `analyze_draft_trades(team, year)` — fetches trades via nflreadpy, filters to same-year draft picks, returns per-trade DataFrame with net value and equivalent picks (via `abs(net_value)`) across 5 trade charts |
 
 ### Key types in `curve_fitting.py`
