@@ -21,6 +21,11 @@ python scripts/train_models.py --model all --train-years 1970 2010 --rounds 1 2
 # Data fetching (requires secrets/cookies.json with Stathead session cookies)
 python src/stathead_downloader.py --config config/stathead_annual_av.json
 
+# PFR data fetching (public — no cookies required)
+python src/pfr_downloader.py --config config/pfr_executives.json   # team executives/staff history
+python src/pfr_downloader.py --config config/pfr_standings.json    # AFC + NFC standings by year
+python src/pfr_downloader.py --config config/pfr_executives.json --csv  # save as CSV instead of Parquet
+
 # Example inference
 python scripts/example_lions_2024.py
 ```
@@ -39,6 +44,10 @@ Stathead (browser cookies) → stathead_downloader.py → data/raw/stathead/annu
                                           train_models.py → models/{parametric,knn,ridge}/
                                                     ↓
                                         example_lions_2024.py (inference)
+
+Pro-Football-Reference (public) → pfr_downloader.py → data/raw/pfr/{source}/*.parquet
+    config/pfr_executives.json  →  data/raw/pfr/executives/{team}_executives.parquet
+    config/pfr_standings.json   →  data/raw/pfr/standings/{year}_{afc|nfc}.parquet
 ```
 
 ### Raw data schema
@@ -57,7 +66,9 @@ Each Parquet file covers one `(draft_year, season_year)` pair. **All columns are
 | `curve_fitting.py` | Generic fit engine; `ExpDecayModel` / `LogDecayModel` descriptors used by `annual_av_analysis.py` |
 | `plot_av.py` | All Plotly figure generation; receives fit result dicts directly |
 | `data_output.py` | `save_data()` — writes CSV or Parquet, auto-creates parent dirs |
+| `scraper_utils.py` | Shared HTTP utilities: `build_session()`, `fetch_page()` (retry/backoff), `load_progress()` / `save_progress()` — imported by both downloaders |
 | `stathead_downloader.py` | Paginated Stathead scraper; resumes via `.progress.json` |
+| `pfr_downloader.py` | Config-driven PFR scraper; URL template + {variable} substitution, team-list or year-range iteration, PFR comment-unwrapping, multi-table per page |
 | `models/` | `CareerAVModel` protocol + Parametric / KNN / Ridge implementations |
 | `trade_value.py` | `load_trade_chart(chart_name)` — normalises any of the 6 trade chart CSVs to `[Pick, Value]`; `find_pick_combination(target, chart_name)` — extended two-pointer search returning the set of picks summing closest to `target`; `analyze_draft_trades(team, year)` — fetches trades via nflreadpy, filters to same-year draft picks, returns per-trade DataFrame with net value and equivalent picks (via `abs(net_value)`) across 5 trade charts |
 
@@ -82,6 +93,39 @@ Parametric model artifacts are committed to git as human-readable JSON in `model
 ### Position normalization
 
 Raw `Pos` values like `"LDE"`, `"LOLB"`, `"RG"` are mapped to 12 standard groups via `_POSITION_GROUPS` in `annual_av_analysis.py`. Compound positions (`"LDE/LOLB"`) are split and exploded. `_SPECALIST` (K, P, KR, etc.) and `_GENERALIST` (DL, OL) positions are excluded from normalized analyses because they don't appear in year-0 data.
+
+### Adding a new PFR data source
+
+No code changes are needed. Create a JSON config in `config/` with these fields:
+
+```json
+{
+  "source_name": "pfr_my_table",
+  "url_template": "https://www.pro-football-reference.com/teams/{team}/some_page.htm",
+  "iterate": {
+    "team": ["det", "chi", "gb"]
+  },
+  "tables": [
+    { "id": "html_table_id", "output_suffix": "my_table" }
+  ],
+  "output_dir": "data/raw/pfr/my_table",
+  "sleep_between_requests": 4.0,
+  "max_retries": 3,
+  "retry_backoff": 10.0
+}
+```
+
+**`iterate` forms:**
+- Explicit list: `{"team": ["det", "chi"]}` → one URL per team
+- Year range: `{"year": {"start": 2000, "end": 2025}}` → one URL per year (inclusive)
+- Any single key with either form works (`{"season": [...]}`, `{"week": {...}}`, etc.)
+
+**`tables` selection:** each entry can specify `"id"` (HTML `id=` attribute) or `"index"` (0-based position in page). PFR comment-wrapped tables are handled automatically. Omit `tables` entirely to skip saving (useful for debugging).
+
+**Output naming:** `{output_dir}/{iter_value}_{output_suffix}.parquet`  
+e.g. `data/raw/pfr/my_table/det_my_table.parquet`
+
+**Re-runs are idempotent** — completed keys are stored in `.progress.json` inside the output directory and skipped on subsequent runs.
 
 ### nflreadr vs Stathead AV
 
