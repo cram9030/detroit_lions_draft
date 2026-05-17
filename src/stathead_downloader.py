@@ -18,8 +18,15 @@ import io
 import json
 import logging
 import re
+import sys
 import time
 from pathlib import Path
+
+# Ensure project root is on sys.path so `src.*` imports work whether this
+# file is run directly (`python src/stathead_downloader.py`) or imported by pytest.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
 import pandas as pd
 import requests
@@ -32,7 +39,7 @@ from src.scraper_utils import (
     save_progress,
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = _PROJECT_ROOT
 
 BASE_URL = (
     "https://www.sports-reference.com"

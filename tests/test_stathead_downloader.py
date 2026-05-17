@@ -1,8 +1,10 @@
-"""Tests for src/stathead_downloader.py — covers pure functions only (no HTTP)."""
+"""Tests for src/stathead_downloader.py — unit and integration (no real HTTP)."""
 
 import json
+import subprocess
 import tempfile
 from pathlib import Path
+from unittest.mock import Mock
 
 import pandas as pd
 import pytest
@@ -15,8 +17,25 @@ from src.stathead_downloader import (
     load_config,
     make_output_path,
     parse_table,
+    run as stathead_run,
 )
 from src.scraper_utils import load_progress, save_progress
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+
+# Minimal Stathead-style HTML page: two data rows + result count so pagination stops.
+_STATHEAD_PAGE_HTML = """
+<html><body>
+<table id="stats">
+  <thead><tr><th>Rk</th><th>Player</th><th>AV.1</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Alice</td><td>12</td></tr>
+    <tr><td>2</td><td>Bob</td><td>8</td></tr>
+  </tbody>
+</table>
+<span>of 2 results</span>
+</body></html>
+"""
 
 
 # =============================================================================
@@ -301,3 +320,100 @@ class TestStatheadProgressTracking:
         loaded.add("key2")
         save_progress(tmp_path, loaded)
         assert load_progress(tmp_path) == {"key1", "key2"}
+
+
+# =============================================================================
+# Pipeline integration — exercises run() end-to-end with mocked HTTP
+# =============================================================================
+
+
+def _stathead_cfg(tmp_path: Path) -> tuple[str, str]:
+    """Write a minimal stathead config and cookies file; return (cfg_path, cookies_path)."""
+    cookies_path = tmp_path / "cookies.json"
+    cookies_path.write_text(json.dumps({"session": "fake"}))
+
+    cfg = {
+        "output_dir": str(tmp_path / "output"),
+        "draft_year_start": 2024,
+        "draft_year_end": 2024,
+        "seasons_after_draft": 1,
+        "fixed_params": {"request": "1", "order_by": "av"},
+        "page_size": 200,
+        "sleep_between_requests": 0.0,
+        "max_retries": 1,
+        "retry_backoff": 0.0,
+    }
+    cfg_path = tmp_path / "cfg.json"
+    cfg_path.write_text(json.dumps(cfg))
+    return str(cfg_path), str(cookies_path)
+
+
+class TestStatheadRunIntegration:
+    def test_script_invocable_directly(self):
+        """python src/stathead_downloader.py --help must not raise ModuleNotFoundError."""
+        result = subprocess.run(
+            ["python", "src/stathead_downloader.py", "--help"],
+            capture_output=True,
+            text=True,
+            cwd=str(_REPO_ROOT),
+        )
+        assert result.returncode == 0, f"Direct invocation failed:\n{result.stderr}"
+        assert "--config" in result.stdout
+
+    def test_run_writes_output_file(self, tmp_path, monkeypatch):
+        cfg_path, cookies_path = _stathead_cfg(tmp_path)
+        monkeypatch.setattr("requests.Session.get", lambda self, url, **kw: Mock(status_code=200, text=_STATHEAD_PAGE_HTML))
+        monkeypatch.setattr("time.sleep", lambda _: None)
+        monkeypatch.setattr("sys.argv", [
+            "stathead_downloader",
+            "--config", cfg_path,
+            "--cookies", cookies_path,
+            "--csv",
+        ])
+
+        stathead_run()
+
+        out = tmp_path / "output" / "draft2024_season2024.csv"
+        assert out.exists(), "Output CSV was not created"
+        assert len(pd.read_csv(out)) > 0
+
+    def test_run_writes_progress_file(self, tmp_path, monkeypatch):
+        cfg_path, cookies_path = _stathead_cfg(tmp_path)
+        monkeypatch.setattr("requests.Session.get", lambda self, url, **kw: Mock(status_code=200, text=_STATHEAD_PAGE_HTML))
+        monkeypatch.setattr("time.sleep", lambda _: None)
+        monkeypatch.setattr("sys.argv", [
+            "stathead_downloader",
+            "--config", cfg_path,
+            "--cookies", cookies_path,
+            "--csv",
+        ])
+
+        stathead_run()
+
+        assert (tmp_path / "output" / ".progress.json").exists()
+
+    def test_run_skips_already_completed_combos(self, tmp_path, monkeypatch):
+        cfg_path, cookies_path = _stathead_cfg(tmp_path)
+        fetch_count = {"n": 0}
+
+        def counting_get(self, url, **kw):
+            fetch_count["n"] += 1
+            return Mock(status_code=200, text=_STATHEAD_PAGE_HTML)
+
+        monkeypatch.setattr("requests.Session.get", counting_get)
+        monkeypatch.setattr("time.sleep", lambda _: None)
+
+        # Pre-populate progress so the one combination is already done
+        out_dir = tmp_path / "output"
+        out_dir.mkdir()
+        save_progress(out_dir, {"draft2024-2024_season2024-2024"})
+
+        monkeypatch.setattr("sys.argv", [
+            "stathead_downloader",
+            "--config", cfg_path,
+            "--cookies", cookies_path,
+            "--csv",
+        ])
+        stathead_run()
+
+        assert fetch_count["n"] == 0, "HTTP fetch should be skipped for cached combo"

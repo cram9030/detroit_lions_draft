@@ -1,7 +1,9 @@
 """Tests for src/pfr_downloader.py and src/scraper_utils.py (shared utilities)."""
 
 import json
+import subprocess
 from pathlib import Path
+from unittest.mock import Mock
 
 import pandas as pd
 import pytest
@@ -13,11 +15,13 @@ from src.pfr_downloader import (
     load_pfr_config,
     make_pfr_output_path,
     parse_pfr_table,
+    run as pfr_run,
     unwrap_pfr_comments,
 )
 from src.scraper_utils import load_progress, save_progress
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "pfr"
+_REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 # =============================================================================
@@ -425,3 +429,117 @@ class TestStandingsContent:
         afc_teams = set(afc[afc_team_col].tolist())
         nfc_teams = set(nfc[nfc_team_col].tolist())
         assert afc_teams.isdisjoint(nfc_teams)
+
+
+# =============================================================================
+# Pipeline integration — exercises run() end-to-end with mocked HTTP
+# =============================================================================
+
+
+def _pfr_cfg(tmp_path: Path, iterate: dict, tables: list) -> str:
+    cfg = {
+        "source_name": "test",
+        "url_template": "https://www.pro-football-reference.com/teams/{team}/executives.htm",
+        "iterate": iterate,
+        "tables": tables,
+        "output_dir": str(tmp_path),
+        "sleep_between_requests": 0.0,
+        "max_retries": 1,
+        "retry_backoff": 0.0,
+    }
+    p = tmp_path / "cfg.json"
+    p.write_text(json.dumps(cfg))
+    return str(p)
+
+
+class TestPfrRunIntegration:
+    def test_script_invocable_directly(self):
+        """python src/pfr_downloader.py --help must not raise ModuleNotFoundError."""
+        result = subprocess.run(
+            ["python", "src/pfr_downloader.py", "--help"],
+            capture_output=True,
+            text=True,
+            cwd=str(_REPO_ROOT),
+        )
+        assert result.returncode == 0, f"Direct invocation failed:\n{result.stderr}"
+        assert "--config" in result.stdout
+
+    def test_run_writes_output_file(self, tmp_path, monkeypatch):
+        fixture_html = (FIXTURE_DIR / "executives_det.html").read_text()
+        monkeypatch.setattr("requests.Session.get", lambda self, url, **kw: Mock(status_code=200, text=fixture_html))
+        monkeypatch.setattr("time.sleep", lambda _: None)
+        monkeypatch.setattr("sys.argv", [
+            "pfr_downloader",
+            "--config", _pfr_cfg(tmp_path, {"team": ["det"]}, [{"id": "executives", "output_suffix": "executives"}]),
+            "--csv",
+        ])
+
+        pfr_run()
+
+        out = tmp_path / "det_executives.csv"
+        assert out.exists(), "Output CSV was not created"
+        assert len(pd.read_csv(out)) > 0
+
+    def test_run_writes_progress_file(self, tmp_path, monkeypatch):
+        fixture_html = (FIXTURE_DIR / "executives_det.html").read_text()
+        monkeypatch.setattr("requests.Session.get", lambda self, url, **kw: Mock(status_code=200, text=fixture_html))
+        monkeypatch.setattr("time.sleep", lambda _: None)
+        monkeypatch.setattr("sys.argv", [
+            "pfr_downloader",
+            "--config", _pfr_cfg(tmp_path, {"team": ["det"]}, [{"id": "executives", "output_suffix": "executives"}]),
+            "--csv",
+        ])
+
+        pfr_run()
+
+        assert (tmp_path / ".progress.json").exists()
+
+    def test_run_multi_table_page_writes_separate_files(self, tmp_path, monkeypatch):
+        fixture_html = (FIXTURE_DIR / "standings_2025.html").read_text()
+        cfg_path = tmp_path / "cfg.json"
+        cfg_path.write_text(json.dumps({
+            "source_name": "test",
+            "url_template": "https://www.pro-football-reference.com/years/{year}/",
+            "iterate": {"year": {"start": 2025, "end": 2025}},
+            "tables": [
+                {"id": "AFC", "output_suffix": "afc"},
+                {"id": "NFC", "output_suffix": "nfc"},
+            ],
+            "output_dir": str(tmp_path),
+            "sleep_between_requests": 0.0,
+            "max_retries": 1,
+            "retry_backoff": 0.0,
+        }))
+        monkeypatch.setattr("requests.Session.get", lambda self, url, **kw: Mock(status_code=200, text=fixture_html))
+        monkeypatch.setattr("time.sleep", lambda _: None)
+        monkeypatch.setattr("sys.argv", ["pfr_downloader", "--config", str(cfg_path), "--csv"])
+
+        pfr_run()
+
+        afc_out = tmp_path / "2025_afc.csv"
+        nfc_out = tmp_path / "2025_nfc.csv"
+        assert afc_out.exists(), "AFC output not created"
+        assert nfc_out.exists(), "NFC output not created"
+        assert len(pd.read_csv(afc_out)) > 0
+        assert len(pd.read_csv(nfc_out)) > 0
+
+    def test_run_skips_already_completed_keys(self, tmp_path, monkeypatch):
+        fixture_html = (FIXTURE_DIR / "executives_det.html").read_text()
+        fetch_count = {"n": 0}
+
+        def counting_get(self, url, **kw):
+            fetch_count["n"] += 1
+            return Mock(status_code=200, text=fixture_html)
+
+        monkeypatch.setattr("requests.Session.get", counting_get)
+        monkeypatch.setattr("time.sleep", lambda _: None)
+        cfg_path = _pfr_cfg(tmp_path, {"team": ["det"]}, [{"id": "executives", "output_suffix": "executives"}])
+
+        # Pre-populate progress so the combination is already done
+        from src.scraper_utils import save_progress
+        save_progress(tmp_path, {"det_executives"})
+
+        monkeypatch.setattr("sys.argv", ["pfr_downloader", "--config", cfg_path, "--csv"])
+        pfr_run()
+
+        assert fetch_count["n"] == 0, "HTTP fetch should be skipped for cached key"
