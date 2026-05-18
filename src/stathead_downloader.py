@@ -20,6 +20,7 @@ import logging
 import re
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 # Ensure project root is on sys.path so `src.*` imports work whether this
@@ -139,8 +140,9 @@ def build_url(
         "draft_year_max": str(draft_year_max),
         "year_min":       str(year_min),
         "year_max":       str(year_max),
-        "offset":         str(offset),
     })
+    if offset > 0:
+        params["offset"] = str(offset)
     req = requests.Request("GET", BASE_URL, params=params)
     return req.prepare().url
 
@@ -201,6 +203,10 @@ def detect_total_results(html: str) -> int | None:
 def is_login_wall(html: str) -> bool:
     text = BeautifulSoup(html, "html.parser").get_text(" ", strip=True).lower()
     signals = ["sign in", "log in", "subscribe", "stathead membership"]
+    # Stathead sometimes shows partial data (10 rows) alongside a subscription prompt.
+    # "full results" in the page always means the session is unauthenticated.
+    if "subscribe" in text and "full results" in text:
+        return True
     return any(s in text for s in signals) and "rk" not in text
 
 
@@ -349,6 +355,10 @@ def run() -> None:
 
                 log.info("  Got %d rows at offset %d", len(df), offset)
                 pages.append(df)
+
+                if len(df) < page_size:
+                    log.info("  Partial page (%d < %d) — end of results.", len(df), page_size)
+                    break
 
                 offset += page_size
                 if total_results is not None and offset >= total_results:
