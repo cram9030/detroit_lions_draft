@@ -51,6 +51,18 @@ BASE_URL = (
 log = logging.getLogger(__name__)
 
 
+def _latest_completed_nfl_season() -> int:
+    """Return the most recent NFL season year with complete data.
+
+    The Super Bowl falls in late February, so:
+      - March or later  → previous year's season is complete (e.g. May 2026 → 2025)
+      - January/February → season two years back is complete (e.g. Jan 2026 → 2024,
+                           since the 2025 season is still in playoffs/Super Bowl)
+    """
+    now = datetime.now()
+    return now.year - 1 if now.month >= 3 else now.year - 2
+
+
 # =============================================================================
 # LOGGING
 # =============================================================================
@@ -271,16 +283,19 @@ def run() -> None:
     session = build_session(cookies)
     completed = load_progress(output_dir)
 
-    draft_ranges       = cfg["draft_year_ranges"]
-    seasons_after      = cfg.get("seasons_after_draft")
+    draft_ranges        = cfg["draft_year_ranges"]
+    seasons_after       = cfg.get("seasons_after_draft")
     global_season_years = cfg.get("season_years", [])
-    page_size          = cfg["page_size"]
-    sleep_sec          = cfg["sleep_between_requests"]
+    page_size           = cfg["page_size"]
+    sleep_sec           = cfg["sleep_between_requests"]
+    max_season          = _latest_completed_nfl_season()
+
+    log.info("Season cap: %d (most recent completed NFL season)", max_season)
 
     def season_years_for(dy_min: int) -> list[int]:
         if seasons_after is not None:
-            return list(range(dy_min, dy_min + seasons_after))
-        return global_season_years
+            return [y for y in range(dy_min, dy_min + seasons_after) if y <= max_season]
+        return [y for y in global_season_years if y <= max_season]
 
     # Pre-compute total combinations for progress logging
     total_combinations = sum(len(season_years_for(dy_min)) for dy_min, _ in draft_ranges)
