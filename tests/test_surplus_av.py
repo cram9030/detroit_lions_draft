@@ -10,7 +10,8 @@ import pytest
 
 from src.surplus_av import (
     _normalize_pos,
-    aggregate_4yr_av,
+    aggregate_model_av,
+    aggregate_observed_av,
     compute_surplus_av,
     load_team_draft_class,
     project_player_seasons,
@@ -156,10 +157,12 @@ class TestLoadTeamDraftClass:
         _make_draft_parquet(raw_dir, 2022, 2023, [
             {"Player": "Alice", "Draft Team": "DET", "Pick": "5",
              "Draft Year": "2022", "Season": "2023", "AV.1": "9", "Pos": "WR"},
+            {"Player": "Bob", "Draft Team": "GB", "Pick": "10",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "4", "Pos": "QB"},
         ])
 
         df = load_team_draft_class("GB", 2022, raw_dir=raw_dir)
-        assert df["Player"].to_list() == ["Bob"]
+        assert df["Player"].unique().to_list() == ["Bob"]
 
     def test_raises_when_season1_missing(self, tmp_path):
         raw_dir = tmp_path / "raw"
@@ -311,10 +314,56 @@ def _make_draft_df(players: list[dict]) -> pl.DataFrame:
     return pl.DataFrame(rows)
 
 
-class TestAggregate4yrAv:
+class TestAggregateObservedAv:
+    def test_four_seasons_correct_totals(self):
+        df = _make_draft_df([
+            {"name": "Alice", "pos": "WR", "pick": 5, "av": [8.0, 10.0, 7.0, 5.0]}
+        ])
+        result = aggregate_observed_av(df)
+
+        row = result.filter(pl.col("Player") == "Alice").row(0, named=True)
+        assert row["obs_yr0"] == pytest.approx(8.0)
+        assert row["obs_yr1"] == pytest.approx(10.0)
+        assert row["obs_yr2"] == pytest.approx(7.0)
+        assert row["obs_yr3"] == pytest.approx(5.0)
+        assert row["total_4yr_av"] == pytest.approx(30.0)
+
+    def test_null_yr2_yr3_treated_as_zero(self):
+        """Player with no yr2/yr3 data (cut after yr1) contributes 0 for those seasons."""
+        df = _make_draft_df([
+            {"name": "Alice", "pos": "WR", "pick": 5, "av": [8.0, 10.0, 7.0, 5.0]},
+            {"name": "Bob", "pos": "QB", "pick": 10, "av": [3.0, 2.0]},
+        ])
+        result = aggregate_observed_av(df)
+
+        bob = result.filter(pl.col("Player") == "Bob").row(0, named=True)
+        assert bob["obs_yr2"] == pytest.approx(0.0)
+        assert bob["obs_yr3"] == pytest.approx(0.0)
+        assert bob["total_4yr_av"] == pytest.approx(5.0)
+
+    def test_sorted_by_pick(self):
+        df = _make_draft_df([
+            {"name": "Bob", "pos": "WR", "pick": 50, "av": [3.0, 4.0, 2.0, 1.0]},
+            {"name": "Alice", "pos": "QB", "pick": 5, "av": [8.0, 10.0, 7.0, 5.0]},
+        ])
+        result = aggregate_observed_av(df)
+        assert result["Pick"].to_list() == [5, 50]
+
+    def test_output_schema(self):
+        df = _make_draft_df([
+            {"name": "Alice", "pos": "WR", "pick": 5, "av": [8.0, 10.0, 7.0, 5.0]}
+        ])
+        result = aggregate_observed_av(df)
+        expected = {"Player", "Pos", "Pick", "Draft Year", "obs_yr0", "obs_yr1", "obs_yr2", "obs_yr3", "total_4yr_av"}
+        assert set(result.columns) == expected
+        for col in ("proj_yr2", "proj_yr3", "is_projected"):
+            assert col not in result.columns
+
+
+class TestAggregateModelAv:
     def test_two_seasons_projects_yr2_yr3(self):
         df = _make_draft_df([{"name": "Alice", "pos": "WR", "pick": 5, "av": [8.0, 10.0]}])
-        result = aggregate_4yr_av(df, MockModel())
+        result = aggregate_model_av(df, MockModel())
 
         row = result.filter(pl.col("Player") == "Alice").row(0, named=True)
         # MockModel returns 3.0 per projected year
@@ -323,23 +372,11 @@ class TestAggregate4yrAv:
         assert row["total_4yr_av"] == pytest.approx(8.0 + 10.0 + 3.0 + 3.0)
         assert row["is_projected"] is True
 
-    def test_four_seasons_no_projection(self):
-        df = _make_draft_df([
-            {"name": "Alice", "pos": "WR", "pick": 5, "av": [8.0, 10.0, 7.0, 5.0]}
-        ])
-        result = aggregate_4yr_av(df, MockModel())
-
-        row = result.filter(pl.col("Player") == "Alice").row(0, named=True)
-        assert row["total_4yr_av"] == pytest.approx(8.0 + 10.0 + 7.0 + 5.0)
-        assert row["is_projected"] is False
-        assert row["proj_yr2"] == pytest.approx(0.0)
-        assert row["proj_yr3"] == pytest.approx(0.0)
-
     def test_three_seasons_projects_only_yr3(self):
         df = _make_draft_df([
             {"name": "Alice", "pos": "WR", "pick": 5, "av": [8.0, 10.0, 7.0]}
         ])
-        result = aggregate_4yr_av(df, MockModel())
+        result = aggregate_model_av(df, MockModel())
 
         row = result.filter(pl.col("Player") == "Alice").row(0, named=True)
         assert row["obs_yr2"] == pytest.approx(7.0)
@@ -352,7 +389,7 @@ class TestAggregate4yrAv:
         df = _make_draft_df([
             {"name": "Alice", "pos": "UNKNOWN_POS", "pick": 5, "av": [8.0, 10.0]}
         ])
-        result = aggregate_4yr_av(df, MockModel())
+        result = aggregate_model_av(df, MockModel())
 
         row = result.filter(pl.col("Player") == "Alice").row(0, named=True)
         assert row["proj_yr2"] == pytest.approx(0.0)
@@ -364,12 +401,12 @@ class TestAggregate4yrAv:
             {"name": "Bob", "pos": "WR", "pick": 50, "av": [3.0, 4.0]},
             {"name": "Alice", "pos": "QB", "pick": 5, "av": [8.0, 10.0]},
         ])
-        result = aggregate_4yr_av(df, MockModel())
+        result = aggregate_model_av(df, MockModel())
         assert result["Pick"].to_list() == [5, 50]
 
     def test_output_schema(self):
         df = _make_draft_df([{"name": "Alice", "pos": "WR", "pick": 5, "av": [8.0, 10.0]}])
-        result = aggregate_4yr_av(df, MockModel())
+        result = aggregate_model_av(df, MockModel())
         required = {
             "Player", "Pos", "Pick", "Draft Year",
             "obs_yr0", "obs_yr1", "obs_yr2", "obs_yr3",
@@ -384,7 +421,7 @@ class TestAggregate4yrAv:
 
 
 class TestComputeSurplusAv:
-    def test_surplus_equals_total_minus_eavar(self, tmp_path):
+    def test_surplus_equals_av_above_replacement_minus_eavar(self, tmp_path):
         eavar_path = tmp_path / "eavar.csv"
         _make_eavar_csv(eavar_path)
 
@@ -400,12 +437,12 @@ class TestComputeSurplusAv:
         )
 
         result = compute_surplus_av(players_df, eavar_path=eavar_path)
-        # EAVAR for pick 5 = 20.0 - 5 = 15.0
+        # eavar for pick 5 = 20.0 - 5 = 15.0; replacement_level = 4.5
         assert "surplus_av" in result.columns
-        expected = 24.0 - 15.0
-        assert result["surplus_av"][0] == pytest.approx(expected, abs=0.05)
+        assert result["total_4yr_av_above_replacement"][0] == pytest.approx(24.0 - 4.5, abs=0.05)
+        assert result["surplus_av"][0] == pytest.approx((24.0 - 4.5) - 15.0, abs=0.05)
 
-    def test_pick_not_in_eavar_gives_null(self, tmp_path):
+    def test_pick_beyond_eavar_uses_last_pick(self, tmp_path):
         eavar_path = tmp_path / "eavar.csv"
         _make_eavar_csv(eavar_path)  # only picks 1–10
 
@@ -421,7 +458,9 @@ class TestComputeSurplusAv:
         )
 
         result = compute_surplus_av(players_df, eavar_path=eavar_path)
-        assert result["surplus_av"][0] is None
+        # pick 999 caps to pick 10; eavar for pick 10 = 20.0 - 10 = 10.0
+        assert result["surplus_av"][0] is not None
+        assert result["surplus_av"][0] == pytest.approx((16.0 - 4.5) - 10.0, abs=0.05)
 
     def test_eavar_columns_added(self, tmp_path):
         eavar_path = tmp_path / "eavar.csv"
@@ -439,7 +478,7 @@ class TestComputeSurplusAv:
         )
 
         result = compute_surplus_av(players_df, eavar_path=eavar_path)
-        for col in ("eavar", "eavar_upper", "eavar_lower", "replacement_level"):
+        for col in ("eavar", "eavar_upper", "eavar_lower", "replacement_level", "total_4yr_av_above_replacement"):
             assert col in result.columns
 
     def test_multiple_players_correct_join(self, tmp_path):
@@ -466,6 +505,164 @@ class TestComputeSurplusAv:
         result = compute_surplus_av(players_df, eavar_path=eavar_path)
         alice_row = result.filter(pl.col("Player") == "Alice").row(0, named=True)
         bob_row = result.filter(pl.col("Player") == "Bob").row(0, named=True)
-        # eavar for pick 1 = 19.0, pick 3 = 17.0
-        assert alice_row["surplus_av"] == pytest.approx(26.0 - 19.0, abs=0.05)
-        assert bob_row["surplus_av"] == pytest.approx(17.0 - 17.0, abs=0.05)
+        # eavar for pick 1 = 19.0, pick 3 = 17.0; replacement_level = 4.5
+        assert alice_row["surplus_av"] == pytest.approx((26.0 - 4.5) - 19.0, abs=0.05)
+        assert bob_row["surplus_av"] == pytest.approx((17.0 - 4.5) - 17.0, abs=0.05)
+
+
+# ---------------------------------------------------------------------------
+# Bug-fix tests — position canonicalization and null AV handling
+# ---------------------------------------------------------------------------
+
+
+class TestPositionCanonicalization:
+    def test_specific_position_beats_generalist(self, tmp_path):
+        """Player drafted as LDE (→ DE) then listed as DL (generalist) → canonical DE."""
+        raw_dir = tmp_path / "raw"
+        _make_draft_parquet(raw_dir, 2022, 2022, [
+            {"Player": "Hutch", "Draft Team": "DET", "Pick": "2",
+             "Draft Year": "2022", "Season": "2022", "AV.1": "14", "Pos": "LDE"},
+        ])
+        _make_draft_parquet(raw_dir, 2022, 2023, [
+            {"Player": "Hutch", "Draft Team": "DET", "Pick": "2",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "10", "Pos": "DL"},
+        ])
+
+        df = load_team_draft_class("DET", 2022, raw_dir=raw_dir)
+        assert df.filter(pl.col("Player") == "Hutch")["Pos"].unique().to_list() == ["DE"]
+
+    def test_most_common_specific_position_wins(self, tmp_path):
+        """Player listed LB in yr0+yr1, DE in yr2 → LB wins (2 vs 1)."""
+        raw_dir = tmp_path / "raw"
+        _make_draft_parquet(raw_dir, 2022, 2022, [
+            {"Player": "Houston", "Draft Team": "DET", "Pick": "45",
+             "Draft Year": "2022", "Season": "2022", "AV.1": "2", "Pos": "LB"},
+        ])
+        _make_draft_parquet(raw_dir, 2022, 2023, [
+            {"Player": "Houston", "Draft Team": "DET", "Pick": "45",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "3", "Pos": "LB"},
+        ])
+        _make_draft_parquet(raw_dir, 2022, 2024, [
+            {"Player": "Houston", "Draft Team": "DET", "Pick": "45",
+             "Draft Year": "2022", "Season": "2024", "AV.1": "5", "Pos": "DE"},
+        ])
+
+        df = load_team_draft_class("DET", 2022, raw_dir=raw_dir)
+        assert df.filter(pl.col("Player") == "Houston")["Pos"].unique().to_list() == ["LB"]
+
+    def test_yr0_position_breaks_tie(self, tmp_path):
+        """Player listed as CB in yr0, S in yr1 (tied 1-1) → yr0 wins → CB."""
+        raw_dir = tmp_path / "raw"
+        _make_draft_parquet(raw_dir, 2022, 2022, [
+            {"Player": "Dave", "Draft Team": "DET", "Pick": "30",
+             "Draft Year": "2022", "Season": "2022", "AV.1": "6", "Pos": "CB"},
+        ])
+        _make_draft_parquet(raw_dir, 2022, 2023, [
+            {"Player": "Dave", "Draft Team": "DET", "Pick": "30",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "5", "Pos": "S"},
+        ])
+
+        df = load_team_draft_class("DET", 2022, raw_dir=raw_dir)
+        assert df.filter(pl.col("Player") == "Dave")["Pos"].unique().to_list() == ["CB"]
+
+    def test_only_generalist_positions_falls_back_to_yr0(self, tmp_path):
+        """Player listed as OL every season → falls back to yr0 normalized position (OL)."""
+        raw_dir = tmp_path / "raw"
+        _make_draft_parquet(raw_dir, 2022, 2022, [
+            {"Player": "Lineman", "Draft Team": "DET", "Pick": "20",
+             "Draft Year": "2022", "Season": "2022", "AV.1": "7", "Pos": "OL"},
+        ])
+        _make_draft_parquet(raw_dir, 2022, 2023, [
+            {"Player": "Lineman", "Draft Team": "DET", "Pick": "20",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "8", "Pos": "OL"},
+        ])
+
+        df = load_team_draft_class("DET", 2022, raw_dir=raw_dir)
+        assert df.filter(pl.col("Player") == "Lineman")["Pos"].unique().to_list() == ["OL"]
+
+    def test_single_row_per_player_per_season(self, tmp_path):
+        """After canonicalization, each player has at most one row per years_from_draft."""
+        raw_dir = tmp_path / "raw"
+        _make_draft_parquet(raw_dir, 2022, 2022, [
+            {"Player": "Hutch", "Draft Team": "DET", "Pick": "2",
+             "Draft Year": "2022", "Season": "2022", "AV.1": "14", "Pos": "LDE"},
+        ])
+        _make_draft_parquet(raw_dir, 2022, 2023, [
+            {"Player": "Hutch", "Draft Team": "DET", "Pick": "2",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "10", "Pos": "DL"},
+        ])
+        _make_draft_parquet(raw_dir, 2022, 2024, [
+            {"Player": "Hutch", "Draft Team": "DET", "Pick": "2",
+             "Draft Year": "2022", "Season": "2024", "AV.1": "11", "Pos": "DE"},
+        ])
+
+        df = load_team_draft_class("DET", 2022, raw_dir=raw_dir)
+        hutch_rows = df.filter(pl.col("Player") == "Hutch")
+        # No duplicate (player, years_from_draft) combinations
+        assert hutch_rows.shape[0] == hutch_rows.n_unique(subset=["Player", "years_from_draft"])
+
+
+class TestNullAvHandling:
+    def test_null_av_rows_excluded(self, tmp_path):
+        """Players with null AV.1 in a season have no row for that season."""
+        raw_dir = tmp_path / "raw"
+        _make_draft_parquet(raw_dir, 2022, 2022, [
+            {"Player": "Alice", "Draft Team": "DET", "Pick": "5",
+             "Draft Year": "2022", "Season": "2022", "AV.1": "8", "Pos": "WR"},
+            {"Player": "Bob", "Draft Team": "DET", "Pick": "50",
+             "Draft Year": "2022", "Season": "2022", "AV.1": "3", "Pos": "DE"},
+        ])
+        # yr1 parquet: Alice has no AV (empty string → null), Bob has real data
+        _make_draft_parquet(raw_dir, 2022, 2023, [
+            {"Player": "Alice", "Draft Team": "DET", "Pick": "5",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "", "Pos": "WR"},
+            {"Player": "Bob", "Draft Team": "DET", "Pick": "50",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "4", "Pos": "DE"},
+        ])
+
+        df = load_team_draft_class("DET", 2022, raw_dir=raw_dir)
+        # Alice's yr1 null row should be absent; she only has yr0
+        alice_yfds = df.filter(pl.col("Player") == "Alice")["years_from_draft"].to_list()
+        assert alice_yfds == [0]
+        # Bob has both seasons
+        bob_yfds = sorted(df.filter(pl.col("Player") == "Bob")["years_from_draft"].to_list())
+        assert bob_yfds == [0, 1]
+
+    def test_raises_when_required_season_has_no_av_data(self, tmp_path):
+        """ValueError raised when yr1 parquet exists but ALL team rows have null AV.1."""
+        raw_dir = tmp_path / "raw"
+        _make_draft_parquet(raw_dir, 2022, 2022, [
+            {"Player": "Alice", "Draft Team": "DET", "Pick": "5",
+             "Draft Year": "2022", "Season": "2022", "AV.1": "8", "Pos": "WR"},
+        ])
+        # yr1: entire DET contingent has null AV (stale parquet)
+        _make_draft_parquet(raw_dir, 2022, 2023, [
+            {"Player": "Alice", "Draft Team": "DET", "Pick": "5",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "", "Pos": "WR"},
+        ])
+
+        with pytest.raises(ValueError, match="no finalized AV data"):
+            load_team_draft_class("DET", 2022, raw_dir=raw_dir)
+
+    def test_null_av_not_converted_to_zero(self, tmp_path):
+        """A null AV.1 season must not produce a 0.0 row — it should be absent entirely."""
+        raw_dir = tmp_path / "raw"
+        _make_draft_parquet(raw_dir, 2022, 2022, [
+            {"Player": "Alice", "Draft Team": "DET", "Pick": "5",
+             "Draft Year": "2022", "Season": "2022", "AV.1": "10", "Pos": "WR"},
+            {"Player": "Bob", "Draft Team": "DET", "Pick": "10",
+             "Draft Year": "2022", "Season": "2022", "AV.1": "6", "Pos": "QB"},
+        ])
+        _make_draft_parquet(raw_dir, 2022, 2023, [
+            # Alice has null AV in yr1; Bob has real data
+            {"Player": "Alice", "Draft Team": "DET", "Pick": "5",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "", "Pos": "WR"},
+            {"Player": "Bob", "Draft Team": "DET", "Pick": "10",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "7", "Pos": "QB"},
+        ])
+
+        df = load_team_draft_class("DET", 2022, raw_dir=raw_dir)
+        alice_rows = df.filter(pl.col("Player") == "Alice")
+        # Should have yr0 only — no yr1 row with AV.1 == 0.0
+        assert 0.0 not in alice_rows["AV.1"].to_list()
+        assert 1 not in alice_rows["years_from_draft"].to_list()

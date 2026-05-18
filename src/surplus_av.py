@@ -6,14 +6,18 @@ a per-player surplus.  Summing player surpluses yields a class-level score.
 
 Typical usage
 -------------
->>> from src.surplus_av import load_team_draft_class, aggregate_4yr_av, compute_surplus_av
+>>> from src.surplus_av import load_team_draft_class, aggregate_observed_av, compute_surplus_av
+>>> from src.surplus_av import aggregate_model_av
 >>> from src.models.factory import make_career_av_model
 >>> from pathlib import Path
 >>>
 >>> draft_df = load_team_draft_class("DET", 2024)
+>>> # If all 4 seasons have been played:
+>>> players_df = aggregate_observed_av(draft_df)
+>>> # Otherwise, project missing seasons with a model:
 >>> model = make_career_av_model("parametric")
 >>> model.load(Path("models/parametric"))
->>> players_df = aggregate_4yr_av(draft_df, model)
+>>> players_df = aggregate_model_av(draft_df, model)
 >>> results = compute_surplus_av(players_df)
 """
 
@@ -23,11 +27,16 @@ from pathlib import Path
 
 import polars as pl
 
+from src.annual_av_analysis import _GENERALIST as _GENERALIST_LIST
 from src.annual_av_analysis import _POSITION_GROUPS
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_RAW_DIR = _PROJECT_ROOT / "data/raw/stathead/annual_av"
 _DEFAULT_EAVAR_PATH = _PROJECT_ROOT / "data/processed/expected_av_above_replacement.csv"
+
+# Stathead uses these as catch-all codes that the trajectory models don't recognise.
+# They are excluded when counting positions for player canonicalization.
+_GENERALIST: frozenset[str] = frozenset(_GENERALIST_LIST)
 
 
 def _normalize_pos(
@@ -40,6 +49,75 @@ def _normalize_pos(
         return overrides[player]
     first = pos.replace("-", "/").split("/")[0].strip()
     return _POSITION_GROUPS.get(first, first)
+
+
+def _canonicalize_positions(df: pl.DataFrame) -> pl.DataFrame:
+    """Resolve each player to a single canonical position across all seasons.
+
+    Stathead position codes change year-to-year for the same player (e.g.
+    ``LDE`` → ``DL`` → ``DE``), which causes the pivot in
+    :func:`aggregate_4yr_av` to produce duplicate rows.  This function
+    assigns one consistent position per player so the pivot is clean.
+
+    Strategy:
+      1. Count occurrences of each specific (non-generalist) normalized position.
+      2. Most-common specific position wins.
+      3. Tie-break: prefer the yr0 (draft-year) position.
+      4. Alphabetical on position name as final deterministic tie-break.
+      5. If a player has *only* generalist positions (``DL``, ``OL``), fall
+         back to their yr0 position.
+    """
+    # yr0 position per player — tie-break anchor
+    yr0_pos = (
+        df.filter(pl.col("years_from_draft") == 0)
+        .select(["Player", "Pick", "Draft Year", "Pos"])
+        .rename({"Pos": "yr0_pos"})
+    )
+
+    # Count only specific (non-generalist) positions across all seasons
+    pos_counts = (
+        df.filter(~pl.col("Pos").is_in(list(_GENERALIST)))
+        .group_by(["Player", "Pick", "Draft Year", "Pos"])
+        .agg(pl.len().alias("count"))
+    )
+
+    if pos_counts.is_empty():
+        canonical = yr0_pos.rename({"yr0_pos": "canonical_pos"})
+    else:
+        best = (
+            pos_counts
+            .join(yr0_pos, on=["Player", "Pick", "Draft Year"], how="left")
+            .with_columns(
+                (pl.col("Pos") == pl.col("yr0_pos")).cast(pl.Int8).alias("is_yr0_int")
+            )
+            # Primary: highest count; secondary: yr0 match; tertiary: alphabetical
+            .sort(
+                ["Player", "Pick", "Draft Year", "count", "is_yr0_int", "Pos"],
+                descending=[False, False, False, True, True, False],
+            )
+            .unique(
+                subset=["Player", "Pick", "Draft Year"],
+                keep="first",
+                maintain_order=False,
+            )
+            .select(["Player", "Pick", "Draft Year", pl.col("Pos").alias("canonical_pos")])
+        )
+        # Players with only generalist positions won't appear in best → fall back to yr0
+        canonical = (
+            yr0_pos
+            .join(best, on=["Player", "Pick", "Draft Year"], how="left")
+            .with_columns(
+                pl.coalesce(["canonical_pos", "yr0_pos"]).alias("canonical_pos")
+            )
+            .select(["Player", "Pick", "Draft Year", "canonical_pos"])
+        )
+
+    return (
+        df
+        .join(canonical, on=["Player", "Pick", "Draft Year"])
+        .with_columns(pl.col("canonical_pos").alias("Pos"))
+        .drop("canonical_pos")
+    )
 
 
 def load_team_draft_class(
@@ -65,41 +143,45 @@ def load_team_draft_class(
         ``[Player, Pos, Pick, Draft Year, years_from_draft, AV.1]``.
 
     Raises:
-        ValueError: If fewer than two completed seasons of data are available.
+        ValueError: If fewer than two completed seasons of data are available,
+            or if the required seasons exist on disk but contain no finalized
+            AV data for the requested team (parquets downloaded before the
+            season stats were finalized).
     """
     raw_dir = raw_dir or _DEFAULT_RAW_DIR
 
-    required = [
-        raw_dir / f"draft{year}_season{year}.parquet",
-        raw_dir / f"draft{year}_season{year + 1}.parquet",
-    ]
-    missing = [str(p) for p in required if not p.exists()]
-    if missing:
-        raise ValueError(
-            f"At least 2 completed seasons are required but the following data files "
-            f"are missing:\n  " + "\n  ".join(missing)
-        )
+    # --- 1. File existence check for required seasons ----------------------
+    for season in [year, year + 1]:
+        path = raw_dir / f"draft{year}_season{season}.parquet"
+        if not path.exists():
+            raise ValueError(
+                f"At least 2 completed seasons are required but this file is missing:\n"
+                f"  {path}\n\n"
+                "To download, update config/stathead_annual_av.json and run:\n"
+                "  python src/stathead_downloader.py --config config/stathead_annual_av.json"
+            )
 
+    # --- 2. Load all available seasons -------------------------------------
     optional = [
         raw_dir / f"draft{year}_season{year + 2}.parquet",
         raw_dir / f"draft{year}_season{year + 3}.parquet",
     ]
-    paths = required + [p for p in optional if p.exists()]
+    paths = [
+        raw_dir / f"draft{year}_season{year}.parquet",
+        raw_dir / f"draft{year}_season{year + 1}.parquet",
+    ] + [p for p in optional if p.exists()]
 
-    frames = []
-    for path in paths:
-        df = pl.read_parquet(path)
-        frames.append(df.filter(pl.col("Draft Team") == team))
-
+    frames = [pl.read_parquet(p).filter(pl.col("Draft Team") == team) for p in paths]
     raw = pl.concat(frames)
 
+    # --- 3. Type cast — AV.1 left nullable (no fill_null) ------------------
     prepared = (
         raw.with_columns(
             [
                 pl.col("Pick").cast(pl.Int64, strict=False),
                 pl.col("Season").cast(pl.Int64, strict=False),
                 pl.col("Draft Year").cast(pl.Int64, strict=False),
-                pl.col("AV.1").cast(pl.Float64, strict=False).fill_null(0.0),
+                pl.col("AV.1").cast(pl.Float64, strict=False),
                 pl.col("Pos").str.strip_chars(),
             ]
         )
@@ -109,6 +191,21 @@ def load_team_draft_class(
         .filter(pl.col("years_from_draft").is_in([0, 1, 2, 3]))
     )
 
+    # --- 4. Validate required seasons have finalized AV --------------------
+    for yfd in [0, 1]:
+        has_data = prepared.filter(
+            (pl.col("years_from_draft") == yfd) & pl.col("AV.1").is_not_null()
+        )
+        if has_data.is_empty():
+            season = year + yfd
+            raise ValueError(
+                f"Season {season} parquet exists but {team} has no finalized AV data "
+                f"(all AV.1 values are null).\n"
+                "Re-download the data:\n"
+                "  python src/stathead_downloader.py --config config/stathead_annual_av.json"
+            )
+
+    # --- 5. Normalize positions --------------------------------------------
     prepared = prepared.with_columns(
         pl.struct(["Player", "Pos"])
         .map_elements(
@@ -116,6 +213,19 @@ def load_team_draft_class(
             return_dtype=pl.String,
         )
         .alias("Pos")
+    )
+
+    # --- 6. Canonicalize: one position per player across all seasons -------
+    prepared = _canonicalize_positions(prepared)
+
+    # --- 7. Drop rows with no AV (unfinalized / stale season data) ---------
+    prepared = prepared.filter(pl.col("AV.1").is_not_null())
+
+    # --- 8. One row per (player, season) after position merging ------------
+    prepared = (
+        prepared
+        .group_by(["Player", "Pos", "Pick", "Draft Year", "years_from_draft"])
+        .agg(pl.sum("AV.1"))
     )
 
     return prepared.select(
@@ -161,14 +271,58 @@ def project_player_seasons(
     return yr2, yr3
 
 
-def aggregate_4yr_av(
+def aggregate_observed_av(draft_class_df: pl.DataFrame) -> pl.DataFrame:
+    """Aggregate AV over all four observed seasons per player.  No model needed.
+
+    Use when the draft class has been in the league for four full seasons
+    (i.e. ``years_from_draft == 3`` is present in ``draft_class_df``).
+    Players absent from a season's data contributed 0 AV that year.
+
+    Args:
+        draft_class_df: Output of :func:`load_team_draft_class`.
+
+    Returns:
+        DataFrame with columns
+        ``[Player, Pos, Pick, Draft Year,
+           obs_yr0, obs_yr1, obs_yr2, obs_yr3, total_4yr_av]``.
+        All ``obs_yr*`` values are ``0.0`` when the player had no recorded AV
+        for that season (cut, injured, etc.).
+    """
+    observed_years = sorted(draft_class_df["years_from_draft"].unique().to_list())
+
+    wide = draft_class_df.pivot(
+        index=["Player", "Pos", "Pick", "Draft Year"],
+        on="years_from_draft",
+        values="AV.1",
+    ).rename({str(yr): f"obs_yr{yr}" for yr in observed_years})
+
+    for col in ("obs_yr0", "obs_yr1", "obs_yr2", "obs_yr3"):
+        if col not in wide.columns:
+            wide = wide.with_columns(pl.lit(0.0).alias(col))
+        else:
+            wide = wide.with_columns(pl.col(col).fill_null(0.0))
+
+    return (
+        wide
+        .with_columns(
+            (pl.col("obs_yr0") + pl.col("obs_yr1") + pl.col("obs_yr2") + pl.col("obs_yr3"))
+            .round(1)
+            .alias("total_4yr_av")
+        )
+        .sort("Pick")
+        .select(["Player", "Pos", "Pick", "Draft Year", "obs_yr0", "obs_yr1", "obs_yr2", "obs_yr3", "total_4yr_av"])
+    )
+
+
+def aggregate_model_av(
     draft_class_df: pl.DataFrame,
     model,
 ) -> pl.DataFrame:
-    """Aggregate observed and projected AV over the first four seasons per player.
+    """Aggregate observed AV and project missing seasons via a career AV model.
 
-    Seasons already present in ``draft_class_df`` are used as-is.  Any
-    seasons beyond the observed window are projected via ``model``.
+    Use when the draft class has fewer than four completed seasons (i.e.
+    ``years_from_draft == 3`` is absent).  Observed values are always used
+    as-is; the model fills only the seasons not yet played.
 
     Args:
         draft_class_df: Output of :func:`load_team_draft_class`.
@@ -180,7 +334,8 @@ def aggregate_4yr_av(
            obs_yr0, obs_yr1, obs_yr2, obs_yr3,
            proj_yr2, proj_yr3, total_4yr_av, is_projected]``.
         ``obs_yr2`` / ``obs_yr3`` are ``null`` when not yet observed.
-        ``proj_yr2`` / ``proj_yr3`` reflect model output (0.0 when observed).
+        ``proj_yr2`` is the model's yr2 contribution (0.0 when yr2 is observed).
+        ``proj_yr3`` is always the model's yr3 prediction (yr3 has not been played).
     """
     observed_years = sorted(draft_class_df["years_from_draft"].unique().to_list())
 
@@ -190,14 +345,12 @@ def aggregate_4yr_av(
         values="AV.1",
     ).rename({str(yr): f"obs_yr{yr}" for yr in observed_years})
 
-    # Ensure required columns exist and fill required seasons
     for col in ("obs_yr0", "obs_yr1"):
         if col not in wide.columns:
             wide = wide.with_columns(pl.lit(0.0).alias(col))
         else:
             wide = wide.with_columns(pl.col(col).fill_null(0.0))
 
-    # Optional year columns stay nullable — null means "season not yet played"
     for col in ("obs_yr2", "obs_yr3"):
         if col not in wide.columns:
             wide = wide.with_columns(pl.lit(None).cast(pl.Float64).alias(col))
@@ -213,29 +366,20 @@ def aggregate_4yr_av(
         yr0 = row["obs_yr0"]
         yr1 = row["obs_yr1"]
         yr2_obs = row["obs_yr2"]
-        yr3_obs = row["obs_yr3"]
 
         obs_av: list[float] = [yr0, yr1]
         if yr2_obs is not None:
             obs_av.append(yr2_obs)
-        if yr3_obs is not None:
-            obs_av.append(yr3_obs)
 
         proj = project_player_seasons(model, player, pos, obs_av)
-        if proj is None:
-            proj_yr2, proj_yr3 = 0.0, 0.0
-        else:
-            proj_yr2, proj_yr3 = proj
+        proj_yr2 = proj[0] if proj else 0.0
+        proj_yr3 = proj[1] if proj else 0.0
 
-        # For total: use observed when available, else projected
-        eff_yr2 = yr2_obs if yr2_obs is not None else proj_yr2
-        eff_yr3 = yr3_obs if yr3_obs is not None else proj_yr3
-        # Projected yr2/yr3 are 0 when that year was already observed
+        # proj_yr2 already equals yr2_obs when yr2 is observed (project_player_seasons
+        # returns obs_av[2] directly); zero it in the output column so the display
+        # reflects only the model's contribution.
         out_proj_yr2 = 0.0 if yr2_obs is not None else proj_yr2
-        out_proj_yr3 = 0.0 if yr3_obs is not None else proj_yr3
-
-        total = yr0 + yr1 + eff_yr2 + eff_yr3
-        is_projected = len(obs_av) < 4
+        total = yr0 + yr1 + (yr2_obs if yr2_obs is not None else proj_yr2) + proj_yr3
 
         rows.append(
             {
@@ -246,11 +390,11 @@ def aggregate_4yr_av(
                 "obs_yr0": round(yr0, 1),
                 "obs_yr1": round(yr1, 1),
                 "obs_yr2": round(yr2_obs, 1) if yr2_obs is not None else None,
-                "obs_yr3": round(yr3_obs, 1) if yr3_obs is not None else None,
+                "obs_yr3": None,
                 "proj_yr2": round(out_proj_yr2, 1),
-                "proj_yr3": round(out_proj_yr3, 1),
+                "proj_yr3": round(proj_yr3, 1),
                 "total_4yr_av": round(total, 1),
-                "is_projected": is_projected,
+                "is_projected": True,
             }
         )
 
@@ -280,8 +424,21 @@ def compute_surplus_av(
     eavar_path = eavar_path or _DEFAULT_EAVAR_PATH
     eavar_df = pl.read_csv(eavar_path).rename({"pick": "Pick"})
 
-    result = players_4yr_df.join(eavar_df, on="Pick", how="left")
+    # Picks beyond the last entry in the EAVAR table use that last pick's values.
+    max_pick = eavar_df["Pick"].max()
+    result = (
+        players_4yr_df
+        .with_columns(pl.col("Pick").clip(upper_bound=max_pick).alias("_pick_key"))
+        .join(eavar_df, left_on="_pick_key", right_on="Pick", how="left")
+        .drop("_pick_key")
+    )
+
     result = result.with_columns(
-        (pl.col("total_4yr_av") - pl.col("eavar")).round(1).alias("surplus_av")
+        (pl.col("total_4yr_av") - pl.col("replacement_level")).round(1)
+        .alias("total_4yr_av_above_replacement")
+    )
+    result = result.with_columns(
+        (pl.col("total_4yr_av_above_replacement") - pl.col("eavar")).round(1)
+        .alias("surplus_av")
     )
     return result

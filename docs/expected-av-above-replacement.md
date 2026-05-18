@@ -64,7 +64,12 @@ python scripts/expected_av_above_replacement.py --skip-plots
 | `eavar` | Float64 | Expected AV above replacement at this pick |
 | `eavar_upper` | Float64 | Upper 1σ confidence bound |
 | `eavar_lower` | Float64 | Lower 1σ confidence bound |
-| `replacement_level` | Float64 | The replacement level scalar subtracted (same for all rows) |
+| `replacement_level` | Float64 | The replacement level scalar subtracted (same for all rows; 4-year total) |
+
+Draft picks beyond pick 250 are not in the table.  `compute_surplus_av` in
+`src/surplus_av.py` handles this by capping such picks at 250 before joining,
+so late-round selections (e.g. pick 257) receive the pick-250 EAVAR as a
+conservative floor rather than a null value.
 
 ## Comparison interpretation
 
