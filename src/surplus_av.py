@@ -41,12 +41,14 @@ _GENERALIST: frozenset[str] = frozenset(_GENERALIST_LIST)
 
 def _normalize_pos(
     player: str,
-    pos: str,
+    pos: str | None,
     overrides: dict[str, str] | None = None,
 ) -> str:
     """Return the normalized position group, applying per-player overrides first."""
     if overrides and player in overrides:
         return overrides[player]
+    if not pos:
+        return "UNK"
     first = pos.replace("-", "/").split("/")[0].strip()
     return _POSITION_GROUPS.get(first, first)
 

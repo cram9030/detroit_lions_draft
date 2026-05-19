@@ -30,6 +30,11 @@ python src/pfr_downloader.py --config config/pfr_executives.json --csv  # save a
 python scripts/draft_class_surplus_av.py --team DET --year 2024
 python scripts/draft_class_surplus_av.py --team DET --year 2024 --model knn
 
+# Bake all-teams/all-years surplus AV JSON for static site (requires trained models)
+python scripts/baked_draft_data.py                                   # writes data/baked/draft_{year}.json for 2010-2024
+python scripts/baked_draft_data.py --year 2023                       # limit to 2010-2023
+python scripts/baked_draft_data.py --output-dir outputs/baked        # custom output directory
+
 # Example inference (Lions 2024 — 3-model comparison vs pick expectation)
 python scripts/example_lions_2024.py
 ```
@@ -48,6 +53,8 @@ Stathead (browser cookies) → stathead_downloader.py → data/raw/stathead/annu
                                           train_models.py → models/{parametric,knn,ridge}/
                                                     ↓
                                         example_lions_2024.py (inference)
+                                                    ↓
+                                        baked_draft_data.py → data/baked/draft_{year}.json
 
 Pro-Football-Reference (public) → pfr_downloader.py → data/raw/pfr/{source}/*.parquet
     config/pfr_executives.json  →  data/raw/pfr/executives/{team}_executives.parquet

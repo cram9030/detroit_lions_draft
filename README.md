@@ -29,7 +29,10 @@ detroit_lions_draft/
 ├── outputs/
 │   ├── figures/          # Generated interactive HTML plots
 │   └── reports/
+├── data/
+│   ├── baked/            # Per-year JSON files for static site consumption
 ├── scripts/              # Runnable entry points
+│   ├── baked_draft_data.py        # Bake all-teams surplus AV JSON (one file per year)
 │   ├── draft_class_surplus_av.py  # Draft class surplus AV analysis (any team/year)
 │   ├── example_lions_2024.py
 │   ├── generate_trade_patch.py
@@ -162,6 +165,15 @@ deactivate
    python scripts/draft_class_surplus_av.py --team DET --year 2024 --model knn
    ```
    See [docs/surplus-av.md](docs/surplus-av.md) for metric details and interpretation.
+
+6. **Generate baked draft data** — build one JSON file per draft year covering all
+   32 franchises with surplus AV and GM data (requires trained models from step 4):
+   ```bash
+   python scripts/baked_draft_data.py
+   ```
+   Writes `data/baked/draft_{year}.json` for every year from 2010 to `--year` (default 2024).
+   Fully-observed classes (2022 and earlier) contain raw AV data only. Partially-observed
+   classes (2023–2024) include projections from all three models (parametric, knn, ridge).
 
 ---
 
