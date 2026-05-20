@@ -319,6 +319,7 @@ def aggregate_observed_av(draft_class_df: pl.DataFrame) -> pl.DataFrame:
 def aggregate_model_av(
     draft_class_df: pl.DataFrame,
     model,
+    position_overrides: dict[str, str] | None = None,
 ) -> pl.DataFrame:
     """Aggregate observed AV and project missing seasons via a career AV model.
 
@@ -329,6 +330,10 @@ def aggregate_model_av(
     Args:
         draft_class_df: Output of :func:`load_team_draft_class`.
         model: A fitted ``CareerAVModel``.
+        position_overrides: Optional per-player position map (player name →
+            normalized position group).  Needed when Stathead records a
+            generalist code (``"OL"``, ``"DL"``) that the model does not
+            recognise.
 
     Returns:
         DataFrame with columns
@@ -373,7 +378,7 @@ def aggregate_model_av(
         if yr2_obs is not None:
             obs_av.append(yr2_obs)
 
-        proj = project_player_seasons(model, player, pos, obs_av)
+        proj = project_player_seasons(model, player, pos, obs_av, position_overrides)
         proj_yr2 = proj[0] if proj else 0.0
         proj_yr3 = proj[1] if proj else 0.0
 
