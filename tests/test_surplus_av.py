@@ -414,6 +414,23 @@ class TestAggregateModelAv:
         }
         assert required.issubset(set(result.columns))
 
+    def test_generalist_position_without_override_projects_zero(self):
+        """Baseline: OL player (unknown to model) gets 0.0 projections without overrides."""
+        df = _make_draft_df([{"name": "Bob", "pos": "OL", "pick": 210, "av": [1.0, 5.0]}])
+        result = aggregate_model_av(df, MockModel())
+        row = result.filter(pl.col("Player") == "Bob").row(0, named=True)
+        assert row["proj_yr2"] == pytest.approx(0.0)
+        assert row["proj_yr3"] == pytest.approx(0.0)
+
+    def test_generalist_position_with_override_uses_model(self):
+        """With position_overrides, an OL→OG player receives model projections."""
+        df = _make_draft_df([{"name": "Bob", "pos": "OL", "pick": 210, "av": [1.0, 5.0]}])
+        result = aggregate_model_av(df, MockModel(), position_overrides={"Bob": "OG"})
+        row = result.filter(pl.col("Player") == "Bob").row(0, named=True)
+        assert row["proj_yr2"] == pytest.approx(3.0)
+        assert row["proj_yr3"] == pytest.approx(3.0)
+        assert row["total_4yr_av"] == pytest.approx(1.0 + 5.0 + 3.0 + 3.0)
+
 
 # ---------------------------------------------------------------------------
 # compute_surplus_av
