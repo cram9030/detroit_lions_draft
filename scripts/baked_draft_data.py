@@ -81,6 +81,29 @@ STATHEAD_RAW_DIR = PROJECT_ROOT / "data" / "raw" / "stathead" / "annual_av"
 START_YEAR = 2010
 MODELS = ["parametric", "knn", "ridge"]
 
+# Per-player position overrides for players Stathead records with a generalist
+# catch-all code ("OL", "DL") that the career-AV models do not recognise.
+# Keys are exact player names; values are the normalised position group to use.
+_POSITION_OVERRIDES: dict[str, str] = {
+    # 2024 draft
+    "Christian Mahogany": "OG",
+    "Mekhi Wingo": "DT",
+    "Giovanni Manu": "OT",
+    # 2023 draft
+    "Juice Scruggs": "OC",
+    "Zach Harrison": "DE",
+    "Nick Saldiveri": "OT",
+    "Colby Wooden": "DE",
+    "Colby Sorsdal": "OT",
+    "Jordan McFadden": "OG",
+    "Asim Richards": "OT",
+    "Robert Beal": "DE",
+    "Karl Brooks": "DT",
+    "Jovaughn Gwyn": "OG",
+    "Jordon Riley": "DT",
+    "Spencer Anderson": "OG",
+}
+
 ALL_PFR_CODES: list[str] = sorted([
     "atl", "buf", "car", "chi", "cin", "cle", "clt", "crd",
     "dal", "den", "det", "gnb", "htx", "jax", "kan", "mia",
@@ -205,11 +228,12 @@ def _build_model_block(
     draft_df: pl.DataFrame,
     model_name: str,
     models_dir: Path,
+    position_overrides: dict[str, str] | None = None,
 ) -> dict:
     """Run one model projection and return its players + class_summary."""
     model = make_career_av_model(model_name)
     model.load(models_dir / model_name)
-    players_df = aggregate_model_av(draft_df, model)
+    players_df = aggregate_model_av(draft_df, model, position_overrides)
     results = compute_surplus_av(players_df)
     players = [player_row_to_dict(r, is_projected_class=True) for r in results.iter_rows(named=True)]
     return {
@@ -251,7 +275,7 @@ def build_team_entry(
     else:
         model_results: dict = {}
         for model_name in MODELS:
-            model_results[model_name] = _build_model_block(draft_df, model_name, models_dir)
+            model_results[model_name] = _build_model_block(draft_df, model_name, models_dir, _POSITION_OVERRIDES)
         return {
             "gm": gm,
             "fully_observed": False,
