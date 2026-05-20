@@ -74,7 +74,7 @@ from src.surplus_av import (
 )
 
 MODELS_DIR = PROJECT_ROOT / "models"
-BAKED_DIR = PROJECT_ROOT / "data" / "baked"
+BAKED_DIR = PROJECT_ROOT / "data" / "processed" / "baked"
 EXECUTIVES_DIR = PROJECT_ROOT / "data" / "raw" / "pfr" / "executives"
 STATHEAD_RAW_DIR = PROJECT_ROOT / "data" / "raw" / "stathead" / "annual_av"
 
@@ -301,7 +301,7 @@ def parse_args() -> argparse.Namespace:
         "--output-dir",
         type=Path,
         default=None,
-        help="Directory to write draft_{YEAR}.json files (default: data/baked/)",
+        help="Directory to write draft_{YEAR}.json files (default: data/processed/baked/)",
     )
     return p.parse_args()
 

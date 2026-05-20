@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generated_at": "2026-05-20T04:01:16.183365+00:00",
+    "generated_at": "2026-05-20T04:07:28.115375+00:00",
     "year": 2019,
     "models": [
       "parametric",
@@ -777,22 +777,6 @@
       "fully_observed": true,
       "players": [
         {
-          "player": "Jalen Thompson",
-          "pos": "S",
-          "pick": 1,
-          "obs_yr0": 3.0,
-          "obs_yr1": 2.0,
-          "obs_yr2": 5.0,
-          "obs_yr3": 6.0,
-          "total_4yr_av": 16.0,
-          "total_4yr_av_above_replacement": 11.4,
-          "eavar": 22.051,
-          "eavar_upper": 22.391,
-          "eavar_lower": 21.711,
-          "replacement_level": 4.586,
-          "surplus_av": -10.7
-        },
-        {
           "player": "Kyler Murray",
           "pos": "QB",
           "pick": 1,
@@ -807,6 +791,22 @@
           "eavar_lower": 21.711,
           "replacement_level": 4.586,
           "surplus_av": 27.3
+        },
+        {
+          "player": "Jalen Thompson",
+          "pos": "S",
+          "pick": 1,
+          "obs_yr0": 3.0,
+          "obs_yr1": 2.0,
+          "obs_yr2": 5.0,
+          "obs_yr3": 6.0,
+          "total_4yr_av": 16.0,
+          "total_4yr_av_above_replacement": 11.4,
+          "eavar": 22.051,
+          "eavar_upper": 22.391,
+          "eavar_lower": 21.711,
+          "replacement_level": 4.586,
+          "surplus_av": -10.7
         },
         {
           "player": "Byron Murphy",
