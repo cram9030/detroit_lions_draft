@@ -17,6 +17,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import polars as pl
+from scipy.stats import skewnorm
 
 from src import curve_fitting as _cf
 
@@ -1067,5 +1068,479 @@ def plot_position_career_av(
 
     if export_path is not None:
         _export_figure(fig, export_path, export_format)
+
+    return fig
+
+
+def plot_skew_3d(
+    skew_params_df: pl.DataFrame,
+    player_av_df: pl.DataFrame,
+    title: str = "Skew-Normal AV Distributions by Draft Pick",
+    max_pick: int | None = None,
+    av_range: tuple[float, float] = (0.0, 100.0),
+    n_av_points: int = 300,
+    degeneracy_threshold: float = 1e6,
+    export_path: str | Path | None = None,
+    export_format: Literal["html", "png", "svg"] | None = None,
+) -> go.Figure:
+    """Create a static 3D surface of skew-normal AV distributions by draft pick.
+
+    For each pick with a valid skew-normal fit, evaluates the PDF across an AV
+    range and stacks the results into a surface. Picks where ``|a| >
+    degeneracy_threshold`` are skipped — roughly 85% of picks produce degenerate
+    MLE estimates and are excluded.
+
+    Displays two layers:
+    1. ``go.Surface`` — probability density surface (X=pick, Y=AV, Z=density).
+    2. ``go.Scatter3d`` — individual player AV values as dots on the z=0 floor.
+
+    Args:
+        skew_params_df: DataFrame with columns ``Pick (Int64)``, ``a (Float64)``,
+            ``loc (Float64)``, ``scale (Float64)`` — the full ``skew_params.csv``
+            contents. Degenerate picks are filtered internally.
+        player_av_df: DataFrame with columns ``Player``, ``Pick``,
+            ``Draft Year``, ``Draft Team``, ``rookie_contract_av`` — output of
+            ``aggregate_player_av().collect()``.
+        title: Chart title.
+        max_pick: If set, restrict both surface and scatter to picks ≤ this value.
+        av_range: ``(lo, hi)`` range for the AV axis. Default ``(0.0, 100.0)``.
+        n_av_points: Number of AV sample points for PDF evaluation. Default 300.
+        degeneracy_threshold: Picks with ``|a|`` above this are excluded.
+        export_path: If provided, the figure is saved to this path.
+        export_format: Required when ``export_path`` is set.
+
+    Returns:
+        Plotly Figure object.
+
+    Raises:
+        ValueError: If ``export_path`` is set but ``export_format`` is None.
+    """
+    if export_path is not None and export_format is None:
+        raise ValueError("export_format must be specified when export_path is provided.")
+
+    valid_df = skew_params_df.filter(pl.col("a").abs() <= degeneracy_threshold)
+    if max_pick is not None:
+        valid_df = valid_df.filter(pl.col("Pick") <= max_pick)
+    valid_df = valid_df.sort("Pick")
+
+    av_arr = np.linspace(av_range[0], av_range[1], n_av_points)
+    picks_list = valid_df["Pick"].to_list()
+    n_picks = len(picks_list)
+
+    z_matrix = np.zeros((n_av_points, n_picks))
+    for j, row in enumerate(valid_df.iter_rows(named=True)):
+        z_matrix[:, j] = skewnorm.pdf(av_arr, row["a"], row["loc"], row["scale"])
+
+    scatter_df = player_av_df.filter(pl.col("Pick").is_in(picks_list))
+    if max_pick is not None:
+        scatter_df = scatter_df.filter(pl.col("Pick") <= max_pick)
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Surface(
+            x=picks_list,
+            y=av_arr.tolist(),
+            z=z_matrix.tolist(),
+            colorscale="Viridis",
+            opacity=0.85,
+            showscale=True,
+            colorbar=dict(title="Probability Density"),
+            name="PDF Surface",
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter3d(
+            x=scatter_df["Pick"].to_list(),
+            y=scatter_df["rookie_contract_av"].to_list(),
+            z=[0.0] * len(scatter_df),
+            mode="markers",
+            marker=dict(
+                size=2,
+                color=_hex_to_rgba(_VIRIDIS[3], 0.4),
+                opacity=0.4,
+            ),
+            name="Individual Players",
+        )
+    )
+
+    fig.update_layout(
+        title=title,
+        scene=dict(
+            xaxis=dict(title="Pick Number"),
+            yaxis=dict(title="Rookie Contract AV", range=list(av_range)),
+            zaxis=dict(title="Probability Density"),
+            camera=dict(eye=dict(x=1.5, y=-1.5, z=0.8)),
+        ),
+        template="plotly_white",
+    )
+
+    if export_path is not None:
+        _export_figure(fig, export_path, export_format)
+
+    return fig
+
+
+def plot_animated_skew_by_pick(
+    skew_params_df: pl.DataFrame,
+    player_av_df: pl.DataFrame,
+    title: str = "Skew-Normal AV Distribution by Pick Number",
+    max_pick: int | None = None,
+    av_range: tuple[float, float] = (0.0, 100.0),
+    n_av_points: int = 300,
+    degeneracy_threshold: float = 1e6,
+    export_path: str | Path | None = None,
+) -> go.Figure:
+    """Create an animated 2D figure cycling through pick numbers.
+
+    Each frame shows the fitted skew-normal PDF for one pick plus a rug plot
+    of the actual player AV values at that pick. Only picks with valid fits
+    (``|a| <= degeneracy_threshold``) are included — typically ~49 of 329
+    picks from the full-dataset ``skew_params.csv``.
+
+    The y-axis (probability density) is fixed across all frames so the shape
+    of each distribution is visually comparable.
+
+    Args:
+        skew_params_df: DataFrame with columns ``Pick``, ``a``, ``loc``,
+            ``scale`` — the full ``skew_params.csv`` contents.
+        player_av_df: DataFrame with columns ``Player``, ``Pick``,
+            ``Draft Year``, ``Draft Team``, ``rookie_contract_av``.
+        title: Chart title.
+        max_pick: If set, restrict frames and player scatter to picks ≤ this value.
+        av_range: ``(lo, hi)`` range for the AV axis. Kept fixed across frames.
+        n_av_points: AV sample points for PDF evaluation.
+        degeneracy_threshold: Picks with ``|a|`` above this are excluded.
+        export_path: If provided, saves the figure as HTML. Must end with
+            ``.html`` — animated figures cannot be exported as static images.
+
+    Returns:
+        Plotly Figure with animation frames and a pick-number slider.
+
+    Raises:
+        ValueError: If ``export_path`` is provided but does not end with ``.html``.
+    """
+    if export_path is not None and not str(export_path).endswith(".html"):
+        raise ValueError(
+            "Animated figures can only be exported as HTML. "
+            f"Got: {export_path!r}. Use a path ending with '.html'."
+        )
+
+    valid_df = skew_params_df.filter(pl.col("a").abs() <= degeneracy_threshold)
+    if max_pick is not None:
+        valid_df = valid_df.filter(pl.col("Pick") <= max_pick)
+    valid_df = valid_df.sort("Pick")
+    valid_picks = valid_df["Pick"].to_list()
+    rows_by_pick = {row["Pick"]: row for row in valid_df.iter_rows(named=True)}
+
+    av_arr = np.linspace(av_range[0], av_range[1], n_av_points)
+
+    # Pre-compute fixed y-axis range from peak PDF values across all valid picks
+    max_pdf = max(
+        float(skewnorm.pdf(av_arr, row["a"], row["loc"], row["scale"]).max())
+        for row in rows_by_pick.values()
+    )
+    y_range = [-(max_pdf * 0.05), max_pdf * 1.1]
+
+    obs_color = _hex_to_rgba(_VIRIDIS[3], 0.7)
+
+    def _build_traces(pick_num: int, a: float, loc: float, scale: float) -> list:
+        pdf = skewnorm.pdf(av_arr, a, loc, scale)
+        pick_players = player_av_df.filter(pl.col("Pick") == pick_num)
+        curve = go.Scatter(
+            x=av_arr.tolist(),
+            y=pdf.tolist(),
+            mode="lines",
+            line=dict(color=_LINE_COLOR, width=2),
+            name=f"Pick {pick_num} PDF",
+        )
+        rug = go.Scatter(
+            x=pick_players["rookie_contract_av"].to_list(),
+            y=[0.0] * len(pick_players),
+            mode="markers",
+            marker=dict(color=obs_color, size=8, symbol="line-ns-open"),
+            name="Player AV",
+            text=pick_players["Player"].to_list(),
+            hovertemplate="%{text}: %{x:.1f} AV<extra></extra>",
+        )
+        return [curve, rug]
+
+    frames = [
+        go.Frame(
+            data=_build_traces(
+                p, rows_by_pick[p]["a"], rows_by_pick[p]["loc"], rows_by_pick[p]["scale"]
+            ),
+            name=str(p),
+        )
+        for p in valid_picks
+    ]
+
+    first_row = rows_by_pick[valid_picks[0]]
+    initial_traces = _build_traces(
+        valid_picks[0], first_row["a"], first_row["loc"], first_row["scale"]
+    )
+    fig = go.Figure(data=initial_traces, frames=frames)
+
+    slider_steps = [
+        dict(
+            method="animate",
+            args=[[str(p)], dict(mode="immediate", frame=dict(duration=400, redraw=True))],
+            label=str(p),
+        )
+        for p in valid_picks
+    ]
+
+    fig.update_layout(
+        title=title,
+        xaxis=dict(title="Rookie Contract AV", range=list(av_range)),
+        yaxis=dict(title="Probability Density", range=y_range),
+        template="plotly_white",
+        updatemenus=[
+            dict(
+                type="buttons",
+                showactive=False,
+                y=1.05,
+                x=0,
+                xanchor="left",
+                buttons=[
+                    dict(
+                        label="Play",
+                        method="animate",
+                        args=[
+                            None,
+                            dict(
+                                frame=dict(duration=400, redraw=True),
+                                fromcurrent=True,
+                                transition=dict(duration=150),
+                            ),
+                        ],
+                    ),
+                    dict(
+                        label="Pause",
+                        method="animate",
+                        args=[
+                            [None],
+                            dict(
+                                frame=dict(duration=0, redraw=False),
+                                mode="immediate",
+                                transition=dict(duration=0),
+                            ),
+                        ],
+                    ),
+                ],
+            )
+        ],
+        sliders=[
+            dict(
+                active=0,
+                currentvalue=dict(prefix="Pick: ", visible=True, xanchor="center"),
+                pad=dict(t=50),
+                steps=slider_steps,
+            )
+        ],
+    )
+
+    if export_path is not None:
+        path = Path(export_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fig.write_html(str(path))
+
+    return fig
+
+
+def plot_animated_skew_by_year(
+    rolling_skew_df: pl.DataFrame,
+    player_av_df: pl.DataFrame | None = None,
+    title: str = "Skew-Normal AV Distributions by Pick — Rolling Window",
+    max_pick: int | None = None,
+    av_range: tuple[float, float] = (0.0, 100.0),
+    n_av_points: int = 300,
+    degeneracy_threshold: float = 1e6,
+    window_half: int = 5,
+    export_path: str | Path | None = None,
+) -> go.Figure:
+    """Create an animated 3D surface cycling through rolling-window center years.
+
+    Each frame shows the skew-normal PDF surface for one center year from the
+    rolling-window fit. The pick axis is the union of all valid picks across
+    all years so the surface dimensions are constant across frames. Picks that
+    are degenerate or absent in a given year appear as zero-density columns.
+
+    Displays two layers per frame:
+    1. ``go.Surface`` — PDF surface (X=pick, Y=AV, Z=density).
+    2. ``go.Scatter3d`` — players drafted within the window at z=0 (optional).
+
+    Args:
+        rolling_skew_df: DataFrame with columns ``Pick``, ``a``, ``loc``,
+            ``scale``, ``center_year`` — the full ``rolling_skew_params.parquet``
+            contents.
+        player_av_df: If provided, draws a scatter of players whose ``Draft Year``
+            falls in ``[center_year - window_half, center_year + window_half]``
+            for each frame. If ``None``, no scatter layer is drawn.
+        title: Chart title.
+        max_pick: If set, restrict surface and scatter to picks ≤ this value.
+        av_range: ``(lo, hi)`` range for the AV axis. Fixed across all frames.
+        n_av_points: AV sample points for PDF evaluation.
+        degeneracy_threshold: Picks with ``|a|`` above this are excluded.
+        window_half: Half-width of the rolling window used when filtering
+            players per frame. Default 5, matching ``WINDOW_LENGTH=11``.
+        export_path: If provided, saves the figure as HTML. Must end with
+            ``.html`` — animated 3D figures cannot be exported as static images.
+
+    Returns:
+        Plotly Figure with animation frames and a center-year slider.
+
+    Raises:
+        ValueError: If ``export_path`` is provided but does not end with ``.html``.
+    """
+    if export_path is not None and not str(export_path).endswith(".html"):
+        raise ValueError(
+            "Animated figures can only be exported as HTML. "
+            f"Got: {export_path!r}. Use a path ending with '.html'."
+        )
+
+    valid_rolling = rolling_skew_df.filter(pl.col("a").abs() <= degeneracy_threshold)
+    if max_pick is not None:
+        valid_rolling = valid_rolling.filter(pl.col("Pick") <= max_pick)
+
+    all_valid_picks = sorted(valid_rolling["Pick"].unique().to_list())
+    pick_to_idx = {p: i for i, p in enumerate(all_valid_picks)}
+    center_years = sorted(rolling_skew_df["center_year"].unique().to_list())
+    n_picks = len(all_valid_picks)
+
+    av_arr = np.linspace(av_range[0], av_range[1], n_av_points)
+
+    # Pre-compute global z_max so the z-axis stays fixed across frames
+    global_zmax = 0.0
+    for row in valid_rolling.iter_rows(named=True):
+        peak = float(skewnorm.pdf(row["loc"], row["a"], row["loc"], row["scale"]))
+        if peak > global_zmax:
+            global_zmax = peak
+    z_axis_max = global_zmax * 1.1
+
+    obs_color = _hex_to_rgba(_VIRIDIS[3], 0.35)
+
+    def _build_surface_data(yr: int) -> list:
+        yr_df = valid_rolling.filter(pl.col("center_year") == yr).sort("Pick")
+        z_matrix = np.zeros((n_av_points, n_picks))
+        for row in yr_df.iter_rows(named=True):
+            col_idx = pick_to_idx[row["Pick"]]
+            z_matrix[:, col_idx] = skewnorm.pdf(av_arr, row["a"], row["loc"], row["scale"])
+
+        traces: list = [
+            go.Surface(
+                x=all_valid_picks,
+                y=av_arr.tolist(),
+                z=z_matrix.tolist(),
+                colorscale="Viridis",
+                opacity=0.85,
+                showscale=True,
+                colorbar=dict(title="Probability Density"),
+                cmin=0.0,
+                cmax=global_zmax,
+                name=f"Year {yr}",
+            )
+        ]
+
+        if player_av_df is not None:
+            window_players = player_av_df.filter(
+                (pl.col("Draft Year") >= yr - window_half)
+                & (pl.col("Draft Year") <= yr + window_half)
+                & pl.col("Pick").is_in(all_valid_picks)
+            )
+            if max_pick is not None:
+                window_players = window_players.filter(pl.col("Pick") <= max_pick)
+            if len(window_players) > 0:
+                traces.append(
+                    go.Scatter3d(
+                        x=window_players["Pick"].to_list(),
+                        y=window_players["rookie_contract_av"].to_list(),
+                        z=[0.0] * len(window_players),
+                        mode="markers",
+                        marker=dict(size=2, color=obs_color, opacity=0.35),
+                        name="Players in Window",
+                        text=window_players["Player"].to_list(),
+                        hovertemplate="%{text}<br>Pick %{x} — %{y:.1f} AV<extra></extra>",
+                    )
+                )
+
+        return traces
+
+    frames = [
+        go.Frame(data=_build_surface_data(yr), name=str(yr))
+        for yr in center_years
+    ]
+
+    initial_traces = _build_surface_data(center_years[0])
+    fig = go.Figure(data=initial_traces, frames=frames)
+
+    slider_steps = [
+        dict(
+            method="animate",
+            args=[[str(yr)], dict(mode="immediate", frame=dict(duration=300, redraw=True))],
+            label=str(yr),
+        )
+        for yr in center_years
+    ]
+
+    fig.update_layout(
+        title=f"{title} — {center_years[0]}–{center_years[-1]}",
+        scene=dict(
+            xaxis=dict(title="Pick Number"),
+            yaxis=dict(title="Rookie Contract AV", range=list(av_range)),
+            zaxis=dict(title="Probability Density", range=[0, z_axis_max]),
+            camera=dict(eye=dict(x=1.5, y=-1.5, z=0.8)),
+        ),
+        template="plotly_white",
+        updatemenus=[
+            dict(
+                type="buttons",
+                showactive=False,
+                y=1.05,
+                x=0,
+                xanchor="left",
+                buttons=[
+                    dict(
+                        label="Play",
+                        method="animate",
+                        args=[
+                            None,
+                            dict(
+                                frame=dict(duration=300, redraw=True),
+                                fromcurrent=True,
+                                transition=dict(duration=100),
+                            ),
+                        ],
+                    ),
+                    dict(
+                        label="Pause",
+                        method="animate",
+                        args=[
+                            [None],
+                            dict(
+                                frame=dict(duration=0, redraw=False),
+                                mode="immediate",
+                                transition=dict(duration=0),
+                            ),
+                        ],
+                    ),
+                ],
+            )
+        ],
+        sliders=[
+            dict(
+                active=0,
+                currentvalue=dict(prefix="Center Year: ", visible=True, xanchor="center"),
+                pad=dict(t=50),
+                steps=slider_steps,
+            )
+        ],
+    )
+
+    if export_path is not None:
+        path = Path(export_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fig.write_html(str(path))
 
     return fig
