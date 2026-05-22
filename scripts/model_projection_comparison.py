@@ -1,14 +1,15 @@
-"""Detroit Lions 2022 draft class — per-player projection comparison.
+"""Per-player projection comparison for any team/draft class.
 
-For each player in the 2022 Lions draft class (all 4 years of AV now available),
-this script generates career projections using 1, 2, and 3 years of observed AV
-as model input, then plots actual vs. projected AV as line plots per player.
+For each player in the specified draft class, this script generates career
+projections using 1, 2, and 3 years of observed AV as model input (up to however
+many seasons are available), then plots actual vs. projected AV as line plots per
+player.
 
 Usage
 -----
-    python scripts/lions_2022_projection_comparison.py [--model {parametric,knn,ridge,all}]
+    python scripts/model_projection_comparison.py --year 2022 [--team DET] [--model {parametric,knn,ridge,all}]
 
-Defaults to ``all`` (all three models on each plot).
+Defaults to team ``DET`` and all three models on each plot.
 
 Prerequisites
 -------------
@@ -24,7 +25,7 @@ Train with:
 
 Outputs
 -------
-    outputs/figures/lions_2022_{player_slug}_projection.html  (one per player)
+    outputs/figures/{team}_{year}_{player_slug}_projection.html  (one per player)
 """
 
 from __future__ import annotations
@@ -45,7 +46,6 @@ from src.surplus_av import _normalize_pos, load_team_draft_class
 MODELS_DIR = PROJECT_ROOT / "models"
 FIGURES_DIR = PROJECT_ROOT / "outputs/figures"
 
-_DRAFT_YEAR = 2022
 _YEARS = [0, 1, 2, 3]
 
 _MODEL_COLORS = {
@@ -56,7 +56,6 @@ _MODEL_COLORS = {
 _WINDOW_DASH = {1: "dash", 2: "dot", 3: "dashdot"}
 _WINDOW_LABEL = {1: "1yr input", 2: "2yr input", 3: "3yr input"}
 
-# 2022 Lions class has no generalist (OL/DL) positions — no overrides needed.
 _PLAYER_POSITION_OVERRIDES: dict[str, str] = {}
 
 
@@ -119,6 +118,8 @@ def _make_player_figure(
     player: str,
     pos: str,
     pick: int,
+    year: int,
+    team: str,
     actual: list[float],
     projections: dict[str, dict[int, tuple[list, list, list]]],
 ) -> go.Figure:
@@ -172,7 +173,7 @@ def _make_player_figure(
                 ))
 
     fig.update_layout(
-        title=f"{player} (Pick {pick}, {pos}) — 2022 Lions Draft | Actual vs. Projections",
+        title=f"{player} (Pick {pick}, {pos}) — {year} {team} Draft | Actual vs. Projections",
         xaxis=dict(
             title="Year from Draft",
             tickvals=_YEARS,
@@ -188,7 +189,18 @@ def _make_player_figure(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Lions 2022 draft — per-player projection comparison plots"
+        description="Draft class — per-player projection comparison plots"
+    )
+    parser.add_argument(
+        "--year",
+        required=True,
+        type=int,
+        help="Draft year, e.g. 2022",
+    )
+    parser.add_argument(
+        "--team",
+        default="DET",
+        help="Three-letter team code (default: DET)",
     )
     parser.add_argument(
         "--model",
@@ -205,22 +217,26 @@ def main() -> None:
     _check_prerequisites(model_names)
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("Loading Lions 2022 observed AV...")
-    obs_df = load_team_draft_class("DET", _DRAFT_YEAR)
+    print(f"Loading {args.team} {args.year} observed AV...")
+    obs_df = load_team_draft_class(args.team, args.year)
+
+    available_years = sorted(obs_df["years_from_draft"].unique().to_list())
+    n_obs_global = len(available_years)
 
     wide = (
         obs_df
         .pivot(index=["Player", "Pos", "Pick"], on="years_from_draft", values="AV.1")
-        .rename({"0": "obs_yr0", "1": "obs_yr1", "2": "obs_yr2", "3": "obs_yr3"})
-        .with_columns([
-            pl.col("obs_yr0").fill_null(0.0),
-            pl.col("obs_yr1").fill_null(0.0),
-            pl.col("obs_yr2").fill_null(0.0),
-            pl.col("obs_yr3").fill_null(0.0),
-        ])
-        .sort("Pick")
+        .rename({str(yr): f"obs_yr{yr}" for yr in available_years})
     )
-    print(f"  {len(wide)} Lions 2022 picks loaded")
+    # Fill null for available seasons (0 AV that year) and add None columns for
+    # seasons not yet in the data (future years — should not appear as 0 in plots).
+    fill_exprs = [pl.col(f"obs_yr{yr}").fill_null(0.0) for yr in available_years]
+    null_exprs = [
+        pl.lit(None).cast(pl.Float64).alias(f"obs_yr{yr}")
+        for yr in range(4) if yr not in available_years
+    ]
+    wide = wide.with_columns(fill_exprs + null_exprs).sort("Pick")
+    print(f"  {len(wide)} {args.team} {args.year} picks loaded ({n_obs_global} seasons available)")
 
     print(f"Loading model(s): {model_names}")
     models = {}
@@ -247,7 +263,7 @@ def main() -> None:
                 continue
 
             window_data: dict[int, tuple] = {}
-            for n_input in (1, 2, 3):
+            for n_input in range(1, min(n_obs_global, 3) + 1):
                 obs_input = actual[:n_input]
                 try:
                     result = model.predict(norm_pos, obs_input)
@@ -264,9 +280,9 @@ def main() -> None:
                 window_data[n_input] = traj
             projections[model_name] = window_data
 
-        fig = _make_player_figure(player, pos, pick, actual, projections)
+        fig = _make_player_figure(player, pos, pick, args.year, args.team, actual, projections)
         slug = player.lower().replace(" ", "_")
-        out_path = FIGURES_DIR / f"lions_2022_{slug}_projection.html"
+        out_path = FIGURES_DIR / f"{args.team.lower()}_{args.year}_{slug}_projection.html"
         fig.write_html(str(out_path))
         print(f"    Saved {out_path.name}")
         saved.append(out_path.name)
