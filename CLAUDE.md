@@ -17,6 +17,7 @@ python scripts/run_analysis.py --skip-skew --skip-rolling  # skip expensive step
 # Model training
 python scripts/train_models.py --model parametric
 python scripts/train_models.py --model all --train-years 1970 2010 --rounds 1 2
+python scripts/train_models.py --model parametric --curve exp_decay  # alternate curve (gamma is default)
 
 # Data fetching (requires secrets/cookies.json with Stathead session cookies)
 python src/stathead_downloader.py --config config/stathead_annual_av.json

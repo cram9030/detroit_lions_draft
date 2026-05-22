@@ -6,26 +6,48 @@ The `src/models/` package provides position-aware trajectory models that project
 
 ## The Parametric Model
 
-`ParametricCurveModel` fits a Gamma-shaped curve to the population mean AV trajectory for each normalized position group:
+`ParametricCurveModel` fits a population-mean trajectory curve per position using `scipy.optimize.curve_fit`, then scales the fitted shape to individual players at inference time.
 
-```
-f(t) = a · t^α · exp(−b·t) + c
-```
+**Pluggable curve shape** — the curve function is selected at construction time via `curve_name` (default `"gamma"`). All curve descriptors live in `src/curve_fitting.py`.
 
-Unlike a pure exponential, this shape rises to a peak (typically years 3–5) then decays, matching the observed career arc. Parameters `a`, `α`, `b`, `c` are fitted per position using `scipy.optimize.curve_fit`.
+| `curve_name` | Formula | Notes |
+|---|---|---|
+| `gamma` *(default)* | `a · t^α · exp(−b·t) + c` | Rises to a peak then decays; best match for career AV arcs |
+| `exp_decay` | `a · exp(−b·t) + c` | Monotone decay from year 0 |
+| `log_decay` | `a · ln(t) + b` | Slow log growth / decay |
+| `quadratic` | `a·t² + b·t + c` | Unconstrained polynomial |
+| `cubic` | `a·t³ + b·t² + c·t + d` | Unconstrained polynomial |
+| `quartic` | `a·t⁴ + b·t³ + c·t² + d·t + e` | Unconstrained polynomial |
 
-**At inference**, the curve shape is held fixed and a single scale factor `s` is computed from the player's observed seasons to personalise the projection:
+**At inference**, the fitted curve is held fixed and a single scale factor `s` personalises the projection:
 
 ```
 s = mean(observed_av / f(t_observed))
 projected_av[t] = s · f(t)
 ```
 
-The uncertainty band is derived from the fit's covariance matrix via Jacobian propagation.
+The uncertainty band is derived from the fit's covariance matrix via ±1σ parameter perturbation.
 
-Model artifacts (human-readable JSON, committed to git) are stored in `models/parametric/`:
-- `params.json` — fitted `popt` and `pcov` per position
-- `metadata.json` — training date, year range, validation MAE by position
+**Model artifacts** (human-readable JSON, committed to git) are stored in `models/parametric/`:
+- `params.json` — fitted `popt` and `pcov` per position, plus `curve_name`
+- `metadata.json` — training date, year range, validation MAE by position, `curve_name`
+
+**Using a custom curve at construction time:**
+
+```python
+from src.curve_fitting import GammaCurveModel, ExpDecayModel
+from src.models.parametric import ParametricCurveModel
+
+# Named lookup (recommended — curve_name is serialised with the model)
+model = ParametricCurveModel(curve_name="exp_decay")
+
+# Custom descriptor (use curve_name to label it for save/load)
+model = ParametricCurveModel(
+    curve=GammaCurveModel,
+    curve_name="gamma",
+    bounds=([0, 0.1, 0.01, -1], [50, 5, 5, 10]),
+)
+```
 
 ---
 
@@ -93,6 +115,7 @@ python scripts/train_models.py [--model parametric|knn|ridge|all]
                                [--train-years START END]
                                [--rounds ROUND ...]
                                [--max-years N]
+                               [--curve gamma|exp_decay|log_decay|quadratic|cubic|quartic]
 ```
 
 | Option | Default | Description |
@@ -101,13 +124,18 @@ python scripts/train_models.py [--model parametric|knn|ridge|all]
 | `--train-years` | `1970 2010` | Inclusive draft-year training window |
 | `--rounds` | all | Draft rounds to include |
 | `--max-years` | `10` | Number of career years to model |
+| `--curve` | `gamma` | Curve shape for the parametric model (ignored for knn/ridge) |
 
 The script trains on `START`–`END` draft classes, validates on 2011–2015 picks (predicting years 3–(N-1) given years 0–2), prints a per-position MAE table, and writes trained artifacts to `models/<name>/`.
 
 Example:
 
 ```bash
+# Default gamma curve
 python scripts/train_models.py --model parametric
+
+# Exponential decay curve
+python scripts/train_models.py --model parametric --curve exp_decay
 ```
 
 Output:
