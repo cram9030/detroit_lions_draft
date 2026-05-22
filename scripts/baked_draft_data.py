@@ -3,7 +3,7 @@
 Each file contains per-player and class-level surplus AV data for that year's
 draft class, plus the GM for each franchise.  Fully-observed classes (≥4
 completed seasons) use raw AV data only.  Partially-observed classes include
-projections from all three career AV models (parametric, knn, ridge).
+projections from all available career AV models.
 
 Output files
 ------------
@@ -12,7 +12,7 @@ Output files
 JSON shape — fully observed::
 
     {
-      "metadata": {"generated_at": "...", "year": 2024, "models": [...]},
+      "metadata": {"generated_at": "...", "year": 2024, "models": {...}},
       "teams": {
         "DET": {
           "gm": "Brad Holmes",
@@ -29,11 +29,18 @@ JSON shape — partially observed (2023/2024)::
       "gm": "Brad Holmes",
       "fully_observed": false,
       "models": {
-        "parametric": {"players": [...], "class_summary": {...}},
-        "knn":        {"players": [...], "class_summary": {...}},
-        "ridge":      {"players": [...], "class_summary": {...}}
+        "parametric": {
+          "gamma":    {"players": [...], "class_summary": {...}},
+          "exp_decay": {"players": [...], "class_summary": {...}}
+        },
+        "knn":   {"players": [...], "class_summary": {...}},
+        "ridge": {"players": [...], "class_summary": {...}}
       }
     }
+
+All trained parametric curve variants in ``models/parametric/`` are discovered
+automatically — train a new variant with ``train_models.py --curve <name>`` and
+it will appear in the next bake without any code changes.
 
 Prerequisites
 -------------
@@ -42,7 +49,9 @@ Prerequisites
 3. EAVAR table: ``data/processed/expected_av_above_replacement.csv``
 4. Trained models (for 2023/2024 projections)::
 
-       python scripts/train_models.py --model all
+       python scripts/train_models.py --model parametric --curve gamma
+       python scripts/train_models.py --model knn
+       python scripts/train_models.py --model ridge
 
 Usage
 -----
@@ -79,7 +88,7 @@ EXECUTIVES_DIR = PROJECT_ROOT / "data" / "raw" / "pfr" / "executives"
 STATHEAD_RAW_DIR = PROJECT_ROOT / "data" / "raw" / "stathead" / "annual_av"
 
 START_YEAR = 2010
-MODELS = ["parametric", "knn", "ridge"]
+_NON_PARAMETRIC_MODELS = ["knn", "ridge"]
 
 # Per-player position overrides for players Stathead records with a generalist
 # catch-all code ("OL", "DL") that the career-AV models do not recognise.
@@ -133,24 +142,33 @@ def pfr_to_stathead(pfr_code: str, year: int) -> str:
     return _PFR_TO_STATHEAD_STATIC[pfr_code]
 
 
+def _discover_parametric_curves(models_dir: Path) -> list[str]:
+    """Return sorted list of trained parametric curve variants.
+
+    Scans models/parametric/ for sub-directories that contain a params.json.
+    Returns [] if no variants exist or the directory is absent.
+    """
+    param_dir = models_dir / "parametric"
+    if not param_dir.is_dir():
+        return []
+    return sorted(
+        d.name for d in param_dir.iterdir()
+        if d.is_dir() and (d / "params.json").exists()
+    )
+
+
 def _check_model(model_name: str, models_dir: Path) -> None:
     """Raise FileNotFoundError with a helpful message if the model is missing."""
     paths = {
-        "parametric": models_dir / "parametric" / "gamma" / "params.json",
         "knn": models_dir / "knn" / "_config.joblib",
         "ridge": models_dir / "ridge" / "_config.joblib",
     }
     path = paths[model_name]
     if not path.exists():
-        train_cmd = (
-            "python scripts/train_models.py --model parametric --curve gamma"
-            if model_name == "parametric"
-            else f"python scripts/train_models.py --model {model_name}"
-        )
         raise FileNotFoundError(
             f"{model_name} model not found at {path}\n"
             f"Train it first:\n"
-            f"  {train_cmd}"
+            f"  python scripts/train_models.py --model {model_name}"
         )
 
 
@@ -234,10 +252,14 @@ def _build_model_block(
     model_name: str,
     models_dir: Path,
     position_overrides: dict[str, str] | None = None,
+    curve_name: str | None = None,
 ) -> dict:
     """Run one model projection and return its players + class_summary."""
     model = make_career_av_model(model_name)
-    load_path = models_dir / "parametric" / "gamma" if model_name == "parametric" else models_dir / model_name
+    if model_name == "parametric" and curve_name:
+        load_path = models_dir / "parametric" / curve_name
+    else:
+        load_path = models_dir / model_name
     model.load(load_path)
     players_df = aggregate_model_av(draft_df, model, position_overrides)
     results = compute_surplus_av(players_df)
@@ -254,6 +276,7 @@ def build_team_entry(
     year: int,
     models_dir: Path,
     executives_dir: Path,
+    parametric_curves: list[str],
 ) -> dict:
     """Build the full JSON entry for one team/year."""
     gm = get_gm_for_team_year(pfr_code, year, executives_dir)
@@ -280,8 +303,21 @@ def build_team_entry(
         }
     else:
         model_results: dict = {}
-        for model_name in MODELS:
-            model_results[model_name] = _build_model_block(draft_df, model_name, models_dir, _POSITION_OVERRIDES)
+
+        # Each discovered parametric curve variant gets its own nested block.
+        if parametric_curves:
+            model_results["parametric"] = {
+                curve: _build_model_block(
+                    draft_df, "parametric", models_dir, _POSITION_OVERRIDES, curve_name=curve
+                )
+                for curve in parametric_curves
+            }
+
+        for model_name in _NON_PARAMETRIC_MODELS:
+            model_results[model_name] = _build_model_block(
+                draft_df, model_name, models_dir, _POSITION_OVERRIDES
+            )
+
         return {
             "gm": gm,
             "fully_observed": False,
@@ -319,8 +355,24 @@ def main() -> None:
     output_dir = args.output_dir or BAKED_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for model_name in MODELS:
+    parametric_curves = _discover_parametric_curves(models_dir)
+    if parametric_curves:
+        print(f"Discovered parametric variants: {parametric_curves}")
+    else:
+        warnings.warn(
+            "No trained parametric variants found in models/parametric/ — "
+            "parametric projections will be omitted from partially-observed classes. "
+            "Train one with: python scripts/train_models.py --model parametric --curve gamma"
+        )
+
+    for model_name in _NON_PARAMETRIC_MODELS:
         _check_model(model_name, models_dir)
+
+    models_metadata: dict = {
+        "parametric": parametric_curves,
+        "knn": True,
+        "ridge": True,
+    }
 
     generated_at = datetime.now(timezone.utc).isoformat()
 
@@ -331,7 +383,9 @@ def main() -> None:
             stathead_code = pfr_to_stathead(pfr_code, year)
             print(f"  {stathead_code}", end=" ", flush=True)
             try:
-                entry = build_team_entry(pfr_code, stathead_code, year, models_dir, EXECUTIVES_DIR)
+                entry = build_team_entry(
+                    pfr_code, stathead_code, year, models_dir, EXECUTIVES_DIR, parametric_curves
+                )
             except Exception as exc:
                 warnings.warn(f"Unexpected error for {stathead_code} {year}: {exc}")
                 continue
@@ -341,7 +395,7 @@ def main() -> None:
             "metadata": {
                 "generated_at": generated_at,
                 "year": year,
-                "models": MODELS,
+                "models": models_metadata,
             },
             "teams": teams,
         }
