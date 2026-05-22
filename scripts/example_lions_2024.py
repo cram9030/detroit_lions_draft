@@ -273,7 +273,7 @@ def main() -> None:
         yaxis_title="4-Year AV",
         barmode="group",
         xaxis_tickangle=-35,
-        height=500,
+        template="plotly_white",
     )
     fig_players.write_html(str(FIGURES_DIR / "lions_2024_player_comparison.html"))
     print("\n  Saved lions_2024_player_comparison.html")
@@ -297,7 +297,7 @@ def main() -> None:
             f"Ridge Δ = {ridge_total - class_exp:+.1f})"
         ),
         yaxis_title="Total 4-Year AV",
-        height=400,
+        template="plotly_white",
     )
     fig_class.write_html(str(FIGURES_DIR / "lions_2024_class_comparison.html"))
     print("  Saved lions_2024_class_comparison.html")

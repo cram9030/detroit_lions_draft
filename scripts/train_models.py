@@ -46,7 +46,7 @@ RAW_DIR = PROJECT_ROOT / "data/raw/stathead/annual_av"
 MODELS_DIR = PROJECT_ROOT / "models"
 
 _SUPPORTED = ["parametric", "knn", "ridge"]
-_VAL_YEARS = (2011, 2015)  # holdout validation window
+_VAL_YEARS = [1975, 1985, 1995, 2005, 2015]  # holdout validation years
 
 
 def parse_args() -> argparse.Namespace:
@@ -98,11 +98,11 @@ def _build_trajectory_df(
     career_lf = aggregate_career_av_by_position(prepared_lf, normalize=True, rounds=rounds)
 
     start, end = train_years
-    val_start, val_end = _VAL_YEARS
     return (
         career_lf
         .filter(
-            (pl.col("Draft Year") >= start) & (pl.col("Draft Year") <= end) & ~((pl.col("Draft Year") >= val_start) & (pl.col("Draft Year") <= val_end))
+            (pl.col("Draft Year") >= start) & (pl.col("Draft Year") <= end)
+            & ~pl.col("Draft Year").is_in(_VAL_YEARS)
         )
         .collect()
     )
@@ -113,12 +113,9 @@ def _build_val_df(rounds: list[int] | None) -> pl.DataFrame:
     prepared_lf = prepare_av_data(raw_lf)
     career_lf = aggregate_career_av_by_position(prepared_lf, normalize=True, rounds=rounds)
 
-    val_start, val_end = _VAL_YEARS
     return (
         career_lf
-        .filter(
-            (pl.col("Draft Year") >= val_start) & (pl.col("Draft Year") <= val_end)
-        )
+        .filter(pl.col("Draft Year").is_in(_VAL_YEARS))
         .collect()
     )
 
@@ -191,7 +188,7 @@ def train_one(
     model.fit(train_df)
     print(f"[{log_prefix}] Fit complete.")
 
-    print(f"[{log_prefix}] Validating on {_VAL_YEARS[0]}–{_VAL_YEARS[1]} draft class...")
+    print(f"[{log_prefix}] Validating on draft years {_VAL_YEARS}...")
     val_mae = _validate_model(model, val_df, max_years)
 
     # Print MAE table
@@ -211,7 +208,7 @@ def train_one(
         "model": name,
         "trained_on": date.today().isoformat(),
         "train_years": list(train_years),
-        "val_years": list(_VAL_YEARS),
+        "val_years": _VAL_YEARS,
         "val_mae_by_position": {pos: round(v, 4) for pos, v in val_mae.items()},
         "positions": sorted(val_mae.keys()),
         "normalize": True,

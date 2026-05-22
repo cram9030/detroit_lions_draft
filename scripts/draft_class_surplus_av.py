@@ -188,7 +188,7 @@ def main() -> None:
         yaxis_title="4-Year AV Above Replacement",
         barmode="group",
         xaxis_tickangle=-35,
-        height=520,
+        template="plotly_white",
     )
     player_chart = output_dir / f"{team}_{year}_player_surplus_av.html"
     fig_players.write_html(str(player_chart))
@@ -216,7 +216,7 @@ def main() -> None:
         xaxis_title="Player",
         yaxis_title="Surplus AV (4yr AV above replacement − EAVAR)",
         xaxis_tickangle=-35,
-        height=520,
+        template="plotly_white",
     )
     class_chart = output_dir / f"{team}_{year}_class_surplus_av.html"
     fig_surplus.write_html(str(class_chart))

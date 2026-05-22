@@ -137,9 +137,8 @@ def _make_curve_figure(
             ticktext=[f"Yr {y}" for y in years],
         ),
         yaxis_title="Expected AV (population mean)",
+        template="plotly_white",
         legend=dict(orientation="v", x=1.02, xanchor="left"),
-        height=480,
-        width=900,
     )
     return fig
 

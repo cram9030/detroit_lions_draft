@@ -9,7 +9,11 @@ Usage
 -----
     python scripts/draft_class_model_projection.py --year 2022 [--team DET] [--model {parametric,knn,ridge,all}]
 
-Defaults to team ``DET`` and all three models on each plot.
+Use ``--parametric-curve <name>`` to specify a single trained curve, or
+``--parametric-curve all`` to include every trained curve found under
+``models/parametric/``.
+
+Defaults to team ``DET``, all three model types, and the ``gamma`` curve.
 
 Prerequisites
 -------------
@@ -48,11 +52,15 @@ FIGURES_DIR = PROJECT_ROOT / "outputs/figures"
 
 _YEARS = [0, 1, 2, 3]
 
-_MODEL_COLORS = {
-    "parametric": "#1f77b4",
-    "knn":        "#2ca02c",
-    "ridge":      "#9467bd",
+# Colors for non-parametric models; parametric curves are assigned from the palette below.
+_STATIC_MODEL_COLORS = {
+    "knn":   "#2ca02c",
+    "ridge": "#9467bd",
 }
+_PARAMETRIC_PALETTE = [
+    "#1f77b4", "#ff7f0e", "#d62728", "#17becf", "#bcbd22", "#e377c2",
+]
+
 _WINDOW_DASH = {1: "dash", 2: "dot", 3: "dashdot"}
 _WINDOW_LABEL = {1: "1yr input", 2: "2yr input", 3: "3yr input"}
 
@@ -65,24 +73,48 @@ def _hex_to_rgba(hex_color: str, alpha: float) -> str:
     return f"rgba({r},{g},{b},{alpha})"
 
 
-def _check_prerequisites(model_names: list[str], parametric_curve: str = "gamma") -> None:
-    checks = {
-        "parametric": MODELS_DIR / "parametric" / parametric_curve / "params.json",
-        "knn":        MODELS_DIR / "knn" / "_config.joblib",
-        "ridge":      MODELS_DIR / "ridge" / "_config.joblib",
-    }
-    for name in model_names:
-        path = checks[name]
-        if not path.exists():
-            train_cmd = (
-                f"python scripts/train_models.py --model parametric --curve {parametric_curve}"
-                if name == "parametric"
-                else f"python scripts/train_models.py --model {name}"
-            )
-            raise FileNotFoundError(
-                f"{name} model not found at {path}\n"
-                f"Train it first:\n  {train_cmd}"
-            )
+def _discover_parametric_curves() -> list[str]:
+    """Return names of all trained parametric curves found in models/parametric/."""
+    parametric_dir = MODELS_DIR / "parametric"
+    if not parametric_dir.exists():
+        return []
+    return sorted(
+        d.name for d in parametric_dir.iterdir()
+        if d.is_dir() and (d / "params.json").exists()
+    )
+
+
+def _build_color_map(model_keys: list[str]) -> dict[str, str]:
+    """Assign a color to each model key. Parametric curves cycle through a palette."""
+    colors: dict[str, str] = {}
+    param_idx = 0
+    for key in model_keys:
+        if key in _STATIC_MODEL_COLORS:
+            colors[key] = _STATIC_MODEL_COLORS[key]
+        else:
+            colors[key] = _PARAMETRIC_PALETTE[param_idx % len(_PARAMETRIC_PALETTE)]
+            param_idx += 1
+    return colors
+
+
+def _check_prerequisites(model_keys: list[str]) -> None:
+    """Verify trained artifacts exist for every requested model key."""
+    for key in model_keys:
+        if key in ("knn", "ridge"):
+            path = MODELS_DIR / key / "_config.joblib"
+            if not path.exists():
+                raise FileNotFoundError(
+                    f"{key} model not found at {path}\n"
+                    f"Train it first:\n  python scripts/train_models.py --model {key}"
+                )
+        elif key.startswith("parametric/"):
+            curve = key.split("/", 1)[1]
+            path = MODELS_DIR / "parametric" / curve / "params.json"
+            if not path.exists():
+                raise FileNotFoundError(
+                    f"{key} model not found at {path}\n"
+                    f"Train it first:\n  python scripts/train_models.py --model parametric --curve {curve}"
+                )
 
 
 def _build_trajectory(
@@ -127,11 +159,12 @@ def _make_player_figure(
     team: str,
     actual: list[float],
     projections: dict[str, dict[int, tuple[list, list, list]]],
-    parametric_curve: str = "gamma",
+    color_map: dict[str, str],
 ) -> go.Figure:
     """Build per-player line plot: actual AV vs. model projections at 1/2/3yr input.
 
-    projections: {model_name: {n_input: (y, y_upper, y_lower)}}
+    projections: {model_key: {n_input: (y, y_upper, y_lower)}}
+    model_key is 'parametric/<curve>', 'knn', or 'ridge'.
     """
     fig = go.Figure()
 
@@ -144,17 +177,12 @@ def _make_player_figure(
         marker=dict(size=9),
     ))
 
-    for model_name, window_data in projections.items():
-        color = _MODEL_COLORS[model_name]
+    for model_key, window_data in projections.items():
+        color = color_map[model_key]
         rgba_band = _hex_to_rgba(color, 0.12)
-        display_name = (
-            f"parametric/{parametric_curve}"
-            if model_name == "parametric" and parametric_curve != "gamma"
-            else model_name
-        )
 
         for n_input, (y, y_up, y_lo) in sorted(window_data.items()):
-            label = f"{display_name} ({_WINDOW_LABEL[n_input]})"
+            label = f"{model_key} ({_WINDOW_LABEL[n_input]})"
 
             fig.add_trace(go.Scatter(
                 x=_YEARS,
@@ -191,9 +219,8 @@ def _make_player_figure(
             ticktext=["Yr 0", "Yr 1", "Yr 2", "Yr 3"],
         ),
         yaxis_title="Annual AV",
+        template="plotly_white",
         legend=dict(orientation="v", x=1.02, xanchor="left"),
-        height=480,
-        width=860,
     )
     return fig
 
@@ -223,17 +250,43 @@ def main() -> None:
         "--parametric-curve",
         default="gamma",
         dest="parametric_curve",
-        help="Curve variant to use for the parametric model (default: gamma). "
-             "Must match a trained models/parametric/<curve>/ directory.",
+        help="Curve variant for the parametric model (default: gamma). "
+             "Use 'all' to include every trained curve in models/parametric/.",
     )
     args = parser.parse_args()
 
-    model_names = (
-        ["parametric", "knn", "ridge"] if args.model == "all" else [args.model]
-    )
+    include_param = args.model in ("parametric", "all")
+    include_knn   = args.model in ("knn", "all")
+    include_ridge = args.model in ("ridge", "all")
 
-    _check_prerequisites(model_names, args.parametric_curve)
+    # Resolve parametric curves
+    if include_param:
+        if args.parametric_curve == "all":
+            param_curves = _discover_parametric_curves()
+            if not param_curves:
+                print(
+                    "No trained parametric curves found in models/parametric/. "
+                    "Train at least one first.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            print(f"Discovered parametric curves: {param_curves}")
+        else:
+            param_curves = [args.parametric_curve]
+    else:
+        param_curves = []
+
+    # Build ordered list of model keys: parametric curves first, then knn, ridge
+    model_keys: list[str] = [f"parametric/{c}" for c in param_curves]
+    if include_knn:
+        model_keys.append("knn")
+    if include_ridge:
+        model_keys.append("ridge")
+
+    _check_prerequisites(model_keys)
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+
+    color_map = _build_color_map(model_keys)
 
     print(f"Loading {args.team} {args.year} observed AV...")
     obs_df = load_team_draft_class(args.team, args.year)
@@ -256,17 +309,17 @@ def main() -> None:
     wide = wide.with_columns(fill_exprs + null_exprs).sort("Pick")
     print(f"  {len(wide)} {args.team} {args.year} picks loaded ({n_obs_global} seasons available)")
 
-    print(f"Loading model(s): {model_names}")
-    models = {}
-    for name in model_names:
-        m = make_career_av_model(name)
-        load_path = (
-            MODELS_DIR / "parametric" / args.parametric_curve
-            if name == "parametric"
-            else MODELS_DIR / name
-        )
-        m.load(load_path)
-        models[name] = m
+    print(f"Loading model(s): {model_keys}")
+    models: dict[str, object] = {}
+    for key in model_keys:
+        if key.startswith("parametric/"):
+            curve = key.split("/", 1)[1]
+            m = make_career_av_model("parametric")
+            m.load(MODELS_DIR / "parametric" / curve)
+        else:
+            m = make_career_av_model(key)
+            m.load(MODELS_DIR / key)
+        models[key] = m
 
     saved = []
     for row in wide.iter_rows(named=True):
@@ -280,9 +333,9 @@ def main() -> None:
 
         projections: dict[str, dict[int, tuple]] = {}
 
-        for model_name, model in models.items():
+        for model_key, model in models.items():
             if norm_pos is None:
-                print(f"    [{model_name}] skipped — position '{pos}' not resolvable")
+                print(f"    [{model_key}] skipped — position '{pos}' not resolvable")
                 continue
 
             window_data: dict[int, tuple] = {}
@@ -291,7 +344,7 @@ def main() -> None:
                 try:
                     result = model.predict(norm_pos, obs_input)
                 except Exception as exc:
-                    print(f"    [{model_name} {n_input}yr] predict failed: {exc}")
+                    print(f"    [{model_key} {n_input}yr] predict failed: {exc}")
                     continue
                 traj = _build_trajectory(
                     actual, n_input,
@@ -301,9 +354,11 @@ def main() -> None:
                     result["y_lower"],
                 )
                 window_data[n_input] = traj
-            projections[model_name] = window_data
+            projections[model_key] = window_data
 
-        fig = _make_player_figure(player, pos, pick, args.year, args.team, actual, projections, args.parametric_curve)
+        fig = _make_player_figure(
+            player, pos, pick, args.year, args.team, actual, projections, color_map
+        )
         slug = player.lower().replace(" ", "_")
         out_path = FIGURES_DIR / f"{args.team.lower()}_{args.year}_{slug}_projection.html"
         fig.write_html(str(out_path))

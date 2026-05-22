@@ -144,6 +144,14 @@ e.g. `data/raw/pfr/my_table/det_my_table.parquet`
 
 **Re-runs are idempotent** — completed keys are stored in `.progress.json` inside the output directory and skipped on subsequent runs.
 
+### Plot style convention
+
+All Plotly figures across every script must use:
+- `template="plotly_white"` — white background, matching `src/plot_av.py`
+- No explicit `height` or `width` — let Plotly use its responsive defaults
+
+Do not set `height=` or `width=` on `fig.update_layout()` calls; do not omit `template`. This applies to inline figures in scripts (`draft_class_surplus_av.py`, `draft_class_model_projection.py`, `example_lions_2024.py`, etc.) as well as any new plotting code added in `scripts/` or `src/`.
+
 ### nflreadr vs Stathead AV
 
 `load_nflreadr_draft_picks()` provides `dr_av` — the AV a player produced specifically for the team that drafted them. This differs from Stathead's `AV.1` (total season AV, including traded seasons). Both are used in `run_analysis.py` for comparison plots.
