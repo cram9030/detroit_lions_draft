@@ -603,7 +603,7 @@ def aggregate_career_av_by_position(
         )
 
     base_cols = ["Player", "Pos", "Draft Year", "years_from_draft", "AV.1"]
-    if "Pick" in lf.schema:
+    if "Pick" in lf.collect_schema():
         base_cols = ["Player", "Pos", "Pick", "Draft Year", "years_from_draft", "AV.1"]
     return lf.select(base_cols)
 
