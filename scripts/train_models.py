@@ -17,6 +17,11 @@ Control training window and round filter::
 
     python scripts/train_models.py --model parametric --train-years 1970 2010
     python scripts/train_models.py --model parametric --rounds 1 2
+
+Select a different curve for the parametric model::
+
+    python scripts/train_models.py --model parametric --curve exp_decay
+    python scripts/train_models.py --model parametric --curve gamma  (default)
 """
 
 from __future__ import annotations
@@ -35,6 +40,7 @@ import polars as pl
 from src.annual_av_analysis import aggregate_career_av_by_position, prepare_av_data
 from src.data_ingest import load_parquets_from_dir
 from src.models.factory import make_career_av_model
+from src.models.parametric import _CURVE_REGISTRY
 
 RAW_DIR = PROJECT_ROOT / "data/raw/stathead/annual_av"
 MODELS_DIR = PROJECT_ROOT / "models"
@@ -73,6 +79,12 @@ def parse_args() -> argparse.Namespace:
         default=10,
         metavar="N",
         help="Number of career years to model (default: 10).",
+    )
+    parser.add_argument(
+        "--curve",
+        choices=sorted(_CURVE_REGISTRY),
+        default="gamma",
+        help="Curve shape for the parametric model (default: gamma). Ignored for knn/ridge.",
     )
     return parser.parse_args()
 
@@ -155,13 +167,20 @@ def train_one(
     train_years: tuple[int, int],
     rounds: list[int] | None,
     max_years: int,
+    curve_name: str = "gamma",
 ) -> None:
     model_dir = MODELS_DIR / name
     model_dir.mkdir(parents=True, exist_ok=True)
 
+    model_kwargs: dict = {"max_years": max_years}
+    if name == "parametric":
+        model_kwargs["curve_name"] = curve_name
+
     print(f"\n[{name}] Training on {len(train_df)} player-seasons "
           f"({train_years[0]}–{train_years[1]})...")
-    model = make_career_av_model(name, max_years=max_years)
+    if name == "parametric":
+        print(f"[{name}] Curve: {curve_name}")
+    model = make_career_av_model(name, **model_kwargs)
     model.fit(train_df)
     print(f"[{name}] Fit complete.")
 
@@ -181,7 +200,7 @@ def train_one(
     print(f"\n[{name}] Saved to {model_dir}")
 
     # Update metadata.json
-    metadata = {
+    metadata: dict = {
         "model": name,
         "trained_on": date.today().isoformat(),
         "train_years": list(train_years),
@@ -192,6 +211,8 @@ def train_one(
         "rounds": rounds,
         "max_years": max_years,
     }
+    if name == "parametric":
+        metadata["curve_name"] = curve_name
     (model_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
     print(f"[{name}] Metadata written.")
 
@@ -202,6 +223,7 @@ def main() -> None:
     train_years = tuple(args.train_years)
     rounds = args.rounds
     max_years = args.max_years
+    curve_name = args.curve
 
     print("Building training dataset...")
     train_df = _build_trajectory_df(train_years, rounds)
@@ -212,7 +234,7 @@ def main() -> None:
     print(f"  {len(val_df)} rows")
 
     for name in to_train:
-        train_one(name, train_df, val_df, train_years, rounds, max_years)
+        train_one(name, train_df, val_df, train_years, rounds, max_years, curve_name)
 
     print("\nTraining complete.")
 
