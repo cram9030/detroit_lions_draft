@@ -132,7 +132,7 @@ def _validate_model(model, val_df: pl.DataFrame, max_years: int) -> dict[str, fl
         val_df
         .group_by(["Player", "Pos"])
         .agg(pl.col("years_from_draft").n_unique().alias("n_years"))
-        .filter(pl.col("n_years") >= max_years)
+        .filter(pl.col("n_years") >= n_obs)
     )
 
     for row in players.iter_rows(named=True):
@@ -142,10 +142,14 @@ def _validate_model(model, val_df: pl.DataFrame, max_years: int) -> dict[str, fl
             .filter((pl.col("Player") == player) & (pl.col("Pos") == pos))
             .sort("years_from_draft")
         )
-        if len(player_df) < max_years:
-            continue
 
-        actual = player_df["AV.1"].to_list()[:max_years]
+        # Zero-pad missing years so short-career players contribute 0 actual AV
+        # for seasons they didn't play, consistent with how training handles them.
+        actual_dict = dict(zip(
+            player_df["years_from_draft"].to_list(),
+            player_df["AV.1"].to_list(),
+        ))
+        actual = [actual_dict.get(yr, 0.0) for yr in range(max_years)]
         try:
             result = model.predict(pos, actual[:n_obs])
         except ValueError:
