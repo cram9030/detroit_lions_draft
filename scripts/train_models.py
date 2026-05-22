@@ -169,22 +169,25 @@ def train_one(
     max_years: int,
     curve_name: str = "gamma",
 ) -> None:
-    model_dir = MODELS_DIR / name
+    if name == "parametric":
+        model_dir = MODELS_DIR / "parametric" / curve_name
+        log_prefix = f"parametric/{curve_name}"
+    else:
+        model_dir = MODELS_DIR / name
+        log_prefix = name
     model_dir.mkdir(parents=True, exist_ok=True)
 
     model_kwargs: dict = {"max_years": max_years}
     if name == "parametric":
         model_kwargs["curve_name"] = curve_name
 
-    print(f"\n[{name}] Training on {len(train_df)} player-seasons "
+    print(f"\n[{log_prefix}] Training on {len(train_df)} player-seasons "
           f"({train_years[0]}–{train_years[1]})...")
-    if name == "parametric":
-        print(f"[{name}] Curve: {curve_name}")
     model = make_career_av_model(name, **model_kwargs)
     model.fit(train_df)
-    print(f"[{name}] Fit complete.")
+    print(f"[{log_prefix}] Fit complete.")
 
-    print(f"[{name}] Validating on {_VAL_YEARS[0]}–{_VAL_YEARS[1]} draft class...")
+    print(f"[{log_prefix}] Validating on {_VAL_YEARS[0]}–{_VAL_YEARS[1]} draft class...")
     val_mae = _validate_model(model, val_df, max_years)
 
     # Print MAE table
@@ -197,7 +200,7 @@ def train_one(
         print(f"{'OVERALL':<12} {overall:>8.3f}")
 
     model.save(model_dir)
-    print(f"\n[{name}] Saved to {model_dir}")
+    print(f"\n[{log_prefix}] Saved to {model_dir}")
 
     # Update metadata.json
     metadata: dict = {
@@ -214,7 +217,7 @@ def train_one(
     if name == "parametric":
         metadata["curve_name"] = curve_name
     (model_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
-    print(f"[{name}] Metadata written.")
+    print(f"[{log_prefix}] Metadata written.")
 
 
 def main() -> None:

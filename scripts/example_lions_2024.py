@@ -65,12 +65,12 @@ _PLAYER_POSITION_OVERRIDES: dict[str, str] = {
 
 
 def _check_prerequisites() -> None:
-    params_path = MODELS_DIR / "parametric" / "params.json"
+    params_path = MODELS_DIR / "parametric" / "gamma" / "params.json"
     if not params_path.exists():
         raise FileNotFoundError(
             f"Parametric model not found at {params_path}\n"
             "Train it first:\n"
-            "  python scripts/train_models.py --model parametric"
+            "  python scripts/train_models.py --model parametric --curve gamma"
         )
 
     knn_path = MODELS_DIR / "knn" / "_config.joblib"
@@ -136,7 +136,8 @@ def main() -> None:
     _models = {}
     for _name in ("parametric", "knn", "ridge"):
         _m = make_career_av_model(_name)
-        _m.load(MODELS_DIR / _name)
+        load_path = MODELS_DIR / "parametric" / "gamma" if _name == "parametric" else MODELS_DIR / _name
+        _m.load(load_path)
         _models[_name] = _m
     parametric_model = _models["parametric"]
     knn_model = _models["knn"]

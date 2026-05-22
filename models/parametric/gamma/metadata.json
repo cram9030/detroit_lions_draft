@@ -1,6 +1,6 @@
 {
   "model": "parametric",
-  "trained_on": "2026-05-20",
+  "trained_on": "2026-05-22",
   "train_years": [
     1970,
     2010
@@ -10,18 +10,18 @@
     2015
   ],
   "val_mae_by_position": {
-    "OT": 2.922,
-    "WR": 5.4562,
+    "RB": 2.8519,
     "QB": 11.6781,
     "S": 2.3638,
-    "TE": 1.5683,
-    "LB": 4.4829,
-    "RB": 2.8519,
-    "OG": 4.295,
-    "CB": 5.2011,
     "DT": 3.5256,
+    "CB": 5.2011,
+    "DE": 4.6533,
+    "WR": 5.4562,
+    "OG": 4.295,
+    "OT": 2.922,
     "OC": 3.9461,
-    "DE": 4.6533
+    "LB": 4.4829,
+    "TE": 1.5683
   },
   "positions": [
     "CB",
@@ -39,5 +39,6 @@
   ],
   "normalize": true,
   "rounds": null,
-  "max_years": 10
+  "max_years": 10,
+  "curve_name": "gamma"
 }

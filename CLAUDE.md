@@ -14,10 +14,14 @@ python -m pytest tests/models/test_parametric.py::test_fit_populates_params  # s
 python scripts/run_analysis.py                   # full pipeline
 python scripts/run_analysis.py --skip-skew --skip-rolling  # skip expensive steps
 
-# Model training
-python scripts/train_models.py --model parametric
+# Model training — parametric variants save to models/parametric/<curve>/, others to models/<name>/
+python scripts/train_models.py --model parametric                          # → models/parametric/gamma/
+python scripts/train_models.py --model parametric --curve exp_decay        # → models/parametric/exp_decay/
 python scripts/train_models.py --model all --train-years 1970 2010 --rounds 1 2
-python scripts/train_models.py --model parametric --curve exp_decay  # alternate curve (gamma is default)
+
+# Projection comparison — use --parametric-curve to pick which variant to load
+python scripts/model_projection_comparison.py --year 2022 --model parametric --parametric-curve gamma
+python scripts/model_projection_comparison.py --year 2022 --model parametric --parametric-curve exp_decay
 
 # Data fetching (requires secrets/cookies.json with Stathead session cookies)
 python src/stathead_downloader.py --config config/stathead_annual_av.json

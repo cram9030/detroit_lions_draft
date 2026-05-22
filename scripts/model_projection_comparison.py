@@ -14,12 +14,12 @@ Defaults to team ``DET`` and all three models on each plot.
 Prerequisites
 -------------
 Trained model artifacts must exist:
-    models/parametric/params.json
+    models/parametric/<curve>/params.json   (default curve: gamma)
     models/knn/_config.joblib
     models/ridge/_config.joblib
 
 Train with:
-    python scripts/train_models.py --model parametric
+    python scripts/train_models.py --model parametric --curve gamma
     python scripts/train_models.py --model knn
     python scripts/train_models.py --model ridge
 
@@ -65,18 +65,23 @@ def _hex_to_rgba(hex_color: str, alpha: float) -> str:
     return f"rgba({r},{g},{b},{alpha})"
 
 
-def _check_prerequisites(model_names: list[str]) -> None:
+def _check_prerequisites(model_names: list[str], parametric_curve: str = "gamma") -> None:
     checks = {
-        "parametric": MODELS_DIR / "parametric" / "params.json",
+        "parametric": MODELS_DIR / "parametric" / parametric_curve / "params.json",
         "knn":        MODELS_DIR / "knn" / "_config.joblib",
         "ridge":      MODELS_DIR / "ridge" / "_config.joblib",
     }
     for name in model_names:
         path = checks[name]
         if not path.exists():
+            train_cmd = (
+                f"python scripts/train_models.py --model parametric --curve {parametric_curve}"
+                if name == "parametric"
+                else f"python scripts/train_models.py --model {name}"
+            )
             raise FileNotFoundError(
                 f"{name} model not found at {path}\n"
-                f"Train it first:\n  python scripts/train_models.py --model {name}"
+                f"Train it first:\n  {train_cmd}"
             )
 
 
@@ -122,6 +127,7 @@ def _make_player_figure(
     team: str,
     actual: list[float],
     projections: dict[str, dict[int, tuple[list, list, list]]],
+    parametric_curve: str = "gamma",
 ) -> go.Figure:
     """Build per-player line plot: actual AV vs. model projections at 1/2/3yr input.
 
@@ -141,9 +147,14 @@ def _make_player_figure(
     for model_name, window_data in projections.items():
         color = _MODEL_COLORS[model_name]
         rgba_band = _hex_to_rgba(color, 0.12)
+        display_name = (
+            f"parametric/{parametric_curve}"
+            if model_name == "parametric" and parametric_curve != "gamma"
+            else model_name
+        )
 
         for n_input, (y, y_up, y_lo) in sorted(window_data.items()):
-            label = f"{model_name} ({_WINDOW_LABEL[n_input]})"
+            label = f"{display_name} ({_WINDOW_LABEL[n_input]})"
 
             fig.add_trace(go.Scatter(
                 x=_YEARS,
@@ -208,13 +219,20 @@ def main() -> None:
         default="all",
         help="Which model(s) to include (default: all)",
     )
+    parser.add_argument(
+        "--parametric-curve",
+        default="gamma",
+        dest="parametric_curve",
+        help="Curve variant to use for the parametric model (default: gamma). "
+             "Must match a trained models/parametric/<curve>/ directory.",
+    )
     args = parser.parse_args()
 
     model_names = (
         ["parametric", "knn", "ridge"] if args.model == "all" else [args.model]
     )
 
-    _check_prerequisites(model_names)
+    _check_prerequisites(model_names, args.parametric_curve)
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
     print(f"Loading {args.team} {args.year} observed AV...")
@@ -242,7 +260,12 @@ def main() -> None:
     models = {}
     for name in model_names:
         m = make_career_av_model(name)
-        m.load(MODELS_DIR / name)
+        load_path = (
+            MODELS_DIR / "parametric" / args.parametric_curve
+            if name == "parametric"
+            else MODELS_DIR / name
+        )
+        m.load(load_path)
         models[name] = m
 
     saved = []
@@ -280,7 +303,7 @@ def main() -> None:
                 window_data[n_input] = traj
             projections[model_name] = window_data
 
-        fig = _make_player_figure(player, pos, pick, args.year, args.team, actual, projections)
+        fig = _make_player_figure(player, pos, pick, args.year, args.team, actual, projections, args.parametric_curve)
         slug = player.lower().replace(" ", "_")
         out_path = FIGURES_DIR / f"{args.team.lower()}_{args.year}_{slug}_projection.html"
         fig.write_html(str(out_path))

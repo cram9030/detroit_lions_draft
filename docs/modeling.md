@@ -28,9 +28,17 @@ projected_av[t] = s · f(t)
 
 The uncertainty band is derived from the fit's covariance matrix via ±1σ parameter perturbation.
 
-**Model artifacts** (human-readable JSON, committed to git) are stored in `models/parametric/`:
-- `params.json` — fitted `popt` and `pcov` per position, plus `curve_name`
-- `metadata.json` — training date, year range, validation MAE by position, `curve_name`
+**Model artifacts** (human-readable JSON, committed to git) are stored in `models/parametric/<curve_name>/` — one sub-directory per trained curve variant, so multiple variants coexist without overwriting each other:
+
+```
+models/parametric/
+  gamma/
+    params.json      # fitted popt and pcov per position, plus curve_name
+    metadata.json    # training date, year range, validation MAE, curve_name
+  exp_decay/
+    params.json
+    metadata.json
+```
 
 **Using a custom curve at construction time:**
 
@@ -126,15 +134,19 @@ python scripts/train_models.py [--model parametric|knn|ridge|all]
 | `--max-years` | `10` | Number of career years to model |
 | `--curve` | `gamma` | Curve shape for the parametric model (ignored for knn/ridge) |
 
-The script trains on `START`–`END` draft classes, validates on 2011–2015 picks (predicting years 3–(N-1) given years 0–2), prints a per-position MAE table, and writes trained artifacts to `models/<name>/`.
+The script trains on `START`–`END` draft classes, validates on 2011–2015 picks (predicting years 3–(N-1) given years 0–2), prints a per-position MAE table, and writes trained artifacts to:
+- `models/parametric/<curve>/` for the parametric model
+- `models/<name>/` for knn and ridge
+
+Each parametric curve variant gets its own sub-directory, so multiple variants can be trained and compared without overwriting each other.
 
 Example:
 
 ```bash
-# Default gamma curve
+# Train gamma (default) — saves to models/parametric/gamma/
 python scripts/train_models.py --model parametric
 
-# Exponential decay curve
+# Train exp_decay alongside it — saves to models/parametric/exp_decay/
 python scripts/train_models.py --model parametric --curve exp_decay
 ```
 
@@ -164,7 +176,7 @@ OVERALL         4.412
 
 2. **Trained models** — run:
    ```bash
-   python scripts/train_models.py --model parametric
+   python scripts/train_models.py --model parametric --curve gamma
    python scripts/train_models.py --model knn
    python scripts/train_models.py --model ridge
    ```
@@ -178,6 +190,31 @@ python scripts/example_lions_2024.py
 The script prints a per-player table with observed AV, each model's year-2 and year-3 projections, cumulative 4-year totals, and deltas vs pick expectation, followed by a class-level summary across all three models. It then saves:
 - `outputs/figures/lions_2024_player_comparison.html` — grouped bar chart, all three models vs expectation per player
 - `outputs/figures/lions_2024_class_comparison.html` — class total AV bar chart with all three models
+
+---
+
+## Projection Comparison Script
+
+`scripts/model_projection_comparison.py` generates per-player projection plots for any team/year, showing 1/2/3-year input windows for each model.
+
+```bash
+python scripts/model_projection_comparison.py --year 2022 [--team DET] [--model {parametric,knn,ridge,all}]
+                                               [--parametric-curve CURVE]
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--year` | required | Draft year |
+| `--team` | `DET` | Three-letter team code |
+| `--model` | `all` | Which model(s) to plot |
+| `--parametric-curve` | `gamma` | Curve variant to load from `models/parametric/<curve>/` |
+
+To compare two parametric curve variants side-by-side, run the script twice with different `--parametric-curve` values:
+
+```bash
+python scripts/model_projection_comparison.py --year 2022 --model parametric --parametric-curve gamma
+python scripts/model_projection_comparison.py --year 2022 --model parametric --parametric-curve exp_decay
+```
 
 ---
 

@@ -136,16 +136,21 @@ def pfr_to_stathead(pfr_code: str, year: int) -> str:
 def _check_model(model_name: str, models_dir: Path) -> None:
     """Raise FileNotFoundError with a helpful message if the model is missing."""
     paths = {
-        "parametric": models_dir / "parametric" / "params.json",
+        "parametric": models_dir / "parametric" / "gamma" / "params.json",
         "knn": models_dir / "knn" / "_config.joblib",
         "ridge": models_dir / "ridge" / "_config.joblib",
     }
     path = paths[model_name]
     if not path.exists():
+        train_cmd = (
+            "python scripts/train_models.py --model parametric --curve gamma"
+            if model_name == "parametric"
+            else f"python scripts/train_models.py --model {model_name}"
+        )
         raise FileNotFoundError(
             f"{model_name} model not found at {path}\n"
             f"Train it first:\n"
-            f"  python scripts/train_models.py --model {model_name}"
+            f"  {train_cmd}"
         )
 
 
@@ -232,7 +237,8 @@ def _build_model_block(
 ) -> dict:
     """Run one model projection and return its players + class_summary."""
     model = make_career_av_model(model_name)
-    model.load(models_dir / model_name)
+    load_path = models_dir / "parametric" / "gamma" if model_name == "parametric" else models_dir / model_name
+    model.load(load_path)
     players_df = aggregate_model_av(draft_df, model, position_overrides)
     results = compute_surplus_av(players_df)
     players = [player_row_to_dict(r, is_projected_class=True) for r in results.iter_rows(named=True)]
