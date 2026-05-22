@@ -7,7 +7,7 @@ player.
 
 Usage
 -----
-    python scripts/model_projection_comparison.py --year 2022 [--team DET] [--model {parametric,knn,ridge,all}]
+    python scripts/draft_class_model_projection.py --year 2022 [--team DET] [--model {parametric,knn,ridge,all}]
 
 Defaults to team ``DET`` and all three models on each plot.
 
