@@ -122,3 +122,28 @@ def test_load_preserves_curve_name(trajectory_df, tmp_path):
 def test_unknown_curve_name_raises():
     with pytest.raises(ValueError, match="Unknown curve"):
         ParametricCurveModel(curve_name="nonexistent")
+
+
+def test_fit_uses_zero_padded_means():
+    """Short-career players must contribute zeros to late-year means."""
+    # 5 players retire after 2 seasons (AV=10); 5 play all 10 seasons (AV=10).
+    # Correct year-9 mean = (5*0 + 5*10) / 10 = 5.0.
+    # Without the fix, year-9 mean = 10.0 (only long-career players counted).
+    rows = []
+    for i in range(5):
+        for yr in range(2):
+            rows.append({"Player": f"Short{i}", "Pos": "QB", "Draft Year": 2015,
+                         "years_from_draft": yr, "AV.1": 10.0})
+    for i in range(5):
+        for yr in range(10):
+            rows.append({"Player": f"Long{i}", "Pos": "QB", "Draft Year": 2010,
+                         "years_from_draft": yr, "AV.1": 10.0})
+    df = pl.DataFrame(rows)
+    model = ParametricCurveModel(max_years=10)
+    model.fit(df)
+
+    # Scale ≈ 1.0 (observed 10s match population 10s at year 0-1).
+    # y_pred[7] = prediction for year 9. With correct means the curve is pulled
+    # toward 5 at year 9; without the fix it would stay near 10.
+    result = model.predict("QB", [10.0, 10.0])
+    assert result["y_pred"][7] < 9.0

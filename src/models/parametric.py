@@ -83,8 +83,27 @@ class ParametricCurveModel:
         """Fit one curve per position to the population mean AV."""
         model_fn, _, p0_fn = self._curve_descriptor
 
+        sub = trajectory_df.filter(pl.col("years_from_draft") < self.max_years)
+
+        # Aggregate multi-team seasons so each (Player, Pos, year) is unique.
+        sub_agg = (
+            sub.group_by(["Player", "Pos", "years_from_draft"])
+            .agg(pl.col("AV.1").sum())
+        )
+
+        # Expand every player to all max_years slots; missing seasons get AV.1 = 0
+        # so short-career players contribute zeros to late-year means rather than
+        # being excluded (survivorship bias).
+        players = sub.select(["Player", "Pos"]).unique()
+        year_df = pl.DataFrame({"years_from_draft": list(range(self.max_years))})
+        full_df = (
+            players.join(year_df, how="cross")
+            .join(sub_agg, on=["Player", "Pos", "years_from_draft"], how="left")
+            .with_columns(pl.col("AV.1").fill_null(0.0))
+        )
+
         means = (
-            trajectory_df
+            full_df
             .group_by(["Pos", "years_from_draft"])
             .agg(pl.col("AV.1").mean().alias("mean_av"))
             .sort(["Pos", "years_from_draft"])
@@ -179,9 +198,9 @@ class ParametricCurveModel:
             self._params = data["positions"]
             curve_name = data.get("curve_name", "gamma")
         else:
-            # Legacy format: top-level keys are positions, no curve_name stored.
-            self._params = data
-            curve_name = "gamma"
+            raise ValueError(
+                f"Models need to be regenerated."
+            )
 
         self.curve_name = curve_name
         if curve_name in _CURVE_REGISTRY:
