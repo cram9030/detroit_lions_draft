@@ -602,7 +602,10 @@ def aggregate_career_av_by_position(
             .filter(~pl.col("Pos").is_in(_SPECALIST)).filter(~pl.col("Pos").is_in(_GENERALIST))
         )
 
-    return lf.select(["Player", "Pos", "Draft Year", "years_from_draft", "AV.1"])
+    base_cols = ["Player", "Pos", "Draft Year", "years_from_draft", "AV.1"]
+    if "Pick" in lf.schema:
+        base_cols = ["Player", "Pos", "Pick", "Draft Year", "years_from_draft", "AV.1"]
+    return lf.select(base_cols)
 
 
 def _compute_group_year_describe(df: pl.DataFrame, group_col: str) -> pl.DataFrame:

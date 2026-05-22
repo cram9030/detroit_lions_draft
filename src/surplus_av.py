@@ -241,6 +241,7 @@ def project_player_seasons(
     pos: str,
     obs_av: list[float],
     overrides: dict[str, str] | None = None,
+    pick: int | None = None,
 ) -> tuple[float, float] | None:
     """Return effective (yr2, yr3) AV for a player, projecting any missing seasons.
 
@@ -253,6 +254,8 @@ def project_player_seasons(
         pos: Raw position code from the data.
         obs_av: Observed AV values starting from year 0 (length 2, 3, or 4).
         overrides: Optional per-player position overrides.
+        pick: Draft pick number passed to ``model.predict()`` for models that
+            use it (e.g. KNN).  Ignored by other models.
 
     Returns:
         ``(yr2_av, yr3_av)`` or ``None`` if the position is unknown to the model
@@ -263,7 +266,7 @@ def project_player_seasons(
 
     norm_pos = _normalize_pos(player, pos, overrides)
     try:
-        result = model.predict(norm_pos, obs_av)
+        result = model.predict(norm_pos, obs_av, pick=pick)
     except ValueError:
         return None
 
@@ -378,7 +381,7 @@ def aggregate_model_av(
         if yr2_obs is not None:
             obs_av.append(yr2_obs)
 
-        proj = project_player_seasons(model, player, pos, obs_av, position_overrides)
+        proj = project_player_seasons(model, player, pos, obs_av, position_overrides, pick=int(pick) if pick is not None else None)
         proj_yr2 = proj[0] if proj else 0.0
         proj_yr3 = proj[1] if proj else 0.0
 

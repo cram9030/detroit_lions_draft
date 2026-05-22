@@ -65,7 +65,7 @@ class MockModel:
     def fit(self, trajectory_df: pl.DataFrame) -> None:
         pass
 
-    def predict(self, position: str, observed_av: list[float]) -> dict[str, Any]:
+    def predict(self, position: str, observed_av: list[float], pick: int | None = None) -> dict[str, Any]:
         if position not in self._KNOWN:
             raise ValueError(f"Unknown position: {position}")
         n_obs = len(observed_av)
@@ -253,7 +253,7 @@ class TestProjectPlayerSeasons:
 
     def test_four_seasons_no_model_call(self):
         class FailModel(MockModel):
-            def predict(self, position, observed_av):
+            def predict(self, position, observed_av, pick=None):
                 raise AssertionError("predict should not be called with 4 seasons")
 
         model = FailModel()
@@ -270,7 +270,7 @@ class TestProjectPlayerSeasons:
         called_with = {}
 
         class TrackingModel(MockModel):
-            def predict(self, position, observed_av):
+            def predict(self, position, observed_av, pick=None):
                 called_with["pos"] = position
                 return super().predict(position, observed_av)
 
@@ -282,7 +282,7 @@ class TestProjectPlayerSeasons:
         called_with = {}
 
         class TrackingModel(MockModel):
-            def predict(self, position, observed_av):
+            def predict(self, position, observed_av, pick=None):
                 called_with["pos"] = position
                 return super().predict(position, observed_av)
 

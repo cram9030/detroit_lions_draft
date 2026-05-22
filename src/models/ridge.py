@@ -80,7 +80,7 @@ class RidgeRegressionModel:
                 "n_input": n_feature_cols,
             }
 
-    def predict(self, position: str, observed_av: list[float]) -> PredictionResult:
+    def predict(self, position: str, observed_av: list[float], pick: int | None = None) -> PredictionResult:
         if position not in self._models:
             raise ValueError(f"Unknown position '{position}'. Known: {sorted(self._models)}")
 
