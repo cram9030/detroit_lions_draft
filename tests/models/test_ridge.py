@@ -60,3 +60,16 @@ def test_save_load_roundtrip(fitted_model, tmp_path):
 def test_predict_unknown_position_raises(fitted_model):
     with pytest.raises(ValueError, match="Unknown position"):
         fitted_model.predict("XX", [3.0, 4.0])
+
+
+def test_fit_includes_short_career_players():
+    """Players with fewer than max_years seasons are zero-padded, not excluded."""
+    rows = [
+        {"Player": f"P{i}", "Pos": "QB", "Draft Year": 2020,
+         "years_from_draft": yr, "AV.1": float(yr + 1)}
+        for i in range(5) for yr in range(3)
+    ]
+    df = pl.DataFrame(rows)
+    model = RidgeRegressionModel(max_years=10, n_input=2)
+    model.fit(df)
+    assert "QB" in model._models

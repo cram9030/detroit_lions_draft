@@ -43,22 +43,15 @@ class RidgeRegressionModel:
             # contribute only the same window we're trying to predict.
             sub = sub.filter(pl.col("years_from_draft") < self.max_years)
 
-            complete_players = (
-                sub.group_by("Player")
-                .agg(pl.col("years_from_draft").n_unique().alias("n_years"))
-                .filter(pl.col("n_years") >= self.max_years)
-                ["Player"]
-            )
-            sub_complete = sub.filter(pl.col("Player").is_in(complete_players.to_list()))
-
-            if len(sub_complete) < 5:
+            if sub.select("Player").n_unique() < 5:
                 continue
 
             pivoted = (
-                sub_complete
+                sub
                 .sort(["Player", "years_from_draft"])
                 .pivot(index="Player", on="years_from_draft", values="AV.1", aggregate_function="sum")
                 .sort("Player")
+                .fill_null(0)
             )
             year_cols = [str(y) for y in range(self.max_years)]
             available = [c for c in year_cols if c in pivoted.columns]

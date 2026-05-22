@@ -59,6 +59,21 @@ def test_predict_unknown_position_raises(fitted_model):
         fitted_model.predict("XX", [2.0, 3.5])
 
 
+def test_fit_includes_short_career_players():
+    """Players with fewer than max_years seasons are zero-padded, not excluded."""
+    rows = [
+        {"Player": f"P{i}", "Pos": "QB", "Draft Year": 2020,
+         "years_from_draft": yr, "AV.1": float(yr + 1)}
+        for i in range(5) for yr in range(3)
+    ]
+    df = pl.DataFrame(rows)
+    model = KNNTrajectoryModel(n_neighbors=3, max_years=10)
+    model.fit(df)
+    assert "QB" in model._reference
+    assert model._reference["QB"].shape == (5, 10)
+    assert (model._reference["QB"][:, 3:] == 0).all()
+
+
 def test_fit_handles_duplicate_player_year_rows(tmp_path):
     """fit() must not crash when a player-year appears more than once (e.g. multi-team seasons)."""
     base_df = pl.read_parquet(TRAJECTORY_PATH)
