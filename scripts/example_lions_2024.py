@@ -156,8 +156,10 @@ def main() -> None:
         obs1 = row["obs_yr1"]
         obs_av = [obs0, obs1]
 
+        pick_int = int(pick) if pick is not None else None
+
         # Parametric projection
-        param_proj = project_player_seasons(parametric_model, player, pos, obs_av, _PLAYER_POSITION_OVERRIDES)
+        param_proj = project_player_seasons(parametric_model, player, pos, obs_av, _PLAYER_POSITION_OVERRIDES, pick=pick_int)
         if param_proj is None:
             param_yr2, param_yr3 = 0.0, 0.0
             param_note = f"(pos '{_normalize_pos(player, pos, _PLAYER_POSITION_OVERRIDES)}' not in parametric model)"
@@ -166,7 +168,7 @@ def main() -> None:
             param_note = ""
 
         # KNN projection
-        knn_proj = project_player_seasons(knn_model, player, pos, obs_av, _PLAYER_POSITION_OVERRIDES)
+        knn_proj = project_player_seasons(knn_model, player, pos, obs_av, _PLAYER_POSITION_OVERRIDES, pick=pick_int)
         if knn_proj is None:
             knn_yr2, knn_yr3 = 0.0, 0.0
             knn_note = f"(pos '{_normalize_pos(player, pos, _PLAYER_POSITION_OVERRIDES)}' not in KNN model)"
@@ -175,7 +177,7 @@ def main() -> None:
             knn_note = ""
 
         # Ridge projection
-        ridge_proj = project_player_seasons(ridge_model, player, pos, obs_av, _PLAYER_POSITION_OVERRIDES)
+        ridge_proj = project_player_seasons(ridge_model, player, pos, obs_av, _PLAYER_POSITION_OVERRIDES, pick=pick_int)
         if ridge_proj is None:
             ridge_yr2, ridge_yr3 = 0.0, 0.0
             ridge_note = f"(pos '{_normalize_pos(player, pos, _PLAYER_POSITION_OVERRIDES)}' not in ridge model)"

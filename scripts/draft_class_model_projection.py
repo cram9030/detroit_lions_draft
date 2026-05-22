@@ -342,7 +342,7 @@ def main() -> None:
             for n_input in range(1, min(n_obs_global, 3) + 1):
                 obs_input = actual[:n_input]
                 try:
-                    result = model.predict(norm_pos, obs_input)
+                    result = model.predict(norm_pos, obs_input, pick=int(pick) if pick is not None else None)
                 except Exception as exc:
                     print(f"    [{model_key} {n_input}yr] predict failed: {exc}")
                     continue
