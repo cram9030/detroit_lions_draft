@@ -187,6 +187,7 @@ deactivate
 | Running the analysis pipeline and output plots | [docs/running-analysis.md](docs/running-analysis.md) |
 | Career trajectory models (Parametric, KNN, Ridge) | [docs/modeling.md](docs/modeling.md) |
 | Draft class surplus AV vs EAVAR | [docs/surplus-av.md](docs/surplus-av.md) |
+| Baked all-teams draft JSON for static site | [docs/baked-draft-data.md](docs/baked-draft-data.md) |
 | Draft trade analysis across 5 trade charts | [docs/trade-analysis.md](docs/trade-analysis.md) |
 | Integrating draft JSON into nflreadpy trades | [docs/draft-integration.md](docs/draft-integration.md) |
 
