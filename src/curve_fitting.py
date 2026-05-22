@@ -115,6 +115,15 @@ def quartic(x: np.ndarray, a: float, b: float, c: float, d: float, e: float) -> 
     return a * x**4 + b * x**3 + c * x**2 + d * x + e
 
 
+def gamma_curve(t: np.ndarray, a: float, alpha: float, b: float, c: float) -> np.ndarray:
+    """Gamma-shaped curve: ``f(t) = a · t^α · exp(−b·t) + c``.
+
+    Rises to a peak then decays, matching observed career AV arcs.
+    Pass ``t + 1e-6`` to avoid ``t^α`` being undefined at ``t = 0``.
+    """
+    return a * np.power(t, alpha) * np.exp(-b * t) + c
+
+
 def _exp_jacobian(x: np.ndarray, popt: np.ndarray) -> np.ndarray:
     a, b, _ = popt
     return np.column_stack([
@@ -138,6 +147,18 @@ def _cubic_jacobian(x: np.ndarray, popt: np.ndarray) -> np.ndarray:  # noqa: ARG
 
 def _quartic_jacobian(x: np.ndarray, popt: np.ndarray) -> np.ndarray:  # noqa: ARG001
     return np.column_stack([x**4, x**3, x**2, x, np.ones_like(x)])
+
+
+def _gamma_jacobian(t: np.ndarray, popt: np.ndarray) -> np.ndarray:
+    a, alpha, b, _ = popt
+    t_alpha = np.power(t, alpha)
+    exp_bt = np.exp(-b * t)
+    return np.column_stack([
+        t_alpha * exp_bt,                     # ∂f/∂a
+        a * t_alpha * np.log(t) * exp_bt,     # ∂f/∂alpha  (t > 0 assumed)
+        -a * t * t_alpha * exp_bt,            # ∂f/∂b
+        np.ones_like(t),                      # ∂f/∂c
+    ])
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +201,17 @@ QuarticModel: ModelDescriptor = (
     lambda v: [0.0, 0.0, 0.0, -(float(v.max()) - float(v.min())) / 250, float(v.max())],
 )
 """Five-parameter quartic polynomial: ``f(pick) = a * pick⁴ + b * pick³ + c * pick² + d * pick + e``."""
+
+GammaCurveModel: ModelDescriptor = (
+    gamma_curve,
+    _gamma_jacobian,
+    lambda v: [float(v.max()), 1.0, 0.3, float(v.min())],
+)
+"""Four-parameter gamma-shaped curve: ``f(t) = a · t^α · exp(−b·t) + c``.
+
+Designed for career AV trajectory fitting where t is years from draft.
+Use with ``bounds=([0, 0.1, 0.01, -1], [50, 5, 5, 10])`` in ParametricCurveModel.
+"""
 
 
 # ---------------------------------------------------------------------------

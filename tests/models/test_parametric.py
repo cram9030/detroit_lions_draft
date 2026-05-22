@@ -7,10 +7,19 @@ import numpy as np
 import polars as pl
 import pytest
 
+from src.curve_fitting import ExpDecayModel, GammaCurveModel
 from src.models.parametric import ParametricCurveModel
 
 FIXTURES = Path(__file__).parent / "fixtures"
 TRAJECTORY_PATH = FIXTURES / "mock_knn_trajectories.parquet"
+
+_GAMMA_BOUNDS = ([0, 0.1, 0.01, -1], [50, 5, 5, 10])
+
+# Parameterize tests over two curves so both code paths are exercised.
+_CURVE_CASES = [
+    pytest.param("gamma", GammaCurveModel, _GAMMA_BOUNDS, id="gamma"),
+    pytest.param("exp_decay", ExpDecayModel, None, id="exp_decay"),
+]
 
 
 @pytest.fixture()
@@ -25,15 +34,26 @@ def fitted_model(trajectory_df) -> ParametricCurveModel:
     return model
 
 
-def test_fit_populates_params(fitted_model):
-    assert len(fitted_model._params) == 2
-    assert "QB" in fitted_model._params
-    assert "RB" in fitted_model._params
+# ---------------------------------------------------------------------------
+# Parameterized tests — run for each curve type
+# ---------------------------------------------------------------------------
 
 
-def test_predict_returns_correct_shape(fitted_model):
+@pytest.mark.parametrize("curve_name,curve,bounds", _CURVE_CASES)
+def test_fit_populates_params(trajectory_df, curve_name, curve, bounds):
+    model = ParametricCurveModel(curve_name=curve_name, curve=curve, bounds=bounds)
+    model.fit(trajectory_df)
+    assert len(model._params) == 2
+    assert "QB" in model._params
+    assert "RB" in model._params
+
+
+@pytest.mark.parametrize("curve_name,curve,bounds", _CURVE_CASES)
+def test_predict_returns_correct_shape(trajectory_df, curve_name, curve, bounds):
+    model = ParametricCurveModel(curve_name=curve_name, curve=curve, bounds=bounds)
+    model.fit(trajectory_df)
     observed = [3.0, 4.0]
-    result = fitted_model.predict("QB", observed)
+    result = model.predict("QB", observed)
     expected_years = 10 - len(observed)
     assert len(result["predicted_years"]) == expected_years
     assert len(result["y_pred"]) == expected_years
@@ -44,24 +64,61 @@ def test_predict_returns_correct_shape(fitted_model):
     assert result["position"] == "QB"
 
 
-def test_predict_monotone_uncertainty(fitted_model):
-    result = fitted_model.predict("QB", [3.0, 4.0])
+@pytest.mark.parametrize("curve_name,curve,bounds", _CURVE_CASES)
+def test_predict_monotone_uncertainty(trajectory_df, curve_name, curve, bounds):
+    model = ParametricCurveModel(curve_name=curve_name, curve=curve, bounds=bounds)
+    model.fit(trajectory_df)
+    result = model.predict("QB", [3.0, 4.0])
     for lo, mid, hi in zip(result["y_lower"], result["y_pred"], result["y_upper"]):
         assert hi >= mid >= lo
 
 
-def test_save_load_roundtrip(fitted_model, tmp_path):
-    fitted_model.save(tmp_path)
+@pytest.mark.parametrize("curve_name,curve,bounds", _CURVE_CASES)
+def test_save_load_roundtrip(trajectory_df, curve_name, curve, bounds, tmp_path):
+    model = ParametricCurveModel(curve_name=curve_name, curve=curve, bounds=bounds)
+    model.fit(trajectory_df)
+    model.save(tmp_path)
     assert (tmp_path / "params.json").exists()
 
     fresh = ParametricCurveModel()
     fresh.load(tmp_path)
 
-    r1 = fitted_model.predict("QB", [3.0, 4.0])
+    assert fresh.curve_name == curve_name
+    r1 = model.predict("QB", [3.0, 4.0])
     r2 = fresh.predict("QB", [3.0, 4.0])
     assert r1["y_pred"] == r2["y_pred"]
+
+
+# ---------------------------------------------------------------------------
+# Non-parameterized tests
+# ---------------------------------------------------------------------------
 
 
 def test_predict_unknown_position_raises(fitted_model):
     with pytest.raises(ValueError, match="Unknown position"):
         fitted_model.predict("XX", [3.0, 4.0])
+
+
+def test_default_curve_is_gamma(fitted_model):
+    assert fitted_model.curve_name == "gamma"
+
+
+def test_curve_name_stored_in_json(fitted_model, tmp_path):
+    fitted_model.save(tmp_path)
+    data = json.loads((tmp_path / "params.json").read_text())
+    assert data["curve_name"] == "gamma"
+
+
+def test_load_preserves_curve_name(trajectory_df, tmp_path):
+    model = ParametricCurveModel(curve_name="exp_decay", curve=ExpDecayModel)
+    model.fit(trajectory_df)
+    model.save(tmp_path)
+
+    fresh = ParametricCurveModel()
+    fresh.load(tmp_path)
+    assert fresh.curve_name == "exp_decay"
+
+
+def test_unknown_curve_name_raises():
+    with pytest.raises(ValueError, match="Unknown curve"):
+        ParametricCurveModel(curve_name="nonexistent")
