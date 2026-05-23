@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from src.models.knn import KNNTrajectoryModel
+from src.models.linear import LinearRegressionModel
 from src.models.parametric import ParametricCurveModel
 from src.models.protocol import CareerAVModel
 from src.models.ridge import RidgeRegressionModel
@@ -8,6 +9,7 @@ from src.models.ridge import RidgeRegressionModel
 _REGISTRY: dict[str, type] = {
     "parametric": ParametricCurveModel,
     "knn": KNNTrajectoryModel,
+    "linear": LinearRegressionModel,
     "ridge": RidgeRegressionModel,
 }
 
