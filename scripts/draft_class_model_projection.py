@@ -7,7 +7,7 @@ player.
 
 Usage
 -----
-    python scripts/draft_class_model_projection.py --year 2022 [--team DET] [--model {parametric,knn,ridge,all}]
+    python scripts/draft_class_model_projection.py --year 2022 [--team DET] [--model {parametric,knn,linear,ridge,all}]
 
 Use ``--parametric-curve <name>`` to specify a single trained curve, or
 ``--parametric-curve all`` to include every trained curve found under
@@ -20,11 +20,13 @@ Prerequisites
 Trained model artifacts must exist:
     models/parametric/<curve>/params.json   (default curve: gamma)
     models/knn/_config.joblib
+    models/linear/_config.joblib
     models/ridge/_config.joblib
 
 Train with:
     python scripts/train_models.py --model parametric --curve gamma
     python scripts/train_models.py --model knn
+    python scripts/train_models.py --model linear
     python scripts/train_models.py --model ridge
 
 Outputs
@@ -54,8 +56,9 @@ _YEARS = [0, 1, 2, 3]
 
 # Colors for non-parametric models; parametric curves are assigned from the palette below.
 _STATIC_MODEL_COLORS = {
-    "knn":   "#2ca02c",
-    "ridge": "#9467bd",
+    "knn":    "#2ca02c",
+    "linear": "#e377c2",
+    "ridge":  "#9467bd",
 }
 _PARAMETRIC_PALETTE = [
     "#1f77b4", "#ff7f0e", "#d62728", "#17becf", "#bcbd22", "#e377c2",
@@ -100,7 +103,7 @@ def _build_color_map(model_keys: list[str]) -> dict[str, str]:
 def _check_prerequisites(model_keys: list[str]) -> None:
     """Verify trained artifacts exist for every requested model key."""
     for key in model_keys:
-        if key in ("knn", "ridge"):
+        if key in ("knn", "linear", "ridge"):
             path = MODELS_DIR / key / "_config.joblib"
             if not path.exists():
                 raise FileNotFoundError(
@@ -242,7 +245,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--model",
-        choices=["parametric", "knn", "ridge", "all"],
+        choices=["parametric", "knn", "linear", "ridge", "all"],
         default="all",
         help="Which model(s) to include (default: all)",
     )
@@ -255,9 +258,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    include_param = args.model in ("parametric", "all")
-    include_knn   = args.model in ("knn", "all")
-    include_ridge = args.model in ("ridge", "all")
+    include_param  = args.model in ("parametric", "all")
+    include_knn    = args.model in ("knn", "all")
+    include_linear = args.model in ("linear", "all")
+    include_ridge  = args.model in ("ridge", "all")
 
     # Resolve parametric curves
     if include_param:
@@ -276,10 +280,12 @@ def main() -> None:
     else:
         param_curves = []
 
-    # Build ordered list of model keys: parametric curves first, then knn, ridge
+    # Build ordered list of model keys: parametric curves first, then knn, linear, ridge
     model_keys: list[str] = [f"parametric/{c}" for c in param_curves]
     if include_knn:
         model_keys.append("knn")
+    if include_linear:
+        model_keys.append("linear")
     if include_ridge:
         model_keys.append("ridge")
 
