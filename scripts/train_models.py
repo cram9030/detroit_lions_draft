@@ -10,6 +10,7 @@ Train a specific model::
 
     python scripts/train_models.py --model parametric
     python scripts/train_models.py --model knn
+    python scripts/train_models.py --model linear
     python scripts/train_models.py --model ridge
     python scripts/train_models.py --model all
 
@@ -45,7 +46,7 @@ from src.models.parametric import _CURVE_REGISTRY
 RAW_DIR = PROJECT_ROOT / "data/raw/stathead/annual_av"
 MODELS_DIR = PROJECT_ROOT / "models"
 
-_SUPPORTED = ["parametric", "knn", "ridge"]
+_SUPPORTED = ["parametric", "knn", "linear", "ridge"]
 _VAL_YEARS = [1975, 1985, 1995, 2005, 2015]  # holdout validation years
 
 
