@@ -97,7 +97,7 @@ class KNNTrajectoryModel:
 
                 # 95th-pct non-zero AV as the normalization scale for this position
                 nonzero = matrix[matrix > 0]
-                self._av_scale[pos] = float(np.percentile(nonzero, 95)) if len(nonzero) > 0 else 1.0
+                self._av_scale[pos] = float(np.max(nonzero)) if len(nonzero) > 0 else 1.0
 
     def predict(
         self, position: str, observed_av: list[float], pick: int | None = None
