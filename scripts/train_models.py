@@ -197,8 +197,8 @@ def train_one(
     print("-" * 22)
     for pos in sorted(val_mae):
         print(f"{pos:<12} {val_mae[pos]:>8.3f}")
-    if val_mae:
-        overall = sum(val_mae.values()) / len(val_mae)
+    overall = sum(val_mae.values()) / len(val_mae) if val_mae else None
+    if overall is not None:
         print(f"{'OVERALL':<12} {overall:>8.3f}")
 
     model.save(model_dir)
@@ -210,6 +210,7 @@ def train_one(
         "trained_on": date.today().isoformat(),
         "train_years": list(train_years),
         "val_years": _VAL_YEARS,
+        "val_mae_overall": round(overall, 4) if overall is not None else None,
         "val_mae_by_position": {pos: round(v, 4) for pos, v in val_mae.items()},
         "positions": sorted(val_mae.keys()),
         "normalize": True,

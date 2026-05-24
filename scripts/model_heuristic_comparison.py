@@ -71,15 +71,15 @@ def _compute_heuristic_mae(val_df: pl.DataFrame) -> dict[str, float]:
     return {pos: sum(errs) / len(errs) for pos, errs in mae_by_pos.items()}
 
 
-def _load_model_metadata() -> list[tuple[str, dict[str, float]]]:
-    """Return (label, val_mae_by_position) pairs for all found metadata files."""
+def _load_model_metadata() -> list[tuple[str, dict[str, float], float]]:
+    """Return (label, val_mae_by_position, val_mae_overall) tuples for all found metadata files."""
     results = []
 
-    for name in ["knn", "ridge"]:
+    for name in ["knn", "linear"]:
         path = MODELS_DIR / name / "metadata.json"
         if path.exists():
             meta = json.loads(path.read_text())
-            results.append((name, meta["val_mae_by_position"]))
+            results.append((name, meta["val_mae_by_position"], meta["val_mae_overall"]))
 
     parametric_dir = MODELS_DIR / "parametric"
     if parametric_dir.exists():
@@ -88,7 +88,11 @@ def _load_model_metadata() -> list[tuple[str, dict[str, float]]]:
                 path = curve_dir / "metadata.json"
                 if path.exists():
                     meta = json.loads(path.read_text())
-                    results.append((f"parametric/{curve_dir.name}", meta["val_mae_by_position"]))
+                    results.append((
+                        f"parametric/{curve_dir.name}",
+                        meta["val_mae_by_position"],
+                        meta["val_mae_overall"],
+                    ))
 
     return results
 
@@ -98,32 +102,32 @@ def _overall(mae_by_pos: dict[str, float]) -> float:
 
 
 def _build_markdown_table(
-    models: list[tuple[str, dict[str, float]]],
+    models: list[tuple[str, dict[str, float], float]],
     heuristic_mae: dict[str, float],
 ) -> str:
     all_positions = sorted(
-        {pos for _, mae in models for pos in mae} | set(heuristic_mae)
+        {pos for _, mae, _ in models for pos in mae} | set(heuristic_mae)
     )
 
-    col_labels = [label for label, _ in models] + ["Heuristic"]
+    col_labels = [label for label, _, _ in models] + ["Heuristic"]
     headers = ["Position"] + col_labels
 
     rows = []
     rows.append("| " + " | ".join(headers) + " |")
-    rows.append("| " + " | ".join(["---"] * len(headers)) + " |")
+    rows.append("| " + " | ".join([":---"] + ["---:"] * len(col_labels)) + " |")
 
     for pos in all_positions:
         cells = [pos]
-        for _, mae_dict in models:
+        for _, mae_dict, _ in models:
             val = mae_dict.get(pos)
             cells.append(f"{val:.4f}" if val is not None else "N/A")
         cells.append(f"{heuristic_mae.get(pos, float('nan')):.4f}")
         rows.append("| " + " | ".join(cells) + " |")
 
-    overall_cells = ["**Overall**"]
-    for _, mae_dict in models:
-        overall_cells.append(f"**{_overall(mae_dict):.4f}**")
-    overall_cells.append(f"**{_overall(heuristic_mae):.4f}**")
+    overall_cells = ["Overall"]
+    for _, _, overall_val in models:
+        overall_cells.append(f"{overall_val:.4f}")
+    overall_cells.append(f"{_overall(heuristic_mae):.4f}")
     rows.append("| " + " | ".join(overall_cells) + " |")
 
     return "\n".join(rows)
