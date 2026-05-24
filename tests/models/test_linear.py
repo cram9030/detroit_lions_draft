@@ -23,10 +23,10 @@ def fitted_model(trajectory_df) -> LinearRegressionModel:
     return model
 
 
-def test_fit_trains_one_model_per_position(fitted_model):
-    assert len(fitted_model._models) == 2
-    assert "QB" in fitted_model._models
-    assert "RB" in fitted_model._models
+def test_fit_trains_submodels_per_position(fitted_model):
+    assert set(fitted_model._models.keys()) == {"QB", "RB"}
+    for pos in fitted_model._models:
+        assert set(fitted_model._models[pos].keys()) == {1, 2, 3}
 
 
 def test_predict_returns_correct_shape(fitted_model):
@@ -37,6 +37,29 @@ def test_predict_returns_correct_shape(fitted_model):
     assert len(result["y_pred"]) == expected_years
     assert len(result["y_upper"]) == expected_years
     assert len(result["y_lower"]) == expected_years
+
+
+def test_predict_1yr_input_starts_at_year1(fitted_model):
+    result = fitted_model.predict("QB", [5.0])
+    assert result["predicted_years"][0] == 1
+    assert len(result["predicted_years"]) == 9
+
+
+def test_predict_3yr_input_starts_at_year3(fitted_model):
+    result = fitted_model.predict("QB", [5.0, 4.0, 3.0])
+    assert result["predicted_years"][0] == 3
+    assert len(result["predicted_years"]) == 7
+
+
+def test_predict_adaptive_window_selects_correct_submodel(fitted_model):
+    for n_obs in [1, 2, 3]:
+        obs = [5.0] * n_obs
+        result = fitted_model.predict("QB", obs)
+        assert result["predicted_years"][0] == n_obs, (
+            f"With {n_obs} observed years, predicted_years should start at {n_obs}, "
+            f"got {result['predicted_years'][0]}"
+        )
+        assert len(result["predicted_years"]) == 10 - n_obs
 
 
 def test_predict_monotone_uncertainty(fitted_model):
@@ -70,6 +93,7 @@ def test_fit_includes_short_career_players():
         for i in range(5) for yr in range(3)
     ]
     df = pl.DataFrame(rows)
-    model = LinearRegressionModel(max_years=10, n_input=2)
+    model = LinearRegressionModel(max_years=10)
     model.fit(df)
     assert "QB" in model._models
+    assert set(model._models["QB"].keys()) == {1, 2, 3}

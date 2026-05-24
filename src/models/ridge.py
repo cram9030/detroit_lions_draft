@@ -13,34 +13,32 @@ from sklearn.linear_model import RidgeCV
 from src.models.protocol import PredictionResult
 
 _ALPHAS = [0.1, 1.0, 10.0, 100.0]
+_N_INPUTS = [1, 2, 3]
 
 
 class RidgeRegressionModel:
     """Predicts future AV seasons from observed early-career seasons via Ridge regression.
 
-    A single multi-output RidgeCV model is trained per position.  Features are
-    the observed AV years zero-padded to max_years - 1 columns; targets are
-    AV years X through max_years - 1.  At inference, only the first n_obs
-    features are filled; the rest remain zero.
+    One RidgeCV sub-model is trained per (position, input-window) pair for
+    input windows of 1, 2, and 3 seasons.  At inference, predict() selects the
+    sub-model whose input size matches len(observed_av), so predicted_years
+    always starts immediately after the observed window — matching the adaptive
+    behaviour of KNN and Parametric models.
     """
 
-    def __init__(self, max_years: int = 10, n_input: int = 2) -> None:
+    def __init__(self, max_years: int = 10) -> None:
         self.max_years = max_years
-        self.n_input = n_input  # number of early-career seasons used as features
-        # {pos: {"model": RidgeCV, "residual_std": np.ndarray, "n_input": int}}
-        self._models: dict[str, dict[str, Any]] = {}
+        # {pos: {n_input: {"model": RidgeCV, "residual_std": np.ndarray}}}
+        self._models: dict[str, dict[int, dict[str, Any]]] = {}
 
     # ------------------------------------------------------------------
     # Protocol implementation
     # ------------------------------------------------------------------
 
     def fit(self, trajectory_df: pl.DataFrame) -> None:
-        """Train one multi-output RidgeCV per position."""
+        """Train one RidgeCV sub-model per (position, n_input) pair."""
         for pos in trajectory_df["Pos"].unique().to_list():
             sub = trajectory_df.filter(pl.col("Pos") == pos)
-
-            # Truncate to the first max_years seasons so long-career players
-            # contribute only the same window we're trying to predict.
             sub = sub.filter(pl.col("years_from_draft") < self.max_years)
 
             if sub.select("Player").n_unique() < 5:
@@ -60,42 +58,41 @@ class RidgeRegressionModel:
                 pad = np.zeros((matrix.shape[0], self.max_years - matrix.shape[1]))
                 matrix = np.hstack([matrix, pad])
 
-            # Features: only the first n_input observed seasons; targets: years n_input..max_years-1.
-            # Using only early-career seasons as features prevents leakage where the model
-            # would learn "year k feature ≈ year k target" and then predict 0 at inference
-            # when the future-year features are zero-padded.
-            n_feature_cols = self.n_input
-            X = matrix[:, :n_feature_cols]
-            Y = matrix[:, n_feature_cols:]  # years n_input through max_years-1
+            pos_models: dict[int, dict[str, Any]] = {}
+            for n_input in _N_INPUTS:
+                X = matrix[:, :n_input]
+                Y = matrix[:, n_input:]
 
-            model = RidgeCV(alphas=_ALPHAS, fit_intercept=True)
-            model.fit(X, Y)
+                model = RidgeCV(alphas=_ALPHAS, fit_intercept=True)
+                model.fit(X, Y)
 
-            residuals = Y - model.predict(X)
-            residual_std = residuals.std(axis=0)
+                residuals = Y - model.predict(X)
+                pos_models[n_input] = {
+                    "model": model,
+                    "residual_std": residuals.std(axis=0),
+                }
 
-            self._models[pos] = {
-                "model": model,
-                "residual_std": residual_std,
-                "n_input": n_feature_cols,
-            }
+            self._models[pos] = pos_models
 
     def predict(self, position: str, observed_av: list[float], pick: int | None = None) -> PredictionResult:
         if position not in self._models:
             raise ValueError(f"Unknown position '{position}'. Known: {sorted(self._models)}")
 
-        entry = self._models[position]
-        model: RidgeCV = entry["model"]
-        residual_std: np.ndarray = entry["residual_std"]
-        n_input: int = entry.get("n_input", self.n_input)
-
+        pos_models = self._models[position]
         n_obs = len(observed_av)
 
-        # Feature vector contains only the first n_input observed seasons.
+        # Select the largest trained input window that fits the observed data;
+        # fall back to the smallest if n_obs is less than every trained window.
+        candidates = [k for k in pos_models if k <= n_obs]
+        n_input = max(candidates) if candidates else min(pos_models)
+
+        entry = pos_models[n_input]
+        model: RidgeCV = entry["model"]
+        residual_std: np.ndarray = entry["residual_std"]
+
         x = np.zeros((1, n_input))
         x[0, :min(n_obs, n_input)] = observed_av[:n_input]
 
-        # y_full[i] is the prediction for year n_input + i
         y_full = model.predict(x)[0]  # length = max_years - n_input
 
         y_pred = np.maximum(y_full, 0.0)
@@ -115,21 +112,12 @@ class RidgeRegressionModel:
     def save(self, model_dir: str | Path) -> None:
         model_dir = Path(model_dir)
         joblib.dump(
-            {"max_years": self.max_years, "n_input": self.n_input, "models": self._models},
+            {"max_years": self.max_years, "models": self._models},
             model_dir / "_config.joblib",
         )
 
     def load(self, model_dir: str | Path) -> None:
         model_dir = Path(model_dir)
-        config_path = model_dir / "_config.joblib"
-        if config_path.exists():
-            data = joblib.load(config_path)
-            self.max_years = data["max_years"]
-            self.n_input = data.get("n_input", self.n_input)
-            self._models = data["models"]
-        else:
-            # legacy format: one .joblib per position
-            self._models = {}
-            for path in sorted(model_dir.glob("*.joblib")):
-                pos = path.stem
-                self._models[pos] = joblib.load(path)
+        data = joblib.load(model_dir / "_config.joblib")
+        self.max_years = data["max_years"]
+        self._models = data["models"]
