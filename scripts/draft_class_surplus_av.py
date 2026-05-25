@@ -62,7 +62,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--model",
         default="parametric",
-        choices=["parametric", "knn", "ridge"],
+        choices=["parametric", "knn", "ridge", "linear"],
         help="Career AV model to use for projections (default: parametric)",
     )
     p.add_argument(
@@ -86,6 +86,7 @@ def _check_model(model_name: str, models_dir: Path) -> None:
         "parametric": models_dir / "parametric" / "params.json",
         "knn": models_dir / "knn" / "_config.joblib",
         "ridge": models_dir / "ridge" / "_config.joblib",
+        "linear": models_dir / "linear" / "_config.joblib",
     }
     path = paths[model_name]
     if not path.exists():
