@@ -34,7 +34,7 @@ JSON shape — partially observed (2023/2024)::
           "exp_decay": {"players": [...], "class_summary": {...}}
         },
         "knn":   {"players": [...], "class_summary": {...}},
-        "ridge": {"players": [...], "class_summary": {...}}
+        "linear": {"players": [...], "class_summary": {...}}
       }
     }
 
@@ -51,7 +51,7 @@ Prerequisites
 
        python scripts/train_models.py --model parametric --curve gamma
        python scripts/train_models.py --model knn
-       python scripts/train_models.py --model ridge
+       python scripts/train_models.py --model linear
 
 Usage
 -----
@@ -88,7 +88,7 @@ EXECUTIVES_DIR = PROJECT_ROOT / "data" / "raw" / "pfr" / "executives"
 STATHEAD_RAW_DIR = PROJECT_ROOT / "data" / "raw" / "stathead" / "annual_av"
 
 START_YEAR = 2010
-_NON_PARAMETRIC_MODELS = ["knn", "ridge"]
+_NON_PARAMETRIC_MODELS = ["knn", "linear"]
 
 # Per-player position overrides for players Stathead records with a generalist
 # catch-all code ("OL", "DL") that the career-AV models do not recognise.
@@ -161,7 +161,7 @@ def _check_model(model_name: str, models_dir: Path) -> None:
     """Raise FileNotFoundError with a helpful message if the model is missing."""
     paths = {
         "knn": models_dir / "knn" / "_config.joblib",
-        "ridge": models_dir / "ridge" / "_config.joblib",
+        "linear": models_dir / "linear" / "_config.joblib",
     }
     path = paths[model_name]
     if not path.exists():
@@ -371,7 +371,7 @@ def main() -> None:
     models_metadata: dict = {
         "parametric": parametric_curves,
         "knn": True,
-        "ridge": True,
+        "linear": True,
     }
 
     generated_at = datetime.now(timezone.utc).isoformat()

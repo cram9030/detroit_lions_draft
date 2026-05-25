@@ -1,6 +1,6 @@
 {
   "model": "parametric",
-  "trained_on": "2026-05-24",
+  "trained_on": "2026-05-25",
   "train_years": [
     1970,
     2010
@@ -12,20 +12,20 @@
     2005,
     2015
   ],
-  "val_mae_overall": 2.4406,
+  "val_mae_overall": 2.3636,
   "val_mae_by_position": {
-    "TE": 1.304,
-    "DE": 2.6215,
-    "OT": 2.6347,
-    "S": 1.5515,
-    "QB": 3.9873,
-    "RB": 1.5851,
-    "LB": 2.3339,
-    "OC": 2.9414,
-    "OG": 2.3969,
-    "DT": 2.8164,
-    "WR": 1.9623,
-    "CB": 3.1527
+    "LB": 2.167,
+    "WR": 2.088,
+    "TE": 1.3008,
+    "RB": 1.8585,
+    "OG": 2.2715,
+    "S": 1.5921,
+    "CB": 3.4759,
+    "DE": 2.4134,
+    "OT": 2.4203,
+    "DT": 2.3799,
+    "QB": 4.0863,
+    "OC": 2.3096
   },
   "positions": [
     "CB",
@@ -43,6 +43,6 @@
   ],
   "normalize": true,
   "rounds": null,
-  "max_years": 10,
+  "max_years": 4,
   "curve_name": "quadratic"
 }

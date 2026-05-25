@@ -1,12 +1,14 @@
 {
   "metadata": {
-    "generated_at": "2026-05-20T04:07:28.115375+00:00",
+    "generated_at": "2026-05-25T00:50:33.585063+00:00",
     "year": 2015,
-    "models": [
-      "parametric",
-      "knn",
-      "ridge"
-    ]
+    "models": {
+      "parametric": [
+        "quadratic"
+      ],
+      "knn": true,
+      "linear": true
+    }
   },
   "teams": {
     "ATL": {
