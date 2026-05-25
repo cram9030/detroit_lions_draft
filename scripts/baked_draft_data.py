@@ -87,7 +87,7 @@ BAKED_DIR = PROJECT_ROOT / "data" / "processed" / "baked"
 EXECUTIVES_DIR = PROJECT_ROOT / "data" / "raw" / "pfr" / "executives"
 STATHEAD_RAW_DIR = PROJECT_ROOT / "data" / "raw" / "stathead" / "annual_av"
 
-START_YEAR = 2010
+START_YEAR = 2000
 _NON_PARAMETRIC_MODELS = ["knn", "linear"]
 
 # Per-player position overrides for players Stathead records with a generalist
