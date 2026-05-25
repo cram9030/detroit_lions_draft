@@ -285,16 +285,6 @@ def analyze_draft_trades(
     if len(team_trades) == 0:
         return _empty_trade_df()
 
-    all_players = nflreadpy.load_players()
-    pfr_to_draft_year: dict[str, int | None] = {
-        pfr_id: dy
-        for pfr_id, dy in zip(
-            all_players["pfr_id"].to_list(),
-            all_players["draft_year"].to_list(),
-        )
-        if pfr_id is not None
-    }
-
     output_rows: list[dict] = []
 
     for tid in team_trades["trade_id"].unique().to_list():
@@ -305,13 +295,6 @@ def analyze_draft_trades(
             & pl.col("pick_round").is_null()
             & pl.col("pick_number").is_null()
         ).height > 0:
-            continue
-
-        player_rows = trade_rows.filter(pl.col("pfr_id").is_not_null())
-        if any(
-            pfr_to_draft_year.get(pfr_id) != year
-            for pfr_id in player_rows["pfr_id"].to_list()
-        ):
             continue
 
         rcv_pick_data: list[tuple[int, int]] = []  # (overall, season)

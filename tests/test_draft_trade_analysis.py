@@ -107,14 +107,26 @@ class TestAnalyzeDraftTrades:
         for col in _EXPECTED_COLUMNS:
             assert col in result.columns, f"Missing column: {col}"
 
-    def test_excludes_player_from_wrong_draft_year(self, mocker):
-        mocker.patch("nflreadpy.load_trades", return_value=_make_ec_trades())
-        bad_players = pl.DataFrame({
-            "pfr_id": ["SmitDe07", "ParsMi00", "GolsCh00"],
-            "draft_year": [2019, 2021, 2021],  # DeVonta Smith drafted 2019
+    def test_empty_string_pfr_id_pure_pick_trade_is_included(self, mocker):
+        """Pick rows with pfr_id='' (nflreadpy's format for unresolved picks) must not be skipped."""
+        pure_pick_trade = pl.DataFrame({
+            "trade_id": [9998.0, 9998.0],
+            "season": [2023, 2023],
+            "trade_date": [date(2023, 4, 27), date(2023, 4, 27)],
+            "gave": ["DET", "ARI"],
+            "received": ["ARI", "DET"],
+            "pick_season": [2023.0, 2023.0],
+            "pick_round": [1.0, 1.0],
+            "pick_number": [6.0, 12.0],
+            "conditional": [0.0, 0.0],
+            "pfr_id": ["", ""],
+            "pfr_name": ["", ""],
         })
-        mocker.patch("nflreadpy.load_players", return_value=bad_players)
-        assert len(analyze_draft_trades("PHI", 2021)) == 0
+        mocker.patch("nflreadpy.load_trades", return_value=pure_pick_trade)
+        mocker.patch("nflreadpy.load_players", return_value=pl.DataFrame(
+            {"pfr_id": pl.Series([], dtype=pl.String), "draft_year": pl.Series([], dtype=pl.Int64)}
+        ))
+        assert len(analyze_draft_trades("DET", 2023)) == 1
 
     def test_null_pfr_id_rows_are_valid(self, mocker):
         pure_pick_trade = pl.DataFrame({
