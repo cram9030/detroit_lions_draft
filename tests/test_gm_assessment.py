@@ -14,6 +14,7 @@ import pytest
 
 from src.gm_assessment import (
     fetch_gm,
+    filter_gm_records,
     find_overlapping_gms,
     get_gm_year_range,
     get_surplus_value,
@@ -249,9 +250,20 @@ class TestFindOverlappingGMs:
         assert (df["overlap_from"] <= df["overlap_to"]).all()
 
     def test_overlap_within_requested_range(self):
-        df = find_overlapping_gms(2021, 2024, _EXECUTIVES_DIR)
-        assert (df["overlap_from"] >= 2021).all()
+        """overlap_from >= data_start_year (2010 default); overlap_to <= years_cap."""
+        df = find_overlapping_gms(2021, 2026, _EXECUTIVES_DIR, years_cap=2024)
+        assert (df["overlap_from"] >= 2010).all()
         assert (df["overlap_to"] <= 2024).all()
+
+    def test_full_career_window(self):
+        """Kevin Colbert (PIT 2000-2021) overlapping 2021-2026 should be assessed 2010-2021."""
+        df = find_overlapping_gms(2021, 2026, _EXECUTIVES_DIR, years_cap=2024)
+        colbert = df.filter(
+            (pl.col("pfr_code") == "pit") & (pl.col("gm_name") == "Kevin Colbert")
+        )
+        assert len(colbert) == 1
+        assert colbert["overlap_from"][0] == 2010  # capped to data_start_year, not 2021
+        assert colbert["overlap_to"][0] == 2021    # capped to gm_to
 
     def test_no_interim_gms(self):
         df = find_overlapping_gms(2021, 2024, _EXECUTIVES_DIR)
@@ -400,6 +412,41 @@ class TestGetTradeValue:
         gm_df = self._make_gm_df()
         result = get_trade_value(gm_df, data_dir=_DATA_DIR)
         assert len(result) == len(gm_df)
+
+
+# ---------------------------------------------------------------------------
+# TestFilterGMRecords
+# ---------------------------------------------------------------------------
+
+
+class TestFilterGMRecords:
+    def _make_df(self) -> pl.DataFrame:
+        return pl.DataFrame(
+            {
+                "gm_name": ["Brad Holmes", "New Hire GM"],
+                "pfr_code": ["det", "oti"],
+                "stathead_code": ["DET", "TEN"],
+                "gm_from": [2021, 2025],
+                "gm_to": [2026, 2030],
+                "overlap_from": [2021, 2025],
+                "overlap_to": [2024, 2026],
+                "n_draft_years": [4, 0],
+                "avg_surplus_per_year": [5.0, 0.0],
+            }
+        )
+
+    def test_removes_zero_draft_year_rows(self):
+        result = filter_gm_records(self._make_df())
+        assert len(result) == 1
+        assert result["gm_name"][0] == "Brad Holmes"
+
+    def test_returns_dataframe(self):
+        result = filter_gm_records(self._make_df())
+        assert isinstance(result, pl.DataFrame)
+
+    def test_all_have_n_draft_years_gt_zero(self):
+        result = filter_gm_records(self._make_df())
+        assert (result["n_draft_years"] > 0).all()
 
 
 # ---------------------------------------------------------------------------

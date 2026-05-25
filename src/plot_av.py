@@ -1589,7 +1589,10 @@ def plot_gm_quadrant(
     rows = gm_df.iter_rows(named=True)
     x_vals: list[float] = []
     y_vals: list[float] = []
-    custom: list[list] = []  # [gm_name, years_label, total_surplus, avg_surplus, total_trade, avg_trade]
+    # customdata indices: [0] gm_name, [1] tenure_label, [2] assessed_label,
+    #                     [3] total_surplus, [4] avg_surplus,
+    #                     [5] total_trade, [6] avg_trade
+    custom: list[list] = []
     logo_urls: list[str] = []
     marker_colors: list[str] = []
     marker_sizes: list[int] = []
@@ -1608,10 +1611,12 @@ def plot_gm_quadrant(
         marker_colors.append(info["color"])
         marker_sizes.append(30 if is_highlight else 20)
 
-        years_label = f"{row['overlap_from']}–{row['overlap_to']}"
+        tenure_label = f"{row['gm_from']}–{row['gm_to']}"
+        assessed_label = f"{row['overlap_from']}–{row['overlap_to']}"
         custom.append([
             row["gm_name"],
-            years_label,
+            tenure_label,
+            assessed_label,
             f"{row.get('total_surplus_av', 0.0):.1f}",
             f"{x:.2f}",
             f"{row.get('total_trade_value', 0.0):.1f}",
@@ -1634,11 +1639,12 @@ def plot_gm_quadrant(
         customdata=custom,
         hovertemplate=(
             "<b>%{customdata[0]}</b><br>"
-            "Years: %{customdata[1]}<br>"
-            "Total Surplus AV: %{customdata[2]}<br>"
-            "Avg Surplus AV/Year: %{customdata[3]}<br>"
-            "Total Trade Value: %{customdata[4]}<br>"
-            "Avg Trade Value/Year: %{customdata[5]}<br>"
+            "Tenure: %{customdata[1]}<br>"
+            "Assessed: %{customdata[2]}<br>"
+            "Total Surplus AV: %{customdata[3]}<br>"
+            "Avg Surplus AV/Year: %{customdata[4]}<br>"
+            "Total Trade EAVAR: %{customdata[5]}<br>"
+            "Avg Trade EAVAR/Year: %{customdata[6]}<br>"
             "<extra></extra>"
         ),
         showlegend=False,
@@ -1680,7 +1686,7 @@ def plot_gm_quadrant(
     fig.update_layout(
         title=dict(text=title, x=0.5),
         xaxis_title="Avg Draft Surplus AV per Year",
-        yaxis_title="Avg Trade Value per Year (Fitzgerald-Spielberger)",
+        yaxis_title="Avg Trade Value per Year (EAVAR units)",
         template="plotly_white",
         images=layout_images,
         hovermode="closest",

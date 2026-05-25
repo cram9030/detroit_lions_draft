@@ -30,6 +30,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.gm_assessment import (
+    filter_gm_records,
     find_overlapping_gms,
     get_gm_year_range,
     get_surplus_value,
@@ -73,16 +74,16 @@ def main() -> None:
         help="Parametric curve variant when --model=parametric (default: quadratic)",
     )
     parser.add_argument(
-        "--chart", default="fitz_spiel",
-        help="Trade chart column prefix for aggregation (default: fitz_spiel)",
+        "--chart", default="eaar",
+        help="Trade chart column prefix for aggregation (default: eaar — EAVAR units)",
     )
     parser.add_argument(
         "--output-dir", default="outputs/gm_comparison",
         help="Directory to save HTML output (default: outputs/gm_comparison)",
     )
     parser.add_argument(
-        "--years-cap", type=int, default=None,
-        help="Cap the overlap window to this year (default: no cap)",
+        "--data-end-year", type=int, default=2024,
+        help="Last draft year with ≥2 completed seasons (default: 2024)",
     )
     args = parser.parse_args()
 
@@ -100,9 +101,11 @@ def main() -> None:
     gm_name, gm_from, gm_to = gm_info
     print(f"  Found: {gm_name} ({gm_from}–{gm_to})")
 
-    # 2. Find all overlapping GMs
-    print(f"\nFinding GMs overlapping {gm_from}–{gm_to}...")
-    gm_df = find_overlapping_gms(gm_from, gm_to, _EXECUTIVES_DIR, years_cap=args.years_cap)
+    # 2. Find all overlapping GMs (each assessed over their full career within data bounds)
+    print(f"\nFinding GMs overlapping {gm_from}–{gm_to} (data window capped at {args.data_end_year})...")
+    gm_df = find_overlapping_gms(
+        gm_from, gm_to, _EXECUTIVES_DIR, years_cap=args.data_end_year
+    )
     print(f"  {len(gm_df)} GM entries across {gm_df['pfr_code'].n_unique()} franchises")
 
     # 3. Aggregate surplus AV for each GM
@@ -115,17 +118,24 @@ def main() -> None:
         raw_dir=_RAW_DIR,
     )
 
-    # 4. Aggregate trade value for each GM
-    print("Aggregating trade values...")
+    # 4. Exclude GMs with no qualifying draft data (< 2 completed seasons)
+    before = len(gm_df)
+    gm_df = filter_gm_records(gm_df)
+    excluded = before - len(gm_df)
+    if excluded:
+        print(f"  Excluded {excluded} GM(s) with no qualifying draft data")
+
+    # 5. Aggregate trade value for each GM
+    print("Aggregating trade values (EAVAR units)...")
     gm_df = get_trade_value(gm_df, data_dir=_DATA_DIR, chart_name=args.chart)
 
-    # 5. Print summary table
-    print(f"\n{'GM':<30} {'Team':<6} {'Years':<12} {'Surplus/Yr':>10} {'Trade/Yr':>10}")
-    print("-" * 72)
+    # 6. Print summary table
+    print(f"\n{'GM':<30} {'Team':<6} {'Assessed':>12} {'Surplus/Yr':>10} {'EAVAR/Yr':>10}")
+    print("-" * 74)
     for row in gm_df.sort("avg_surplus_per_year", descending=True).iter_rows(named=True):
-        years_label = f"{row['overlap_from']}–{row['overlap_to']}"
+        assessed_label = f"{row['overlap_from']}–{row['overlap_to']}"
         print(
-            f"{row['gm_name']:<30} {row['stathead_code']:<6} {years_label:<12}"
+            f"{row['gm_name']:<30} {row['stathead_code']:<6} {assessed_label:>12}"
             f" {row['avg_surplus_per_year']:>10.2f} {row['avg_trade_per_year']:>10.2f}"
         )
 

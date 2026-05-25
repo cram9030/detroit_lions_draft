@@ -207,18 +207,29 @@ def find_overlapping_gms(
     overlap_to: int,
     executives_dir: Path | None = None,
     years_cap: int | None = None,
+    data_start_year: int = 2010,
 ) -> pl.DataFrame:
     """Find all non-interim GMs from every franchise whose tenure overlaps [overlap_from, overlap_to].
 
+    Each GM's *assessed window* spans their full career clipped to available data
+    (``[max(gm_from, data_start_year), min(gm_to, years_cap)]``), not just the
+    intersection with the target GM's tenure.  This ensures a GM like Kevin
+    Colbert (PIT 2000–2021) is evaluated over 2010–2021, not just 2021.
+
     Args:
-        overlap_from: Start year of the target GM's tenure window.
-        overlap_to: End year of the target GM's tenure window.
+        overlap_from: Start of the target GM's tenure — used only to determine
+            *which* GMs are included (overlap check).
+        overlap_to: End of the target GM's tenure — used only for the overlap check.
         executives_dir: Directory containing executives parquets.
-        years_cap: Optional cap on the effective overlap_to (e.g. last year with data).
+        years_cap: Cap on the assessed window's end year (e.g. last year with
+            available Stathead data, typically 2024).
+        data_start_year: First year of available Stathead data (default 2010).
+            Used as the floor for each GM's assessed start year.
 
     Returns:
         DataFrame with columns
-        ``[pfr_code, stathead_code, gm_name, gm_from, gm_to, overlap_from, overlap_to]``.
+        ``[pfr_code, stathead_code, gm_name, gm_from, gm_to, overlap_from, overlap_to]``
+        where ``overlap_from``/``overlap_to`` are the *assessed* window years.
     """
     executives_dir = Path(executives_dir) if executives_dir else _DEFAULT_EXECUTIVES_DIR
     effective_to = min(overlap_to, years_cap) if years_cap else overlap_to
@@ -235,13 +246,13 @@ def find_overlapping_gms(
                 continue
             gm_from = int(row["From"])
             gm_to = int(row["To"])
-            # Overlap condition: gm_from <= effective_to AND gm_to >= overlap_from
+            # Overlap check: does this GM's tenure intersect the target window?
             if gm_from > effective_to or gm_to < overlap_from:
                 continue
-            # Compute intersection years
-            eff_overlap_from = max(gm_from, overlap_from)
+            # Assessed window: full career clipped to available data bounds
+            eff_overlap_from = max(gm_from, data_start_year)
             eff_overlap_to = min(gm_to, effective_to)
-            # Use the most representative year for stathead code (use overlap midpoint)
+            # Use the midpoint of the assessed window for stathead code resolution
             mid_year = (eff_overlap_from + eff_overlap_to) // 2
             stathead_code = pfr_to_stathead(pfr_code, mid_year)
             rows.append({
@@ -320,10 +331,26 @@ def get_surplus_value(
     ])
 
 
+def filter_gm_records(gm_df: pl.DataFrame) -> pl.DataFrame:
+    """Remove GMs with no qualifying draft classes (``n_draft_years == 0``).
+
+    GMs who joined too recently to have any draft class with two completed
+    seasons produce meaningless surplus AV of 0.0 and should be excluded from
+    the quadrant chart.  Call this after :func:`get_surplus_value`.
+
+    Args:
+        gm_df: Output of :func:`get_surplus_value` (must contain ``n_draft_years``).
+
+    Returns:
+        Filtered DataFrame with rows where ``n_draft_years > 0``.
+    """
+    return gm_df.filter(pl.col("n_draft_years") > 0)
+
+
 def get_trade_value(
     gm_records_df: pl.DataFrame,
     data_dir: Path | None = None,
-    chart_name: str = "fitz_spiel",
+    chart_name: str = "eaar",
 ) -> pl.DataFrame:
     """Add trade value aggregation columns to gm_records_df.
 
@@ -332,7 +359,8 @@ def get_trade_value(
     Args:
         gm_records_df: Output of :func:`find_overlapping_gms` (or after get_surplus_value).
         data_dir: Directory containing trade chart CSVs.
-        chart_name: Column prefix in analyze_draft_trades output (default: ``"fitz_spiel"``).
+        chart_name: Column prefix in analyze_draft_trades output
+            (default: ``"eaar"`` — EAVAR units, same scale as surplus AV).
 
     Returns:
         Input DataFrame with ``[total_trade_value, n_trade_years, avg_trade_per_year]`` appended.

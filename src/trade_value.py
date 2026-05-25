@@ -369,7 +369,7 @@ def aggregate_trade_value(
     team: str,
     years: list[int],
     data_dir: Path | str = _PROCESSED_DATA_DIR,
-    chart_name: str = "fitz_spiel",
+    chart_name: str = "eaar",
 ) -> dict:
     """Aggregate net trade value across multiple draft years for a team.
 
@@ -382,7 +382,7 @@ def aggregate_trade_value(
         years: List of draft years to aggregate.
         data_dir: Directory containing trade chart CSVs.
         chart_name: Column prefix in :func:`analyze_draft_trades` output
-            to sum (default: ``"fitz_spiel"``).
+            to sum (default: ``"eaar"`` — EAVAR units, same scale as surplus AV).
 
     Returns:
         Dict with keys:
