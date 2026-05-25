@@ -363,3 +363,54 @@ def analyze_draft_trades(
         return _empty_trade_df()
 
     return pl.DataFrame(output_rows)
+
+
+def aggregate_trade_value(
+    team: str,
+    years: list[int],
+    data_dir: Path | str = _PROCESSED_DATA_DIR,
+    chart_name: str = "fitz_spiel",
+) -> dict:
+    """Aggregate net trade value across multiple draft years for a team.
+
+    Calls :func:`analyze_draft_trades` for each year, extracts the column
+    ``{chart_name}_value``, and sums across all trades in that year.  Years
+    with no draft trades count as 0.0 net value and are included in ``n_years``.
+
+    Args:
+        team: Stathead team code (e.g. ``"DET"``).
+        years: List of draft years to aggregate.
+        data_dir: Directory containing trade chart CSVs.
+        chart_name: Column prefix in :func:`analyze_draft_trades` output
+            to sum (default: ``"fitz_spiel"``).
+
+    Returns:
+        Dict with keys:
+        - ``total_trade_value``: sum of yearly net values.
+        - ``per_year``: ``{year: net_value}`` for every requested year.
+        - ``n_years``: number of requested years (including 0-trade years).
+        - ``avg_trade_per_year``: ``total / n_years`` (0.0 when n_years==0).
+    """
+    per_year: dict[int, float] = {}
+    col = f"{chart_name}_value"
+
+    for year in years:
+        try:
+            trades_df = analyze_draft_trades(team, year, data_dir=data_dir)
+        except Exception:
+            per_year[year] = 0.0
+            continue
+
+        if col in trades_df.columns and len(trades_df) > 0:
+            per_year[year] = round(float(trades_df[col].drop_nulls().sum()), 3)
+        else:
+            per_year[year] = 0.0
+
+    total = sum(per_year.values())
+    n = len(per_year)
+    return {
+        "total_trade_value": round(total, 3),
+        "per_year": per_year,
+        "n_years": n,
+        "avg_trade_per_year": round(total / n, 3) if n > 0 else 0.0,
+    }

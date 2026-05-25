@@ -452,3 +452,82 @@ def compute_surplus_av(
         .alias("surplus_av")
     )
     return result
+
+
+def aggregate_drafts(
+    team: str,
+    years: list[int],
+    model_name: str = "linear",
+    parametric_curve: str = "quadratic",
+    models_dir: Path | None = None,
+    raw_dir: Path | None = None,
+    position_overrides: dict[str, str] | None = None,
+) -> dict:
+    """Aggregate surplus AV across multiple draft years for a team.
+
+    For each year, loads the draft class, determines whether it is fully
+    observed (all 4 seasons present) or partially observed, computes surplus
+    AV, and sums across all successful years.  Years where data is unavailable
+    are silently skipped.
+
+    Args:
+        team: Stathead team code (e.g. ``"DET"``).
+        years: List of draft years to aggregate.
+        model_name: Career AV model for partially-observed classes.
+        parametric_curve: Curve variant when model_name is ``"parametric"``.
+        models_dir: Directory containing trained model artifacts.
+        raw_dir: Directory containing annual AV parquets.
+        position_overrides: Per-player position overrides.
+
+    Returns:
+        Dict with keys:
+        - ``total_surplus_av``: sum of class-level surplus_av across years.
+        - ``per_year``: ``{year: class_surplus_av}`` for successful years.
+        - ``n_years``: number of years with valid data.
+        - ``avg_surplus_per_year``: ``total / n_years`` (0.0 when n_years==0).
+    """
+    from src.models.factory import make_career_av_model
+
+    models_dir = models_dir or _PROJECT_ROOT / "models"
+    raw_dir = raw_dir or _DEFAULT_RAW_DIR
+
+    per_year: dict[int, float] = {}
+
+    for year in years:
+        try:
+            draft_df = load_team_draft_class(team, year, raw_dir)
+        except (ValueError, FileNotFoundError):
+            continue
+
+        # Determine if year-3 season file exists (fully observed)
+        yr3_path = raw_dir / f"draft{year}_season{year + 3}.parquet"
+        fully_observed = yr3_path.exists()
+
+        if fully_observed:
+            players_df = aggregate_observed_av(draft_df)
+        else:
+            try:
+                if model_name == "parametric":
+                    from src.models.factory import make_career_av_model as _make
+                    model = _make(model_name, curve=parametric_curve)
+                    model_path = models_dir / "parametric" / parametric_curve
+                else:
+                    model = make_career_av_model(model_name)
+                    model_path = models_dir / model_name
+                model.load(model_path)
+            except Exception:
+                continue
+            players_df = aggregate_model_av(draft_df, model, position_overrides)
+
+        surplus_df = compute_surplus_av(players_df)
+        class_surplus = round(float(surplus_df["surplus_av"].drop_nulls().sum()), 1)
+        per_year[year] = class_surplus
+
+    total = sum(per_year.values())
+    n = len(per_year)
+    return {
+        "total_surplus_av": round(total, 1),
+        "per_year": per_year,
+        "n_years": n,
+        "avg_surplus_per_year": round(total / n, 3) if n > 0 else 0.0,
+    }

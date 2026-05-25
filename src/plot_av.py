@@ -1544,3 +1544,151 @@ def plot_animated_skew_by_year(
         fig.write_html(str(path))
 
     return fig
+
+
+def plot_gm_quadrant(
+    gm_df: pl.DataFrame,
+    title: str = "GM Draft Performance Quadrant",
+    highlight_team: str | None = None,
+    export_path: str | Path | None = None,
+    export_format: Literal["html", "png", "svg"] | None = None,
+) -> go.Figure:
+    """Plot a quadrant scatter of GMs by avg draft surplus AV vs avg trade value.
+
+    Each GM is represented by their team's logo.  Hovering over a logo reveals
+    the GM's name, tenure years, aggregate surplus AV, aggregate trade value, and
+    per-year averages.
+
+    Args:
+        gm_df: DataFrame with columns
+            ``[gm_name, pfr_code, stathead_code, avg_surplus_per_year,
+               avg_trade_per_year, total_surplus_av, total_trade_value,
+               n_draft_years, n_trade_years, gm_from, gm_to,
+               overlap_from, overlap_to]``.
+        title: Figure title.
+        highlight_team: Stathead code of the target team (e.g. ``"DET"``).
+        export_path: Optional path to save the figure.
+        export_format: ``"html"``, ``"png"``, or ``"svg"``.
+
+    Returns:
+        Plotly Figure.
+    """
+    import nflreadpy
+    from src.gm_assessment import STATHEAD_TO_NFLREADPY
+
+    teams_df = nflreadpy.load_teams()
+    # Build lookup: nflreadpy team_abbr → {logo_url, team_color}
+    teams_info: dict[str, dict] = {}
+    for row in teams_df.iter_rows(named=True):
+        abbr = row["team_abbr"]
+        teams_info[abbr] = {
+            "logo_url": row.get("team_logo_espn") or row.get("team_logo_wikipedia") or "",
+            "color": row.get("team_color") or "#333333",
+        }
+
+    rows = gm_df.iter_rows(named=True)
+    x_vals: list[float] = []
+    y_vals: list[float] = []
+    custom: list[list] = []  # [gm_name, years_label, total_surplus, avg_surplus, total_trade, avg_trade]
+    logo_urls: list[str] = []
+    marker_colors: list[str] = []
+    marker_sizes: list[int] = []
+
+    for row in gm_df.iter_rows(named=True):
+        x = float(row["avg_surplus_per_year"])
+        y = float(row["avg_trade_per_year"])
+        x_vals.append(x)
+        y_vals.append(y)
+
+        nfl_abbr = STATHEAD_TO_NFLREADPY.get(row["stathead_code"], row["stathead_code"])
+        info = teams_info.get(nfl_abbr, {"logo_url": "", "color": "#333333"})
+        logo_urls.append(info["logo_url"])
+
+        is_highlight = highlight_team is not None and row["stathead_code"] == highlight_team
+        marker_colors.append(info["color"])
+        marker_sizes.append(30 if is_highlight else 20)
+
+        years_label = f"{row['overlap_from']}–{row['overlap_to']}"
+        custom.append([
+            row["gm_name"],
+            years_label,
+            f"{row.get('total_surplus_av', 0.0):.1f}",
+            f"{x:.2f}",
+            f"{row.get('total_trade_value', 0.0):.1f}",
+            f"{y:.2f}",
+        ])
+
+    fig = go.Figure()
+
+    # Invisible scatter trace — provides hover interaction over logo positions
+    fig.add_trace(go.Scatter(
+        x=x_vals,
+        y=y_vals,
+        mode="markers",
+        marker=dict(
+            size=marker_sizes,
+            color=marker_colors,
+            opacity=0.01,
+            line=dict(width=0),
+        ),
+        customdata=custom,
+        hovertemplate=(
+            "<b>%{customdata[0]}</b><br>"
+            "Years: %{customdata[1]}<br>"
+            "Total Surplus AV: %{customdata[2]}<br>"
+            "Avg Surplus AV/Year: %{customdata[3]}<br>"
+            "Total Trade Value: %{customdata[4]}<br>"
+            "Avg Trade Value/Year: %{customdata[5]}<br>"
+            "<extra></extra>"
+        ),
+        showlegend=False,
+        name="",
+    ))
+
+    # Compute axis range to size logos proportionally
+    if x_vals and y_vals:
+        x_range = max(x_vals) - min(x_vals) or 10.0
+        y_range = max(y_vals) - min(y_vals) or 10.0
+        logo_size_x = x_range * 0.10
+        logo_size_y = y_range * 0.12
+    else:
+        logo_size_x = 1.0
+        logo_size_y = 1.0
+
+    # Add team logos as layout images positioned in data coordinates
+    layout_images = []
+    for x, y, logo_url in zip(x_vals, y_vals, logo_urls):
+        if not logo_url:
+            continue
+        layout_images.append(dict(
+            source=logo_url,
+            x=x,
+            y=y,
+            xref="x",
+            yref="y",
+            sizex=logo_size_x,
+            sizey=logo_size_y,
+            xanchor="center",
+            yanchor="middle",
+            layer="above",
+        ))
+
+    # Quadrant lines at x=0, y=0
+    fig.add_vline(x=0, line=dict(color="lightgray", width=1, dash="dot"))
+    fig.add_hline(y=0, line=dict(color="lightgray", width=1, dash="dot"))
+
+    fig.update_layout(
+        title=dict(text=title, x=0.5),
+        xaxis_title="Avg Draft Surplus AV per Year",
+        yaxis_title="Avg Trade Value per Year (Fitzgerald-Spielberger)",
+        template="plotly_white",
+        images=layout_images,
+        hovermode="closest",
+    )
+
+    if export_path is not None and export_format is not None:
+        _export_figure(fig, export_path, export_format)
+    elif export_path is not None:
+        _export_figure(fig, export_path, "html")
+
+    return fig
