@@ -40,6 +40,13 @@ python scripts/baked_draft_data.py                                   # writes da
 python scripts/baked_draft_data.py --year 2023                       # limit to 2010-2023
 python scripts/baked_draft_data.py --output-dir outputs/baked        # custom output directory
 
+# GM draft and trade performance analysis
+python scripts/gm_comparison.py                          # DET 2024 defaults
+python scripts/gm_comparison.py --team KAN --year 2022 --model knn
+python scripts/all_gm_performance.py                     # all GMs 2001–2024
+python scripts/all_gm_performance.py --from-year 2010 --to-year 2024
+python scripts/all_gm_performance.py --model knn --chart rich_hill
+
 # Example inference (Lions 2024 — 3-model comparison vs pick expectation)
 python scripts/example_lions_2024.py
 ```

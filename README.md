@@ -32,10 +32,12 @@ detroit_lions_draft/
 ├── data/
 │   ├── baked/            # Per-year JSON files for static site consumption
 ├── scripts/              # Runnable entry points
+│   ├── all_gm_performance.py      # GM draft/trade performance survey (date range)
 │   ├── baked_draft_data.py        # Bake all-teams surplus AV JSON (one file per year)
 │   ├── draft_class_surplus_av.py  # Draft class surplus AV analysis (any team/year)
 │   ├── example_lions_2024.py
 │   ├── generate_trade_patch.py
+│   ├── gm_comparison.py           # GM draft/trade performance vs peers (team/year anchor)
 │   ├── run_analysis.py
 │   └── train_models.py
 ├── secrets/              # Local credentials — gitignored, never committed
