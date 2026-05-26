@@ -1546,35 +1546,15 @@ def plot_animated_skew_by_year(
     return fig
 
 
-def plot_gm_quadrant(
-    gm_df: pl.DataFrame,
-    title: str = "GM Draft Performance Quadrant",
-    highlight_team: str | None = None,
-    export_path: str | Path | None = None,
-    export_format: Literal["html", "png", "svg"] | None = None,
-) -> go.Figure:
-    """Plot a quadrant scatter of GMs by avg draft surplus AV vs avg trade value.
+def get_team_info():
+    """helper functionto fetch team logo and color information
 
-    Each GM is represented by their team's logo.  Hovering over a logo reveals
-    the GM's name, tenure years, aggregate surplus AV, aggregate trade value, and
-    per-year averages.
-
-    Args:
-        gm_df: DataFrame with columns
-            ``[gm_name, pfr_code, stathead_code, avg_surplus_per_year,
-               avg_trade_per_year, total_surplus_av, total_trade_value,
-               n_draft_years, n_trade_years, gm_from, gm_to,
-               overlap_from, overlap_to]``.
-        title: Figure title.
-        highlight_team: Stathead code of the target team (e.g. ``"DET"``).
-        export_path: Optional path to save the figure.
-        export_format: ``"html"``, ``"png"``, or ``"svg"``.
+    Args:None
 
     Returns:
-        Plotly Figure.
+        teams_info: dictionary with logo and color
     """
     import nflreadpy
-    from src.gm_assessment import STATHEAD_TO_NFLREADPY
 
     teams_df = nflreadpy.load_teams()
     # Build lookup: nflreadpy team_abbr → {logo_url, team_color}
@@ -1585,6 +1565,27 @@ def plot_gm_quadrant(
             "logo_url": row.get("team_logo_espn") or row.get("team_logo_wikipedia") or "",
             "color": row.get("team_color") or "#333333",
         }
+    return teams_info
+
+def organize_plot_data(gm_df: pl.DataFrame):
+    """Helper function that rearanges gm data for plot uses
+
+    Args:
+        gm_df: DataFrame with columns
+            ``[gm_name, pfr_code, stathead_code, avg_surplus_per_year,
+               avg_trade_per_year, total_surplus_av, total_trade_value,
+               n_draft_years, n_trade_years, gm_from, gm_to,
+               overlap_from, overlap_to]``.
+
+    Returns:
+        x_vals: Surplus value per gm
+        y_vals: Trade value per gm
+        marker_color: Color of the marker
+        marker_size: size fo the markers
+        custom: hover tool tip information
+    """
+    from src.gm_assessment import STATHEAD_TO_NFLREADPY
+    teams_info = get_team_info()
 
     rows = gm_df.iter_rows(named=True)
     x_vals: list[float] = []
@@ -1607,9 +1608,8 @@ def plot_gm_quadrant(
         info = teams_info.get(nfl_abbr, {"logo_url": "", "color": "#333333"})
         logo_urls.append(info["logo_url"])
 
-        is_highlight = highlight_team is not None and row["stathead_code"] == highlight_team
         marker_colors.append(info["color"])
-        marker_sizes.append(30 if is_highlight else 20)
+        marker_sizes.append(20)
 
         tenure_label = f"{row['gm_from']}–{row['gm_to']}"
         assessed_label = f"{row['overlap_from']}–{row['overlap_to']}"
@@ -1621,7 +1621,37 @@ def plot_gm_quadrant(
             f"{x:.2f}",
             f"{row.get('total_trade_value', 0.0):.1f}",
             f"{y:.2f}",
+            row["stathead_code"],  # index 7 — used for y-label disambiguation
         ])
+
+    return x_vals, y_vals, logo_urls, marker_colors, marker_sizes, custom
+
+def plot_gm_quadrant(
+    gm_df: pl.DataFrame,
+    title: str = "GM Draft Performance Quadrant",
+    export_path: str | Path | None = None,
+    export_format: Literal["html", "png", "svg"] | None = None,
+) -> go.Figure:
+    """Plot a quadrant scatter of GMs by avg draft surplus AV vs avg trade value.
+
+    Each GM is represented by their team's logo.  Hovering over a logo reveals
+    the GM's name, tenure years, aggregate surplus AV, aggregate trade value, and
+    per-year averages.
+
+    Args:
+        gm_df: DataFrame with columns
+            ``[gm_name, pfr_code, stathead_code, avg_surplus_per_year,
+               avg_trade_per_year, total_surplus_av, total_trade_value,
+               n_draft_years, n_trade_years, gm_from, gm_to,
+               overlap_from, overlap_to]``.
+        title: Figure title.
+        export_path: Optional path to save the figure.
+        export_format: ``"html"``, ``"png"``, or ``"svg"``.
+
+    Returns:
+        Plotly Figure.
+    """
+    x_vals, y_vals, logo_urls, marker_colors, marker_sizes, custom = organize_plot_data(gm_df)
 
     fig = go.Figure()
 
@@ -1687,6 +1717,215 @@ def plot_gm_quadrant(
         title=dict(text=title, x=0.5),
         xaxis_title="Avg Draft Surplus AV per Year",
         yaxis_title="Avg Trade Value per Year",
+        template="plotly_white",
+        images=layout_images,
+        hovermode="closest",
+    )
+
+    if export_path is not None and export_format is not None:
+        _export_figure(fig, export_path, export_format)
+    elif export_path is not None:
+        _export_figure(fig, export_path, "html")
+
+    return fig
+
+
+def plot_gm_surplus(
+    gm_df: pl.DataFrame,
+    title: str = "GM Draft Surplus EAVAR",
+    export_path: str | Path | None = None,
+    export_format: Literal["html", "png", "svg"] | None = None,
+) -> go.Figure:
+    """Plot a horizontal bar chart of GMs ranked by avg draft surplus AV per year.
+
+    Bars are colored with each team's primary color. Team logos appear at the
+    end of each bar. GMs are ordered so the highest surplus is at the top.
+
+    Args:
+        gm_df: DataFrame with columns
+            ``[gm_name, pfr_code, stathead_code, avg_surplus_per_year,
+               avg_trade_per_year, total_surplus_av, total_trade_value,
+               n_draft_years, n_trade_years, gm_from, gm_to,
+               overlap_from, overlap_to]``.
+        title: Figure title.
+        export_path: Optional path to save the figure.
+        export_format: ``"html"``, ``"png"``, or ``"svg"``.
+
+    Returns:
+        Plotly Figure.
+    """
+    surplus_vals, _, logo_urls, marker_colors, _, custom = organize_plot_data(gm_df)
+    gm_names = [sublist[0] for sublist in custom]
+
+    # Sort ascending so the highest value appears at the top of the horizontal bar chart
+    combined = sorted(zip(surplus_vals, gm_names, logo_urls, marker_colors, custom), key=lambda t: t[0])
+    surplus_vals = [t[0] for t in combined]
+    gm_names = [t[1] for t in combined]
+    logo_urls = [t[2] for t in combined]
+    marker_colors = [t[3] for t in combined]
+    custom = [t[4] for t in combined]
+
+    # Disambiguate duplicate GM names with the team code so Plotly treats them as separate bars
+    from collections import Counter
+    name_counts = Counter(gm_names)
+    display_names = [
+        f"{name} ({sublist[7]})" if name_counts[name] > 1 else name
+        for name, sublist in zip(gm_names, custom)
+    ]
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        x=surplus_vals,
+        y=display_names,
+        customdata=custom,
+        marker=dict(color=marker_colors),
+        hovertemplate=(
+            "<b>%{customdata[0]}</b><br>"
+            "Tenure: %{customdata[1]}<br>"
+            "Assessed: %{customdata[2]}<br>"
+            "Total Surplus AV: %{customdata[3]}<br>"
+            "Avg Surplus AV/Year: %{customdata[4]}<br>"
+            "Total Trade EAVAR: %{customdata[5]}<br>"
+            "Avg Trade EAVAR/Year: %{customdata[6]}<br>"
+            "<extra></extra>"
+        ),
+        showlegend=False,
+        name="",
+        orientation='h'
+    ))
+
+    # sizey is in categorical data units (1 unit = one bar slot)
+    logo_size_y = 0.7
+    x_span = (max(surplus_vals) - min(surplus_vals)) if surplus_vals else 10.0
+    logo_size_x = x_span * 0.08
+
+    # Place logos at the tip of each bar
+    layout_images = []
+    for x, y, logo_url in zip(surplus_vals, display_names, logo_urls):
+        if not logo_url:
+            continue
+        layout_images.append(dict(
+            source=logo_url,
+            x=x,
+            y=y,
+            xref="x",
+            yref="y",
+            sizex=logo_size_x,
+            sizey=logo_size_y,
+            xanchor="left" if x >= 0 else "right",
+            yanchor="middle",
+            layer="above",
+        ))
+
+    fig.update_layout(
+        title=dict(text=title, x=0.5),
+        xaxis_title="Avg Draft Surplus AV per Year",
+        yaxis_title="GM",
+        template="plotly_white",
+        images=layout_images,
+        hovermode="closest",
+    )
+
+    if export_path is not None and export_format is not None:
+        _export_figure(fig, export_path, export_format)
+    elif export_path is not None:
+        _export_figure(fig, export_path, "html")
+
+    return fig
+
+def plot_gm_trade(
+    gm_df: pl.DataFrame,
+    title: str = "GM Draft Surplus EAVAR",
+    export_path: str | Path | None = None,
+    export_format: Literal["html", "png", "svg"] | None = None,
+) -> go.Figure:
+    """Plot a horizontal bar chart of GMs ranked by avg draft surplus AV per year.
+
+    Bars are colored with each team's primary color. Team logos appear at the
+    end of each bar. GMs are ordered so the highest surplus is at the top.
+
+    Args:
+        gm_df: DataFrame with columns
+            ``[gm_name, pfr_code, stathead_code, avg_surplus_per_year,
+               avg_trade_per_year, total_surplus_av, total_trade_value,
+               n_draft_years, n_trade_years, gm_from, gm_to,
+               overlap_from, overlap_to]``.
+        title: Figure title.
+        export_path: Optional path to save the figure.
+        export_format: ``"html"``, ``"png"``, or ``"svg"``.
+
+    Returns:
+        Plotly Figure.
+    """
+    _, trade_vals, logo_urls, marker_colors, _, custom = organize_plot_data(gm_df)
+    gm_names = [sublist[0] for sublist in custom]
+
+    # Sort ascending so the highest value appears at the top of the horizontal bar chart
+    combined = sorted(zip(trade_vals, gm_names, logo_urls, marker_colors, custom), key=lambda t: t[0])
+    trade_vals = [t[0] for t in combined]
+    gm_names = [t[1] for t in combined]
+    logo_urls = [t[2] for t in combined]
+    marker_colors = [t[3] for t in combined]
+    custom = [t[4] for t in combined]
+
+    # Disambiguate duplicate GM names with the team code so Plotly treats them as separate bars
+    from collections import Counter
+    name_counts = Counter(gm_names)
+    display_names = [
+        f"{name} ({sublist[7]})" if name_counts[name] > 1 else name
+        for name, sublist in zip(gm_names, custom)
+    ]
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        x=trade_vals,
+        y=display_names,
+        customdata=custom,
+        marker=dict(color=marker_colors),
+        hovertemplate=(
+            "<b>%{customdata[0]}</b><br>"
+            "Tenure: %{customdata[1]}<br>"
+            "Assessed: %{customdata[2]}<br>"
+            "Total Surplus AV: %{customdata[3]}<br>"
+            "Avg Surplus AV/Year: %{customdata[4]}<br>"
+            "Total Trade EAVAR: %{customdata[5]}<br>"
+            "Avg Trade EAVAR/Year: %{customdata[6]}<br>"
+            "<extra></extra>"
+        ),
+        showlegend=False,
+        name="",
+        orientation='h'
+    ))
+
+    # sizey is in categorical data units (1 unit = one bar slot)
+    logo_size_y = 0.7
+    x_span = (max(trade_vals) - min(trade_vals)) if trade_vals else 10.0
+    logo_size_x = x_span * 0.08
+
+    # Place logos at the tip of each bar
+    layout_images = []
+    for x, y, logo_url in zip(trade_vals, display_names, logo_urls):
+        if not logo_url:
+            continue
+        layout_images.append(dict(
+            source=logo_url,
+            x=x,
+            y=y,
+            xref="x",
+            yref="y",
+            sizex=logo_size_x,
+            sizey=logo_size_y,
+            xanchor="left" if x >= 0 else "right",
+            yanchor="middle",
+            layer="above",
+        ))
+
+    fig.update_layout(
+        title=dict(text=title, x=0.5),
+        xaxis_title="Avg Draft Surplus AV per Year",
+        yaxis_title="GM",
         template="plotly_white",
         images=layout_images,
         hovermode="closest",

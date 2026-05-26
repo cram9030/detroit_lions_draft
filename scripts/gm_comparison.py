@@ -36,7 +36,11 @@ from src.gm_assessment import (
     get_surplus_value,
     get_trade_value,
 )
-from src.plot_av import plot_gm_quadrant
+from src.plot_av import (
+    plot_gm_quadrant,
+    plot_gm_surplus,
+    plot_gm_trade
+    )
 
 _MODELS_DIR = PROJECT_ROOT / "models"
 _EXECUTIVES_DIR = PROJECT_ROOT / "data" / "raw" / "pfr" / "executives"
@@ -151,10 +155,29 @@ def main() -> None:
     fig = plot_gm_quadrant(
         gm_df,
         title=chart_title,
-        highlight_team=team,
         export_path=output_path,
         export_format="html",
     )
+
+    surplus_output_path = output_dir / f"{team}_{year}_gm_draft_bar.html"
+    fig = plot_gm_surplus(
+        gm_df,
+        title = chart_title,
+        export_path = surplus_output_path,
+        export_format = "html",
+    )
+
+    trade_chart_title = (
+            f"GM Trade Performance: {gm_name} ({team}, {gm_from}–{gm_to}) vs Peers"
+        )
+    trade_output_path = output_dir / f"{team}_{year}_gm_trade_bar.html"
+    fig = plot_gm_trade(
+        gm_df,
+        title = trade_chart_title,
+        export_path = trade_output_path,
+        export_format = "html",
+    )
+
     print("Done.")
 
 
