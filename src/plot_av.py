@@ -1686,7 +1686,7 @@ def plot_gm_quadrant(
     fig.update_layout(
         title=dict(text=title, x=0.5),
         xaxis_title="Avg Draft Surplus AV per Year",
-        yaxis_title="Avg Trade Value per Year (EAVAR units)",
+        yaxis_title="Avg Trade Value per Year",
         template="plotly_white",
         images=layout_images,
         hovermode="closest",

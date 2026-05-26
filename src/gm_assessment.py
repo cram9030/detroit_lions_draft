@@ -251,7 +251,7 @@ def find_overlapping_gms(
                 continue
             # Assessed window: full career clipped to available data bounds
             eff_overlap_from = max(gm_from, data_start_year)
-            eff_overlap_to = min(gm_to, effective_to)
+            eff_overlap_to = min(gm_to, years_cap)
             # Use the midpoint of the assessed window for stathead code resolution
             mid_year = (eff_overlap_from + eff_overlap_to) // 2
             stathead_code = pfr_to_stathead(pfr_code, mid_year)
@@ -274,6 +274,7 @@ def find_overlapping_gms(
             "gm_to": pl.Int64,
             "overlap_from": pl.Int64,
             "overlap_to": pl.Int64,
+            "effective_to": pl.Int64,
         })
 
     return pl.DataFrame(rows)
@@ -354,7 +355,7 @@ def get_trade_value(
 ) -> pl.DataFrame:
     """Add trade value aggregation columns to gm_records_df.
 
-    Calls ``aggregate_trade_value`` for each row's (stathead_code, overlap_from..overlap_to).
+    Calls ``aggregate_trade_value`` for each row's (stathead_code, gm_from..gm_to).
 
     Args:
         gm_records_df: Output of :func:`find_overlapping_gms` (or after get_surplus_value).
