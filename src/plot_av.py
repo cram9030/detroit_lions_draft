@@ -1765,13 +1765,18 @@ def plot_gm_surplus(
     marker_colors = [t[3] for t in combined]
     custom = [t[4] for t in combined]
 
-    # Disambiguate duplicate GM names with the team code so Plotly treats them as separate bars
+    # Disambiguate duplicate GM names and append rank (highest surplus = #1)
     from collections import Counter
+    n = len(combined)
     name_counts = Counter(gm_names)
-    display_names = [
+    base_names = [
         f"{name} ({sublist[7]})" if name_counts[name] > 1 else name
         for name, sublist in zip(gm_names, custom)
     ]
+    display_names = [f"{base} [#{n - i}]" for i, base in enumerate(base_names)]
+    # Append rank as customdata[8] so it's available in the hover tooltip
+    for i, c in enumerate(custom):
+        c.append(n - i)
 
     fig = go.Figure()
 
@@ -1781,7 +1786,7 @@ def plot_gm_surplus(
         customdata=custom,
         marker=dict(color=marker_colors),
         hovertemplate=(
-            "<b>%{customdata[0]}</b><br>"
+            "<b>%{customdata[0]}</b> [#%{customdata[8]}]<br>"
             "Tenure: %{customdata[1]}<br>"
             "Assessed: %{customdata[2]}<br>"
             "Total Surplus AV: %{customdata[3]}<br>"
@@ -1821,7 +1826,7 @@ def plot_gm_surplus(
     fig.update_layout(
         title=dict(text=title, x=0.5),
         xaxis_title="Avg Draft Surplus AV per Year",
-        yaxis_title="GM",
+        yaxis=dict(title="GM", automargin=True),
         template="plotly_white",
         images=layout_images,
         hovermode="closest",
@@ -1869,13 +1874,18 @@ def plot_gm_trade(
     marker_colors = [t[3] for t in combined]
     custom = [t[4] for t in combined]
 
-    # Disambiguate duplicate GM names with the team code so Plotly treats them as separate bars
+    # Disambiguate duplicate GM names and append rank (highest trade value = #1)
     from collections import Counter
+    n = len(combined)
     name_counts = Counter(gm_names)
-    display_names = [
+    base_names = [
         f"{name} ({sublist[7]})" if name_counts[name] > 1 else name
         for name, sublist in zip(gm_names, custom)
     ]
+    display_names = [f"{base} [#{n - i}]" for i, base in enumerate(base_names)]
+    # Append rank as customdata[8] so it's available in the hover tooltip
+    for i, c in enumerate(custom):
+        c.append(n - i)
 
     fig = go.Figure()
 
@@ -1885,7 +1895,7 @@ def plot_gm_trade(
         customdata=custom,
         marker=dict(color=marker_colors),
         hovertemplate=(
-            "<b>%{customdata[0]}</b><br>"
+            "<b>%{customdata[0]}</b> [#%{customdata[8]}]<br>"
             "Tenure: %{customdata[1]}<br>"
             "Assessed: %{customdata[2]}<br>"
             "Total Surplus AV: %{customdata[3]}<br>"
@@ -1924,8 +1934,8 @@ def plot_gm_trade(
 
     fig.update_layout(
         title=dict(text=title, x=0.5),
-        xaxis_title="Avg Draft Surplus AV per Year",
-        yaxis_title="GM",
+        xaxis_title="Avg Trade Value per Year",
+        yaxis=dict(title="GM", automargin=True),
         template="plotly_white",
         images=layout_images,
         hovermode="closest",
