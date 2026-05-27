@@ -45,9 +45,11 @@ sys.path.insert(0, str(PROJECT_ROOT))
 import polars as pl
 import plotly.graph_objects as go
 
-from src.annual_av_analysis import exponential_av_fit_stat
+from src.pick_curves import exponential_av_fit_stat
 from src.models.factory import make_career_av_model
-from src.surplus_av import _normalize_pos, load_team_draft_class, project_player_seasons
+from src.models.utils import check_model_exists
+from src.positions import normalize_pos
+from src.surplus_av import load_team_draft_class, project_player_seasons
 
 MODELS_DIR = PROJECT_ROOT / "models"
 FIGURES_DIR = PROJECT_ROOT / "outputs/figures"
@@ -65,29 +67,9 @@ _PLAYER_POSITION_OVERRIDES: dict[str, str] = {
 
 
 def _check_prerequisites() -> None:
-    params_path = MODELS_DIR / "parametric" / "gamma" / "params.json"
-    if not params_path.exists():
-        raise FileNotFoundError(
-            f"Parametric model not found at {params_path}\n"
-            "Train it first:\n"
-            "  python scripts/train_models.py --model parametric --curve gamma"
-        )
-
-    knn_path = MODELS_DIR / "knn" / "_config.joblib"
-    if not knn_path.exists():
-        raise FileNotFoundError(
-            f"KNN model not found at {knn_path}\n"
-            "Train it first:\n"
-            "  python scripts/train_models.py --model knn"
-        )
-
-    ridge_path = MODELS_DIR / "ridge" / "_config.joblib"
-    if not ridge_path.exists():
-        raise FileNotFoundError(
-            f"Ridge model not found at {ridge_path}\n"
-            "Train it first:\n"
-            "  python scripts/train_models.py --model ridge"
-        )
+    check_model_exists("parametric", MODELS_DIR, curve_name="gamma")
+    check_model_exists("knn", MODELS_DIR)
+    check_model_exists("ridge", MODELS_DIR)
 
 
 
@@ -162,7 +144,7 @@ def main() -> None:
         param_proj = project_player_seasons(parametric_model, player, pos, obs_av, _PLAYER_POSITION_OVERRIDES, pick=pick_int)
         if param_proj is None:
             param_yr2, param_yr3 = 0.0, 0.0
-            param_note = f"(pos '{_normalize_pos(player, pos, _PLAYER_POSITION_OVERRIDES)}' not in parametric model)"
+            param_note = f"(pos '{normalize_pos(player, pos, _PLAYER_POSITION_OVERRIDES)}' not in parametric model)"
         else:
             param_yr2, param_yr3 = param_proj
             param_note = ""
@@ -171,7 +153,7 @@ def main() -> None:
         knn_proj = project_player_seasons(knn_model, player, pos, obs_av, _PLAYER_POSITION_OVERRIDES, pick=pick_int)
         if knn_proj is None:
             knn_yr2, knn_yr3 = 0.0, 0.0
-            knn_note = f"(pos '{_normalize_pos(player, pos, _PLAYER_POSITION_OVERRIDES)}' not in KNN model)"
+            knn_note = f"(pos '{normalize_pos(player, pos, _PLAYER_POSITION_OVERRIDES)}' not in KNN model)"
         else:
             knn_yr2, knn_yr3 = knn_proj
             knn_note = ""
@@ -180,7 +162,7 @@ def main() -> None:
         ridge_proj = project_player_seasons(ridge_model, player, pos, obs_av, _PLAYER_POSITION_OVERRIDES, pick=pick_int)
         if ridge_proj is None:
             ridge_yr2, ridge_yr3 = 0.0, 0.0
-            ridge_note = f"(pos '{_normalize_pos(player, pos, _PLAYER_POSITION_OVERRIDES)}' not in ridge model)"
+            ridge_note = f"(pos '{normalize_pos(player, pos, _PLAYER_POSITION_OVERRIDES)}' not in ridge model)"
         else:
             ridge_yr2, ridge_yr3 = ridge_proj
             ridge_note = ""

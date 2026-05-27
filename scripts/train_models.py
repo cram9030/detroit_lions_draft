@@ -38,7 +38,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 import polars as pl
 
-from src.annual_av_analysis import aggregate_career_av_by_position, prepare_av_data
+from src.annual_av_analysis import prepare_av_data
+from src.career_av import aggregate_career_av_by_position
 from src.data_ingest import load_parquets_from_dir
 from src.models.factory import make_career_av_model
 from src.models.parametric import _CURVE_REGISTRY

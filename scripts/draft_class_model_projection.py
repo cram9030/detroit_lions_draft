@@ -47,7 +47,9 @@ import polars as pl
 import plotly.graph_objects as go
 
 from src.models.factory import make_career_av_model
-from src.surplus_av import _normalize_pos, load_team_draft_class
+from src.models.utils import check_model_exists, discover_parametric_curves
+from src.positions import normalize_pos
+from src.surplus_av import load_team_draft_class
 
 MODELS_DIR = PROJECT_ROOT / "models"
 FIGURES_DIR = PROJECT_ROOT / "outputs/figures"
@@ -76,17 +78,6 @@ def _hex_to_rgba(hex_color: str, alpha: float) -> str:
     return f"rgba({r},{g},{b},{alpha})"
 
 
-def _discover_parametric_curves() -> list[str]:
-    """Return names of all trained parametric curves found in models/parametric/."""
-    parametric_dir = MODELS_DIR / "parametric"
-    if not parametric_dir.exists():
-        return []
-    return sorted(
-        d.name for d in parametric_dir.iterdir()
-        if d.is_dir() and (d / "params.json").exists()
-    )
-
-
 def _build_color_map(model_keys: list[str]) -> dict[str, str]:
     """Assign a color to each model key. Parametric curves cycle through a palette."""
     colors: dict[str, str] = {}
@@ -104,20 +95,10 @@ def _check_prerequisites(model_keys: list[str]) -> None:
     """Verify trained artifacts exist for every requested model key."""
     for key in model_keys:
         if key in ("knn", "linear", "ridge"):
-            path = MODELS_DIR / key / "_config.joblib"
-            if not path.exists():
-                raise FileNotFoundError(
-                    f"{key} model not found at {path}\n"
-                    f"Train it first:\n  python scripts/train_models.py --model {key}"
-                )
+            check_model_exists(key, MODELS_DIR)
         elif key.startswith("parametric/"):
             curve = key.split("/", 1)[1]
-            path = MODELS_DIR / "parametric" / curve / "params.json"
-            if not path.exists():
-                raise FileNotFoundError(
-                    f"{key} model not found at {path}\n"
-                    f"Train it first:\n  python scripts/train_models.py --model parametric --curve {curve}"
-                )
+            check_model_exists("parametric", MODELS_DIR, curve_name=curve)
 
 
 def _build_trajectory(
@@ -266,7 +247,7 @@ def main() -> None:
     # Resolve parametric curves
     if include_param:
         if args.parametric_curve == "all":
-            param_curves = _discover_parametric_curves()
+            param_curves = discover_parametric_curves(MODELS_DIR)
             if not param_curves:
                 print(
                     "No trained parametric curves found in models/parametric/. "
@@ -333,7 +314,7 @@ def main() -> None:
         pos    = row["Pos"]
         pick   = row["Pick"]
         actual = [row["obs_yr0"], row["obs_yr1"], row["obs_yr2"], row["obs_yr3"]]
-        norm_pos = _normalize_pos(player, pos, _PLAYER_POSITION_OVERRIDES)
+        norm_pos = normalize_pos(player, pos, _PLAYER_POSITION_OVERRIDES)
 
         print(f"\n  {player} ({pos}, pick {pick})")
 

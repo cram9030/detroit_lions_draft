@@ -16,25 +16,7 @@ _DEFAULT_MODELS_DIR = _PROJECT_ROOT / "models"
 _DEFAULT_RAW_DIR = _PROJECT_ROOT / "data" / "raw" / "stathead" / "annual_av"
 _DEFAULT_DATA_DIR = _PROJECT_ROOT / "data" / "processed"
 
-ALL_PFR_CODES: list[str] = sorted([
-    "atl", "buf", "car", "chi", "cin", "cle", "clt", "crd",
-    "dal", "den", "det", "gnb", "htx", "jax", "kan", "mia",
-    "min", "nor", "nwe", "nyg", "nyj", "oti", "phi", "pit",
-    "rai", "ram", "rav", "sdg", "sea", "sfo", "tam", "was",
-])
-
-# Map Stathead team codes → nflreadpy team_abbr values (for logo/color lookup)
-STATHEAD_TO_NFLREADPY: dict[str, str] = {
-    "ATL": "ATL", "BUF": "BUF", "CAR": "CAR", "CHI": "CHI",
-    "CIN": "CIN", "CLE": "CLE", "IND": "IND", "ARI": "ARI",
-    "DAL": "DAL", "DEN": "DEN", "DET": "DET", "GNB": "GB",
-    "HOU": "HOU", "JAX": "JAX", "KAN": "KC",  "MIA": "MIA",
-    "MIN": "MIN", "NOR": "NO",  "NWE": "NE",  "NYG": "NYG",
-    "NYJ": "NYJ", "TEN": "TEN", "PHI": "PHI", "PIT": "PIT",
-    "OAK": "OAK",  "LVR": "LV",  "BAL": "BAL", "SDG": "SD",
-    "LAC": "LAC", "SEA": "SEA", "SFO": "SF",  "STL": "STL",
-    "LAR": "LA",  "TAM": "TB",  "WAS": "WAS",
-}
+from src.teams import ALL_PFR_CODES, STATHEAD_TO_NFLREADPY  # noqa: F401
 
 _PFR_TO_STATHEAD_STATIC: dict[str, str] = {
     "atl": "ATL", "buf": "BUF", "car": "CAR", "chi": "CHI",

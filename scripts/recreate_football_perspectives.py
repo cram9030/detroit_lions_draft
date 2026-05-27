@@ -24,12 +24,8 @@ import polars as pl
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.annual_av_analysis import (
-    aggregate_player_av,
-    logarithmic_av_fit,
-    logarithmic_fit_result_to_dataframe,
-    prepare_av_data,
-)
+from src.annual_av_analysis import aggregate_player_av, prepare_av_data
+from src.pick_curves import logarithmic_av_fit, logarithmic_fit_result_to_dataframe
 from src.data_ingest import load_parquets_from_dir
 
 # ---------------------------------------------------------------------------

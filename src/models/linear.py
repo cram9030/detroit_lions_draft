@@ -11,6 +11,7 @@ import polars as pl
 from sklearn.linear_model import LinearRegression
 
 from src.models.protocol import PredictionResult
+from src.models.utils import build_training_matrix
 
 _N_INPUTS = [1, 2, 3]
 
@@ -39,19 +40,7 @@ class LinearRegressionModel:
             if sub.select("Player").n_unique() < 5:
                 continue
 
-            pivoted = (
-                sub
-                .sort(["Player", "years_from_draft"])
-                .pivot(index="Player", on="years_from_draft", values="AV.1", aggregate_function="sum")
-                .sort("Player")
-                .fill_null(0)
-            )
-            year_cols = [str(y) for y in range(self.max_years)]
-            available = [c for c in year_cols if c in pivoted.columns]
-            matrix = pivoted.select(available).to_numpy().astype(float)
-            if matrix.shape[1] < self.max_years:
-                pad = np.zeros((matrix.shape[0], self.max_years - matrix.shape[1]))
-                matrix = np.hstack([matrix, pad])
+            matrix, _ = build_training_matrix(sub, self.max_years)
 
             pos_models: dict[int, dict[str, Any]] = {}
             for n_input in _N_INPUTS:

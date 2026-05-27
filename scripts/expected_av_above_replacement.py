@@ -28,12 +28,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 import polars as pl
 
-from src.annual_av_analysis import (
-    aggregate_player_av,
-    exponential_av_fit,
-    fit_result_to_dataframe,
-    prepare_av_data,
-)
+from src.annual_av_analysis import aggregate_player_av, prepare_av_data
+from src.pick_curves import exponential_av_fit, fit_result_to_dataframe
 from src.contracts import get_replacement_level_av, get_replacement_level_contracts
 from src.data_ingest import load_csv, load_parquets_from_dir
 from src.data_output import save_data

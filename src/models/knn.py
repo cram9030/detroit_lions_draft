@@ -9,6 +9,7 @@ import numpy as np
 import polars as pl
 
 from src.models.protocol import PredictionResult
+from src.models.utils import build_training_matrix
 
 
 class KNNTrajectoryModel:
@@ -68,27 +69,13 @@ class KNNTrajectoryModel:
                     .sort("Player")
                 )
 
-            pivoted = (
-                sub
-                .sort(["Player", "years_from_draft"])
-                .pivot(index="Player", on="years_from_draft", values="AV.1", aggregate_function="sum")
-                .sort("Player")
-                .fill_null(0)
-            )
-            # Drop the Player column; columns are year indices (0..max_years-1)
-            year_cols = [str(y) for y in range(self.max_years)]
-            available = [c for c in year_cols if c in pivoted.columns]
-            matrix = pivoted.select(available).to_numpy().astype(float)
-            # Pad missing year columns with zeros
-            if matrix.shape[1] < self.max_years:
-                pad = np.zeros((matrix.shape[0], self.max_years - matrix.shape[1]))
-                matrix = np.hstack([matrix, pad])
+            matrix, player_names = build_training_matrix(sub, self.max_years)
             self._reference[pos] = matrix
 
             if has_pick:
-                # Align picks to the sorted player order in pivoted
+                player_name_df = pl.DataFrame({"Player": player_names})
                 picks_arr = (
-                    pivoted.select("Player")
+                    player_name_df
                     .join(player_picks, on="Player", how="left")
                     ["Pick"].to_numpy().astype(float)
                 )

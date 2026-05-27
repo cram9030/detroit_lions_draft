@@ -44,6 +44,7 @@ import plotly.graph_objects as go
 import polars as pl
 
 from src.models.factory import make_career_av_model
+from src.models.utils import check_model_exists
 from src.surplus_av import (
     aggregate_model_av,
     aggregate_observed_av,
@@ -80,23 +81,6 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def _check_model(model_name: str, models_dir: Path) -> None:
-    """Raise FileNotFoundError with a helpful message if the model is missing."""
-    paths = {
-        "parametric": models_dir / "parametric" / "params.json",
-        "knn": models_dir / "knn" / "_config.joblib",
-        "ridge": models_dir / "ridge" / "_config.joblib",
-        "linear": models_dir / "linear" / "_config.joblib",
-    }
-    path = paths[model_name]
-    if not path.exists():
-        raise FileNotFoundError(
-            f"{model_name} model not found at {path}\n"
-            f"Train it first:\n"
-            f"  python scripts/train_models.py --model {model_name}"
-        )
-
-
 def main() -> None:
     args = parse_args()
     team = args.team.upper()
@@ -117,7 +101,7 @@ def main() -> None:
         print("All 4 seasons observed — no model projection needed.")
         players_df = aggregate_observed_av(draft_df)
     else:
-        _check_model(model_name, models_dir)
+        check_model_exists(model_name, models_dir)
         print(f"Loading {model_name} model...")
         model = make_career_av_model(model_name)
         model.load(models_dir / model_name)

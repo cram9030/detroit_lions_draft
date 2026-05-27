@@ -36,6 +36,7 @@ from src.gm_assessment import (
     get_surplus_value,
     get_trade_value,
 )
+from src.teams import STATHEAD_TO_PFR
 from src.plot_av import (
     plot_gm_quadrant,
     plot_gm_surplus,
@@ -50,18 +51,7 @@ _DATA_DIR = PROJECT_ROOT / "data" / "processed"
 
 def _pfr_code_for_team(team: str) -> str:
     """Convert a Stathead team code to its PFR code (lowercase)."""
-    _STATHEAD_TO_PFR: dict[str, str] = {
-        "ATL": "atl", "BUF": "buf", "CAR": "car", "CHI": "chi",
-        "CIN": "cin", "CLE": "cle", "IND": "clt", "ARI": "crd",
-        "DAL": "dal", "DEN": "den", "DET": "det", "GNB": "gnb",
-        "HOU": "htx", "JAX": "jax", "KAN": "kan", "MIA": "mia",
-        "MIN": "min", "NOR": "nor", "NWE": "nwe", "NYG": "nyg",
-        "NYJ": "nyj", "TEN": "oti", "PHI": "phi", "PIT": "pit",
-        "OAK": "rai", "LVR": "rai", "BAL": "rav", "SDG": "sdg",
-        "LAC": "sdg", "SEA": "sea", "SFO": "sfo", "STL": "ram",
-        "LAR": "ram", "TAM": "tam", "WAS": "was",
-    }
-    return _STATHEAD_TO_PFR.get(team.upper(), team.lower())
+    return STATHEAD_TO_PFR.get(team.upper(), team.lower())
 
 
 def main() -> None:

@@ -27,99 +27,17 @@ from pathlib import Path
 
 import polars as pl
 
-from src.annual_av_analysis import _GENERALIST as _GENERALIST_LIST
-from src.annual_av_analysis import _POSITION_GROUPS
+from src.positions import _GENERALIST as _GENERALIST_LIST
+from src.positions import canonicalize_positions, normalize_pos
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_RAW_DIR = _PROJECT_ROOT / "data/raw/stathead/annual_av"
 _DEFAULT_EAVAR_PATH = _PROJECT_ROOT / "data/processed/expected_av_above_replacement.csv"
 
-# Stathead uses these as catch-all codes that the trajectory models don't recognise.
-# They are excluded when counting positions for player canonicalization.
 _GENERALIST: frozenset[str] = frozenset(_GENERALIST_LIST)
 
-
-def _normalize_pos(
-    player: str,
-    pos: str | None,
-    overrides: dict[str, str] | None = None,
-) -> str:
-    """Return the normalized position group, applying per-player overrides first."""
-    if overrides and player in overrides:
-        return overrides[player]
-    if not pos:
-        return "UNK"
-    first = pos.replace("-", "/").split("/")[0].strip()
-    return _POSITION_GROUPS.get(first, first)
-
-
-def _canonicalize_positions(df: pl.DataFrame) -> pl.DataFrame:
-    """Resolve each player to a single canonical position across all seasons.
-
-    Stathead position codes change year-to-year for the same player (e.g.
-    ``LDE`` → ``DL`` → ``DE``), which causes the pivot in
-    :func:`aggregate_4yr_av` to produce duplicate rows.  This function
-    assigns one consistent position per player so the pivot is clean.
-
-    Strategy:
-      1. Count occurrences of each specific (non-generalist) normalized position.
-      2. Most-common specific position wins.
-      3. Tie-break: prefer the yr0 (draft-year) position.
-      4. Alphabetical on position name as final deterministic tie-break.
-      5. If a player has *only* generalist positions (``DL``, ``OL``), fall
-         back to their yr0 position.
-    """
-    # yr0 position per player — tie-break anchor
-    yr0_pos = (
-        df.filter(pl.col("years_from_draft") == 0)
-        .select(["Player", "Pick", "Draft Year", "Pos"])
-        .rename({"Pos": "yr0_pos"})
-    )
-
-    # Count only specific (non-generalist) positions across all seasons
-    pos_counts = (
-        df.filter(~pl.col("Pos").is_in(list(_GENERALIST)))
-        .group_by(["Player", "Pick", "Draft Year", "Pos"])
-        .agg(pl.len().alias("count"))
-    )
-
-    if pos_counts.is_empty():
-        canonical = yr0_pos.rename({"yr0_pos": "canonical_pos"})
-    else:
-        best = (
-            pos_counts
-            .join(yr0_pos, on=["Player", "Pick", "Draft Year"], how="left")
-            .with_columns(
-                (pl.col("Pos") == pl.col("yr0_pos")).cast(pl.Int8).alias("is_yr0_int")
-            )
-            # Primary: highest count; secondary: yr0 match; tertiary: alphabetical
-            .sort(
-                ["Player", "Pick", "Draft Year", "count", "is_yr0_int", "Pos"],
-                descending=[False, False, False, True, True, False],
-            )
-            .unique(
-                subset=["Player", "Pick", "Draft Year"],
-                keep="first",
-                maintain_order=False,
-            )
-            .select(["Player", "Pick", "Draft Year", pl.col("Pos").alias("canonical_pos")])
-        )
-        # Players with only generalist positions won't appear in best → fall back to yr0
-        canonical = (
-            yr0_pos
-            .join(best, on=["Player", "Pick", "Draft Year"], how="left")
-            .with_columns(
-                pl.coalesce(["canonical_pos", "yr0_pos"]).alias("canonical_pos")
-            )
-            .select(["Player", "Pick", "Draft Year", "canonical_pos"])
-        )
-
-    return (
-        df
-        .join(canonical, on=["Player", "Pick", "Draft Year"])
-        .with_columns(pl.col("canonical_pos").alias("Pos"))
-        .drop("canonical_pos")
-    )
+# Keep backward-compatible alias for callers that import _normalize_pos from this module
+_normalize_pos = normalize_pos
 
 
 def load_team_draft_class(
@@ -218,7 +136,7 @@ def load_team_draft_class(
     )
 
     # --- 6. Canonicalize: one position per player across all seasons -------
-    prepared = _canonicalize_positions(prepared)
+    prepared = canonicalize_positions(prepared)
 
     # --- 7. Drop rows with no AV (unfinalized / stale season data) ---------
     prepared = prepared.filter(pl.col("AV.1").is_not_null())
