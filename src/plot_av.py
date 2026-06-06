@@ -17,6 +17,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import polars as pl
+from plotly.subplots import make_subplots
 from scipy.stats import skewnorm
 
 from src import curve_fitting as _cf
@@ -1945,5 +1946,258 @@ def plot_gm_trade(
         _export_figure(fig, export_path, export_format)
     elif export_path is not None:
         _export_figure(fig, export_path, "html")
+
+    return fig
+
+
+# ---------------------------------------------------------------------------
+# Draft-performance correlation plots
+# ---------------------------------------------------------------------------
+
+def plot_draft_lag_heatmap(
+    results: dict,
+    draft_metrics: list[str],
+    draft_labels: dict[str, str],
+    perf_metrics: list[str],
+    perf_labels: dict[str, str],
+    export_path: str | Path | None = None,
+    export_format: Literal["html", "png", "svg"] | None = None,
+) -> go.Figure:
+    """Pearson r heatmap across draft metrics, lags, and performance metrics.
+
+    Args:
+        results: Nested dict ``results[dm][lag][pm] = (pearson_r, spearman_r, n)``
+            from the lagged correlation computation.
+        draft_metrics: Ordered list of draft metric column names.
+        draft_labels: Display labels keyed by draft metric name.
+        perf_metrics: Ordered list of season performance metric names.
+        perf_labels: Display labels keyed by performance metric name.
+        export_path: Optional path to save the figure.
+        export_format: ``"html"``, ``"png"``, or ``"svg"``.
+
+    Returns:
+        Plotly Figure.
+    """
+    y_labels = [f"{draft_labels[dm]} | lag {lag}" for dm in draft_metrics for lag in range(4)]
+    z_matrix: list[list[float | None]] = []
+    text_matrix: list[list[str]] = []
+
+    for dm in draft_metrics:
+        for lag in range(4):
+            row_z = []
+            row_t = []
+            for pm in perf_metrics:
+                entry = results[dm][lag].get(pm)
+                if entry:
+                    row_z.append(entry[0])
+                    row_t.append(f"{entry[0]:.3f}<br>n={entry[2]}")
+                else:
+                    row_z.append(None)
+                    row_t.append("")
+            z_matrix.append(row_z)
+            text_matrix.append(row_t)
+
+    fig = go.Figure(
+        go.Heatmap(
+            z=z_matrix,
+            x=[perf_labels[pm] for pm in perf_metrics],
+            y=y_labels,
+            colorscale="RdBu",
+            zmid=0,
+            zmin=-0.5,
+            zmax=0.5,
+            text=text_matrix,
+            texttemplate="%{text}",
+            hovertemplate="x: %{x}<br>y: %{y}<br>r: %{z:.3f}<extra></extra>",
+            colorbar=dict(title="Pearson r"),
+        )
+    )
+    fig.update_layout(
+        template="plotly_white",
+        title="Lagged Draft Class Correlation — Pearson r (Draft Metrics vs Season Performance)",
+        xaxis_title="Season Performance Metric",
+        yaxis_title="Draft Metric | Lag (years)",
+        yaxis=dict(autorange="reversed"),
+    )
+
+    if export_path is not None:
+        _export_figure(fig, export_path, export_format or "html")
+
+    return fig
+
+
+def plot_draft_lag_scatter(
+    draft_df: pl.DataFrame,
+    season_perf: pl.DataFrame,
+    results: dict,
+    dm: str,
+    pm: str,
+    draft_labels: dict[str, str],
+    perf_labels: dict[str, str],
+    export_path: str | Path | None = None,
+    export_format: Literal["html", "png", "svg"] | None = None,
+) -> go.Figure:
+    """2×2 subplot scatter of one draft metric vs one performance metric across all 4 lags.
+
+    Args:
+        draft_df: DataFrame with ``stathead_team``, ``draft_year``, and ``dm`` column.
+        season_perf: DataFrame with ``season``, ``team``, and ``pm`` column.
+        results: Nested dict ``results[dm][lag][pm] = (pearson_r, spearman_r, n)``.
+        dm: Draft metric column name (x-axis).
+        pm: Performance metric column name (y-axis).
+        draft_labels: Display labels keyed by draft metric name.
+        perf_labels: Display labels keyed by performance metric name.
+        export_path: Optional path to save the figure.
+        export_format: ``"html"``, ``"png"``, or ``"svg"``.
+
+    Returns:
+        Plotly Figure with one subplot per lag (0–3).
+    """
+    from src.gm_assessment import STATHEAD_TO_NFLREADPY
+    nfl_map = STATHEAD_TO_NFLREADPY
+
+    df = draft_df.with_columns(
+        pl.col("stathead_team")
+        .map_elements(lambda t: nfl_map.get(t, t), return_dtype=pl.String)
+        .alias("team")
+    )
+
+    fig = make_subplots(
+        rows=2,
+        cols=2,
+        subplot_titles=[f"Lag {lag}" for lag in range(4)],
+        shared_xaxes=False,
+    )
+    for lag in range(4):
+        row, col = divmod(lag, 2)
+        lag_df = (
+            df.with_columns((pl.col("draft_year") + lag).alias("season"))
+            .join(season_perf.select(["season", "team", pm]), on=["season", "team"], how="inner")
+            .select([dm, pm, "team", "draft_year"])
+            .drop_nulls()
+        )
+        if len(lag_df) < 5:
+            continue
+
+        x = lag_df[dm].to_numpy()
+        y = lag_df[pm].to_numpy()
+        m, b = np.polyfit(x, y, 1)
+        x_line = np.linspace(x.min(), x.max(), 100)
+
+        entry = results[dm][lag].get(pm)
+        r_label = f"r={entry[0]:.3f}" if entry else ""
+
+        fig.add_trace(
+            go.Scatter(
+                x=x.tolist(),
+                y=y.tolist(),
+                mode="markers",
+                text=[f"{r['team']} {r['draft_year']}" for r in lag_df.iter_rows(named=True)],
+                hovertemplate="%{text}<br>" + f"{dm}=%{{x:.1f}}<br>{pm}=%{{y:.3f}}<extra></extra>",
+                marker=dict(size=4, opacity=0.55, color="#1f77b4"),
+                showlegend=False,
+            ),
+            row=row + 1,
+            col=col + 1,
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=x_line.tolist(),
+                y=(m * x_line + b).tolist(),
+                mode="lines",
+                line=dict(color="red", dash="dash", width=1.5),
+                name=r_label,
+                showlegend=True,
+            ),
+            row=row + 1,
+            col=col + 1,
+        )
+
+    fig.update_layout(
+        template="plotly_white",
+        title=f"Lagged Draft Class Correlation: {draft_labels[dm]} vs {perf_labels[pm]} by Lag Year",
+    )
+    fig.update_xaxes(title_text=draft_labels[dm])
+    fig.update_yaxes(title_text=perf_labels[pm])
+
+    if export_path is not None:
+        _export_figure(fig, export_path, export_format or "html")
+
+    return fig
+
+
+def plot_draft_composite_scatter(
+    composite: pl.DataFrame,
+    results: dict,
+    perf_metrics: list[str],
+    perf_labels: dict[str, str],
+    export_path: str | Path | None = None,
+    export_format: Literal["html", "png", "svg"] | None = None,
+) -> go.Figure:
+    """1×3 scatter of composite active roster draft value vs each season performance metric.
+
+    Args:
+        composite: DataFrame with ``composite_av``, ``team``, ``season``, and
+            one column per performance metric.
+        results: Dict ``results[pm] = (pearson_r, spearman_r, n)`` from
+            the composite correlation computation.
+        perf_metrics: Ordered list of performance metric column names.
+        perf_labels: Display labels keyed by performance metric name.
+        export_path: Optional path to save the figure.
+        export_format: ``"html"``, ``"png"``, or ``"svg"``.
+
+    Returns:
+        Plotly Figure.
+    """
+    fig = make_subplots(
+        rows=1,
+        cols=3,
+        subplot_titles=[perf_labels[pm] for pm in perf_metrics],
+    )
+    for col_idx, pm in enumerate(perf_metrics, start=1):
+        pair = composite.select(["composite_av", pm, "team", "season"]).drop_nulls()
+        if len(pair) < 5:
+            continue
+        x = pair["composite_av"].to_numpy()
+        y = pair[pm].to_numpy()
+        m, b = np.polyfit(x, y, 1)
+        x_line = np.linspace(x.min(), x.max(), 100)
+
+        entry = results.get(pm)
+        r_label = f"r={entry[0]:.3f}, ρ={entry[1]:.3f}" if entry else ""
+
+        fig.add_trace(
+            go.Scatter(
+                x=x.tolist(),
+                y=y.tolist(),
+                mode="markers",
+                text=[f"{r['team']} {r['season']}" for r in pair.iter_rows(named=True)],
+                hovertemplate="%{text}<br>composite_av=%{x:.1f}<br>" + f"{pm}=%{{y:.3f}}<extra></extra>",
+                marker=dict(size=4, opacity=0.55, color="#1f77b4"),
+                showlegend=False,
+            ),
+            row=1,
+            col=col_idx,
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=x_line.tolist(),
+                y=(m * x_line + b).tolist(),
+                mode="lines",
+                line=dict(color="red", dash="dash", width=1.5),
+                name=r_label,
+            ),
+            row=1,
+            col=col_idx,
+        )
+
+    fig.update_layout(
+        template="plotly_white",
+        title="Composite Active Roster Draft Value vs Season Performance",
+    )
+    fig.update_xaxes(title_text="Composite Draft AV")
+
+    if export_path is not None:
+        _export_figure(fig, export_path, export_format or "html")
 
     return fig

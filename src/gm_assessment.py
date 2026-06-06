@@ -233,7 +233,7 @@ def find_overlapping_gms(
                 continue
             # Assessed window: full career clipped to available data bounds
             eff_overlap_from = max(gm_from, data_start_year)
-            eff_overlap_to = min(gm_to, years_cap)
+            eff_overlap_to = min(gm_to, years_cap) if years_cap is not None else gm_to
             # Use the midpoint of the assessed window for stathead code resolution
             mid_year = (eff_overlap_from + eff_overlap_to) // 2
             stathead_code = pfr_to_stathead(pfr_code, mid_year)

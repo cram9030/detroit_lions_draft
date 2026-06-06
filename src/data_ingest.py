@@ -1,7 +1,9 @@
 """Data ingestion utilities for the Detroit Lions draft analysis pipeline."""
 
+import json
 from pathlib import Path
 
+import numpy as np
 import polars as pl
 import nflreadpy
 
@@ -137,3 +139,159 @@ def load_nflreadr_draft_picks(seasons: list[int] | None = None) -> pl.DataFrame:
     if seasons is not None:
         df = df.filter(pl.col("Draft Year").is_in(seasons))
     return df
+
+
+# ---------------------------------------------------------------------------
+# Season performance
+# ---------------------------------------------------------------------------
+
+def _srs_for_season(games: pl.DataFrame) -> dict[str, float]:
+    """Solve the SRS linear system for one season using a normalised schedule matrix."""
+    teams = sorted(games["team"].unique().to_list())
+    idx = {t: i for i, t in enumerate(teams)}
+    n = len(teams)
+
+    margin_sum = np.zeros(n)
+    A = np.zeros((n, n))
+
+    for row in games.iter_rows(named=True):
+        i = idx[row["team"]]
+        j = idx.get(row["opponent"])
+        if j is not None:
+            A[i, j] += 1
+            margin_sum[i] += row["pf"] - row["pa"]
+
+    games_played = A.sum(axis=1)
+    safe = np.where(games_played == 0, 1.0, games_played)
+    mov = margin_sum / safe
+    A_norm = A / safe[:, np.newaxis]
+
+    lhs = np.eye(n) - A_norm
+    rhs = mov.copy()
+    lhs[-1, :] = 1.0
+    rhs[-1] = 0.0
+
+    try:
+        srs_vals = np.linalg.solve(lhs, rhs)
+    except np.linalg.LinAlgError:
+        srs_vals = mov
+
+    return {t: round(float(s), 3) for t, s in zip(teams, srs_vals)}
+
+
+def compute_season_performance() -> pl.DataFrame:
+    """Return ``(team, season, win_pct, point_diff, srs)`` from nflreadpy schedules.
+
+    Team codes are nflreadpy abbreviations (e.g. GB, KC).
+    """
+    sched = nflreadpy.load_schedules()
+    reg = (
+        sched
+        .filter(pl.col("game_type") == "REG")
+        .filter(pl.col("home_score").is_not_null())
+        .select(["season", "home_team", "home_score", "away_team", "away_score"])
+    )
+
+    home = reg.select(
+        pl.col("season"),
+        pl.col("home_team").alias("team"),
+        pl.col("home_score").alias("pf"),
+        pl.col("away_score").alias("pa"),
+        pl.col("away_team").alias("opponent"),
+    )
+    away = reg.select(
+        pl.col("season"),
+        pl.col("away_team").alias("team"),
+        pl.col("away_score").alias("pf"),
+        pl.col("home_score").alias("pa"),
+        pl.col("home_team").alias("opponent"),
+    )
+    all_games = pl.concat([home, away])
+
+    agg = (
+        all_games
+        .with_columns(
+            (pl.col("pf") > pl.col("pa")).cast(pl.Float64).alias("win"),
+            (pl.col("pf") == pl.col("pa")).cast(pl.Float64).alias("tie"),
+        )
+        .group_by(["season", "team"])
+        .agg(
+            pl.sum("win").alias("wins"),
+            pl.sum("tie").alias("ties"),
+            pl.len().alias("games"),
+            pl.sum("pf").alias("total_pf"),
+            pl.sum("pa").alias("total_pa"),
+        )
+        .with_columns(
+            ((pl.col("wins") + 0.5 * pl.col("ties")) / pl.col("games")).alias("win_pct"),
+            (pl.col("total_pf") - pl.col("total_pa")).alias("point_diff"),
+        )
+    )
+
+    srs_rows: list[dict] = []
+    for season in sorted(all_games["season"].unique().to_list()):
+        sg = all_games.filter(pl.col("season") == season)
+        for team, srs in _srs_for_season(sg).items():
+            srs_rows.append({"season": season, "team": team, "srs": srs})
+
+    srs_df = pl.DataFrame(srs_rows)
+    return (
+        agg
+        .join(srs_df, on=["season", "team"], how="left")
+        .select(["season", "team", "win_pct", "point_diff", "srs"])
+        .sort(["season", "team"])
+    )
+
+
+# ---------------------------------------------------------------------------
+# Baked draft data
+# ---------------------------------------------------------------------------
+
+_DEFAULT_BAKED_DIR = Path(__file__).resolve().parents[1] / "data" / "processed" / "baked"
+
+
+def load_baked_data(
+    years: list[int],
+    baked_dir: Path | str | None = None,
+) -> pl.DataFrame:
+    """Load per-(team, draft_year) class surplus and obs_yr* totals from baked JSONs.
+
+    ``class_surplus`` is ``None`` for partially-observed years (models are not
+    committed to surplus values until all 4 seasons have completed).
+
+    Args:
+        years: Draft years to load.
+        baked_dir: Directory containing ``draft_{year}.json`` files.
+            Defaults to ``data/processed/baked/``.
+
+    Returns:
+        DataFrame with columns
+        ``[stathead_team, draft_year, class_surplus, obs_yr0, obs_yr1, obs_yr2, obs_yr3]``.
+    """
+    baked_dir = Path(baked_dir) if baked_dir else _DEFAULT_BAKED_DIR
+    rows = []
+    for year in years:
+        path = baked_dir / f"draft_{year}.json"
+        if not path.exists():
+            continue
+        data = json.loads(path.read_text())
+        for team, tdata in data["teams"].items():
+            if tdata.get("fully_observed"):
+                surplus = tdata.get("class_summary", {}).get("class_surplus")
+                players = tdata.get("players", [])
+            else:
+                surplus = None
+                models = tdata.get("models", {})
+                players = next(iter(models.values())).get("players", []) if models else []
+
+            rows.append({
+                "stathead_team": team,
+                "draft_year": year,
+                "class_surplus": surplus,
+                "obs_yr0": sum(p.get("obs_yr0") or 0.0 for p in players),
+                "obs_yr1": sum(p.get("obs_yr1") or 0.0 for p in players),
+                "obs_yr2": sum(p.get("obs_yr2") or 0.0 for p in players),
+                "obs_yr3": sum(p.get("obs_yr3") or 0.0 for p in players),
+            })
+
+    return pl.DataFrame(rows)
