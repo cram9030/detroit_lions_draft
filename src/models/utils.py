@@ -12,20 +12,30 @@ def check_model_exists(model_name: str, models_dir: Path, curve_name: str | None
     """Raise FileNotFoundError with a helpful train command if the model is missing.
 
     For parametric models, checks for ``models/parametric/{curve}/params.json``
-    when curve_name is provided, or ``models/parametric/params.json`` otherwise.
+    when curve_name is provided, or scans for any available curve otherwise.
     For other models (knn, ridge, linear), checks for ``models/{name}/_config.joblib``.
     """
     if model_name == "parametric":
         if curve_name:
             path = models_dir / "parametric" / curve_name / "params.json"
             train_cmd = f"  python scripts/train_models.py --model {model_name} --curve {curve_name}"
+            if not path.exists():
+                raise FileNotFoundError(
+                    f"parametric/{curve_name} model not found at {path}\n"
+                    f"Train it first:\n"
+                    f"{train_cmd}"
+                )
         else:
-            path = models_dir / "parametric" / "params.json"
-            train_cmd = f"  python scripts/train_models.py --model {model_name}"
-    else:
-        path = models_dir / model_name / "_config.joblib"
-        train_cmd = f"  python scripts/train_models.py --model {model_name}"
-
+            curves = discover_parametric_curves(models_dir)
+            if not curves:
+                raise FileNotFoundError(
+                    f"No parametric model variants found in {models_dir / 'parametric'}\n"
+                    f"Train one first:\n"
+                    f"  python scripts/train_models.py --model parametric"
+                )
+        return
+    path = models_dir / model_name / "_config.joblib"
+    train_cmd = f"  python scripts/train_models.py --model {model_name}"
     if not path.exists():
         raise FileNotFoundError(
             f"{model_name} model not found at {path}\n"

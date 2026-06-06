@@ -82,7 +82,7 @@ from src.surplus_av import (
     compute_surplus_av,
     load_team_draft_class,
 )
-from src.teams import ALL_PFR_CODES as _TEAMS_ALL_PFR_CODES
+from src.teams import ALL_PFR_CODES, pfr_to_stathead
 
 MODELS_DIR = PROJECT_ROOT / "models"
 BAKED_DIR = PROJECT_ROOT / "data" / "processed" / "baked"
@@ -114,29 +114,6 @@ _POSITION_OVERRIDES: dict[str, str] = {
     "Jordon Riley": "DT",
     "Spencer Anderson": "OG",
 }
-
-ALL_PFR_CODES = _TEAMS_ALL_PFR_CODES
-
-_PFR_TO_STATHEAD_STATIC: dict[str, str] = {
-    "atl": "ATL", "buf": "BUF", "car": "CAR", "chi": "CHI",
-    "cin": "CIN", "cle": "CLE", "clt": "IND", "crd": "ARI",
-    "dal": "DAL", "den": "DEN", "det": "DET", "gnb": "GNB",
-    "htx": "HOU", "jax": "JAX", "kan": "KAN", "mia": "MIA",
-    "min": "MIN", "nor": "NOR", "nwe": "NWE", "nyg": "NYG",
-    "nyj": "NYJ", "oti": "TEN", "phi": "PHI", "pit": "PIT",
-    "rav": "BAL", "sea": "SEA", "sfo": "SFO", "tam": "TAM", "was": "WAS",
-}
-
-
-def pfr_to_stathead(pfr_code: str, year: int) -> str:
-    """Translate a PFR franchise code to its Stathead team code for a given year."""
-    if pfr_code == "rai":
-        return "OAK" if year <= 2019 else "LVR"
-    if pfr_code == "ram":
-        return "STL" if year <= 2015 else "LAR"
-    if pfr_code == "sdg":
-        return "SDG" if year <= 2016 else "LAC"
-    return _PFR_TO_STATHEAD_STATIC[pfr_code]
 
 
 def get_gm_for_team_year(

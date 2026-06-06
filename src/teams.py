@@ -3,6 +3,28 @@
 from __future__ import annotations
 
 
+_PFR_TO_STATHEAD_STATIC: dict[str, str] = {
+    "atl": "ATL", "buf": "BUF", "car": "CAR", "chi": "CHI",
+    "cin": "CIN", "cle": "CLE", "clt": "IND", "crd": "ARI",
+    "dal": "DAL", "den": "DEN", "det": "DET", "gnb": "GNB",
+    "htx": "HOU", "jax": "JAX", "kan": "KAN", "mia": "MIA",
+    "min": "MIN", "nor": "NOR", "nwe": "NWE", "nyg": "NYG",
+    "nyj": "NYJ", "oti": "TEN", "phi": "PHI", "pit": "PIT",
+    "rav": "BAL", "sea": "SEA", "sfo": "SFO", "tam": "TAM", "was": "WAS",
+}
+
+
+def pfr_to_stathead(pfr_code: str, year: int) -> str:
+    """Translate a PFR franchise code to its Stathead team code for a given year."""
+    if pfr_code == "rai":
+        return "OAK" if year <= 2019 else "LVR"
+    if pfr_code == "ram":
+        return "STL" if year <= 2015 else "LAR"
+    if pfr_code == "sdg":
+        return "SDG" if year <= 2016 else "LAC"
+    return _PFR_TO_STATHEAD_STATIC[pfr_code]
+
+
 ALL_PFR_CODES: list[str] = sorted([
     "atl", "buf", "car", "chi", "cin", "cle", "clt", "crd",
     "dal", "den", "det", "gnb", "htx", "jax", "kan", "mia",
