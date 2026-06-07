@@ -38,11 +38,11 @@ import plotly.colors as pc
 import plotly.graph_objects as go
 
 from src.models.parametric import ParametricCurveModel
+from src.models.utils import discover_parametric_curves
+from src.positions import _POSITION_ORDER
 
 MODELS_DIR = PROJECT_ROOT / "models"
 FIGURES_DIR = PROJECT_ROOT / "outputs" / "figures"
-
-_POSITION_ORDER = ["QB", "WR", "TE", "RB", "OC", "OG", "OT", "DE", "DT", "LB", "CB", "S"]
 
 
 def _rgb_str_to_rgba(rgb_str: str, alpha: float) -> str:
@@ -50,15 +50,6 @@ def _rgb_str_to_rgba(rgb_str: str, alpha: float) -> str:
     nums = re.findall(r"[\d.]+", rgb_str)
     r, g, b = int(float(nums[0])), int(float(nums[1])), int(float(nums[2]))
     return f"rgba({r},{g},{b},{alpha})"
-
-
-def _discover_curves() -> list[str]:
-    """Return curve names that have a trained params.json in models/parametric/."""
-    return sorted(
-        d.name
-        for d in (MODELS_DIR / "parametric").iterdir()
-        if d.is_dir() and (d / "params.json").exists()
-    )
 
 
 def _check_prerequisites(curves: list[str]) -> None:
@@ -144,7 +135,7 @@ def _make_curve_figure(
 
 
 def main() -> None:
-    available = _discover_curves()
+    available = discover_parametric_curves(MODELS_DIR)
 
     parser = argparse.ArgumentParser(
         description="Plot population-mean career AV curves per parametric variant (all positions on one plot)"

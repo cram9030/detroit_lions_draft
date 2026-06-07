@@ -44,6 +44,7 @@ import plotly.graph_objects as go
 import polars as pl
 
 from src.models.factory import make_career_av_model
+from src.models.utils import check_model_exists, discover_parametric_curves
 from src.surplus_av import (
     aggregate_model_av,
     aggregate_observed_av,
@@ -66,6 +67,11 @@ def parse_args() -> argparse.Namespace:
         help="Career AV model to use for projections (default: parametric)",
     )
     p.add_argument(
+        "--parametric-curve",
+        default=None,
+        help="Parametric curve variant to load (default: auto-discover first available)",
+    )
+    p.add_argument(
         "--models-dir",
         type=Path,
         default=None,
@@ -80,23 +86,6 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def _check_model(model_name: str, models_dir: Path) -> None:
-    """Raise FileNotFoundError with a helpful message if the model is missing."""
-    paths = {
-        "parametric": models_dir / "parametric" / "params.json",
-        "knn": models_dir / "knn" / "_config.joblib",
-        "ridge": models_dir / "ridge" / "_config.joblib",
-        "linear": models_dir / "linear" / "_config.joblib",
-    }
-    path = paths[model_name]
-    if not path.exists():
-        raise FileNotFoundError(
-            f"{model_name} model not found at {path}\n"
-            f"Train it first:\n"
-            f"  python scripts/train_models.py --model {model_name}"
-        )
-
-
 def main() -> None:
     args = parse_args()
     team = args.team.upper()
@@ -105,6 +94,10 @@ def main() -> None:
     models_dir = args.models_dir or MODELS_DIR
     output_dir = args.output_dir or FIGURES_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
+    parametric_curve = args.parametric_curve
+    if model_name == "parametric" and parametric_curve is None:
+        curves = discover_parametric_curves(models_dir)
+        parametric_curve = curves[0] if curves else None
 
     print(f"Loading {team} {year} draft class...")
     draft_df = load_team_draft_class(team, year)
@@ -117,10 +110,11 @@ def main() -> None:
         print("All 4 seasons observed — no model projection needed.")
         players_df = aggregate_observed_av(draft_df)
     else:
-        _check_model(model_name, models_dir)
+        check_model_exists(model_name, models_dir, curve_name=parametric_curve)
         print(f"Loading {model_name} model...")
         model = make_career_av_model(model_name)
-        model.load(models_dir / model_name)
+        load_dir = models_dir / "parametric" / parametric_curve if model_name == "parametric" else models_dir / model_name
+        model.load(load_dir)
         print("Aggregating 4-year AV with model projections...")
         players_df = aggregate_model_av(draft_df, model)
 

@@ -16,49 +16,10 @@ _DEFAULT_MODELS_DIR = _PROJECT_ROOT / "models"
 _DEFAULT_RAW_DIR = _PROJECT_ROOT / "data" / "raw" / "stathead" / "annual_av"
 _DEFAULT_DATA_DIR = _PROJECT_ROOT / "data" / "processed"
 
-ALL_PFR_CODES: list[str] = sorted([
-    "atl", "buf", "car", "chi", "cin", "cle", "clt", "crd",
-    "dal", "den", "det", "gnb", "htx", "jax", "kan", "mia",
-    "min", "nor", "nwe", "nyg", "nyj", "oti", "phi", "pit",
-    "rai", "ram", "rav", "sdg", "sea", "sfo", "tam", "was",
-])
-
-# Map Stathead team codes → nflreadpy team_abbr values (for logo/color lookup)
-STATHEAD_TO_NFLREADPY: dict[str, str] = {
-    "ATL": "ATL", "BUF": "BUF", "CAR": "CAR", "CHI": "CHI",
-    "CIN": "CIN", "CLE": "CLE", "IND": "IND", "ARI": "ARI",
-    "DAL": "DAL", "DEN": "DEN", "DET": "DET", "GNB": "GB",
-    "HOU": "HOU", "JAX": "JAX", "KAN": "KC",  "MIA": "MIA",
-    "MIN": "MIN", "NOR": "NO",  "NWE": "NE",  "NYG": "NYG",
-    "NYJ": "NYJ", "TEN": "TEN", "PHI": "PHI", "PIT": "PIT",
-    "OAK": "OAK",  "LVR": "LV",  "BAL": "BAL", "SDG": "SD",
-    "LAC": "LAC", "SEA": "SEA", "SFO": "SF",  "STL": "STL",
-    "LAR": "LA",  "TAM": "TB",  "WAS": "WAS",
-}
-
-_PFR_TO_STATHEAD_STATIC: dict[str, str] = {
-    "atl": "ATL", "buf": "BUF", "car": "CAR", "chi": "CHI",
-    "cin": "CIN", "cle": "CLE", "clt": "IND", "crd": "ARI",
-    "dal": "DAL", "den": "DEN", "det": "DET", "gnb": "GNB",
-    "htx": "HOU", "jax": "JAX", "kan": "KAN", "mia": "MIA",
-    "min": "MIN", "nor": "NOR", "nwe": "NWE", "nyg": "NYG",
-    "nyj": "NYJ", "oti": "TEN", "phi": "PHI", "pit": "PIT",
-    "rav": "BAL", "sea": "SEA", "sfo": "SFO", "tam": "TAM", "was": "WAS",
-}
+from src.teams import ALL_PFR_CODES, STATHEAD_TO_NFLREADPY, pfr_to_stathead  # noqa: F401
 
 # Regex to extract M/D/YY or M/D/YYYY dates from Notes strings
 _DATE_RE = re.compile(r"\b(\d{1,2})/\d{1,2}/\d{2,4}\b")
-
-
-def pfr_to_stathead(pfr_code: str, year: int) -> str:
-    """Translate a PFR franchise code to its Stathead team code for a given year."""
-    if pfr_code == "rai":
-        return "OAK" if year <= 2019 else "LVR"
-    if pfr_code == "ram":
-        return "STL" if year <= 2015 else "LAR"
-    if pfr_code == "sdg":
-        return "SDG" if year <= 2016 else "LAC"
-    return _PFR_TO_STATHEAD_STATIC[pfr_code]
 
 
 def load_executives(pfr_code: str, executives_dir: Path | None = None) -> pl.DataFrame:

@@ -75,12 +75,14 @@ sys.path.insert(0, str(PROJECT_ROOT))
 import polars as pl
 
 from src.models.factory import make_career_av_model
+from src.models.utils import check_model_exists, discover_parametric_curves
 from src.surplus_av import (
     aggregate_model_av,
     aggregate_observed_av,
     compute_surplus_av,
     load_team_draft_class,
 )
+from src.teams import ALL_PFR_CODES, pfr_to_stathead
 
 MODELS_DIR = PROJECT_ROOT / "models"
 BAKED_DIR = PROJECT_ROOT / "data" / "processed" / "baked"
@@ -112,64 +114,6 @@ _POSITION_OVERRIDES: dict[str, str] = {
     "Jordon Riley": "DT",
     "Spencer Anderson": "OG",
 }
-
-ALL_PFR_CODES: list[str] = sorted([
-    "atl", "buf", "car", "chi", "cin", "cle", "clt", "crd",
-    "dal", "den", "det", "gnb", "htx", "jax", "kan", "mia",
-    "min", "nor", "nwe", "nyg", "nyj", "oti", "phi", "pit",
-    "rai", "ram", "rav", "sdg", "sea", "sfo", "tam", "was",
-])
-
-_PFR_TO_STATHEAD_STATIC: dict[str, str] = {
-    "atl": "ATL", "buf": "BUF", "car": "CAR", "chi": "CHI",
-    "cin": "CIN", "cle": "CLE", "clt": "IND", "crd": "ARI",
-    "dal": "DAL", "den": "DEN", "det": "DET", "gnb": "GNB",
-    "htx": "HOU", "jax": "JAX", "kan": "KAN", "mia": "MIA",
-    "min": "MIN", "nor": "NOR", "nwe": "NWE", "nyg": "NYG",
-    "nyj": "NYJ", "oti": "TEN", "phi": "PHI", "pit": "PIT",
-    "rav": "BAL", "sea": "SEA", "sfo": "SFO", "tam": "TAM", "was": "WAS",
-}
-
-
-def pfr_to_stathead(pfr_code: str, year: int) -> str:
-    """Translate a PFR franchise code to its Stathead team code for a given year."""
-    if pfr_code == "rai":
-        return "OAK" if year <= 2019 else "LVR"
-    if pfr_code == "ram":
-        return "STL" if year <= 2015 else "LAR"
-    if pfr_code == "sdg":
-        return "SDG" if year <= 2016 else "LAC"
-    return _PFR_TO_STATHEAD_STATIC[pfr_code]
-
-
-def _discover_parametric_curves(models_dir: Path) -> list[str]:
-    """Return sorted list of trained parametric curve variants.
-
-    Scans models/parametric/ for sub-directories that contain a params.json.
-    Returns [] if no variants exist or the directory is absent.
-    """
-    param_dir = models_dir / "parametric"
-    if not param_dir.is_dir():
-        return []
-    return sorted(
-        d.name for d in param_dir.iterdir()
-        if d.is_dir() and (d / "params.json").exists()
-    )
-
-
-def _check_model(model_name: str, models_dir: Path) -> None:
-    """Raise FileNotFoundError with a helpful message if the model is missing."""
-    paths = {
-        "knn": models_dir / "knn" / "_config.joblib",
-        "linear": models_dir / "linear" / "_config.joblib",
-    }
-    path = paths[model_name]
-    if not path.exists():
-        raise FileNotFoundError(
-            f"{model_name} model not found at {path}\n"
-            f"Train it first:\n"
-            f"  python scripts/train_models.py --model {model_name}"
-        )
 
 
 def get_gm_for_team_year(
@@ -355,7 +299,7 @@ def main() -> None:
     output_dir = args.output_dir or BAKED_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    parametric_curves = _discover_parametric_curves(models_dir)
+    parametric_curves = discover_parametric_curves(models_dir)
     if parametric_curves:
         print(f"Discovered parametric variants: {parametric_curves}")
     else:
@@ -366,7 +310,7 @@ def main() -> None:
         )
 
     for model_name in _NON_PARAMETRIC_MODELS:
-        _check_model(model_name, models_dir)
+        check_model_exists(model_name, models_dir)
 
     models_metadata: dict = {
         "parametric": parametric_curves,

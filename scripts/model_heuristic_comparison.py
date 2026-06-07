@@ -21,7 +21,8 @@ import polars as pl
 REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from src.annual_av_analysis import aggregate_career_av_by_position, prepare_av_data
+from src.annual_av_analysis import prepare_av_data
+from src.career_av import aggregate_career_av_by_position
 from src.data_ingest import load_parquets_from_dir
 
 RAW_DIR = REPO_ROOT / "data" / "raw" / "stathead" / "annual_av"
