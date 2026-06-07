@@ -1,0 +1,48 @@
+{
+  "model": "parametric",
+  "trained_on": "2026-06-07",
+  "train_years": [
+    1970,
+    2010
+  ],
+  "val_years": [
+    1975,
+    1985,
+    1995,
+    2005,
+    2015
+  ],
+  "val_mae_overall": 2.6219,
+  "val_mae_by_position": {
+    "LB": 2.5769,
+    "DE": 2.7319,
+    "OG": 2.5587,
+    "RB": 2.1437,
+    "OT": 2.7773,
+    "S": 1.7735,
+    "OC": 2.9873,
+    "DT": 2.9513,
+    "CB": 3.4248,
+    "QB": 3.9602,
+    "TE": 1.4408,
+    "WR": 2.1365
+  },
+  "positions": [
+    "CB",
+    "DE",
+    "DT",
+    "LB",
+    "OC",
+    "OG",
+    "OT",
+    "QB",
+    "RB",
+    "S",
+    "TE",
+    "WR"
+  ],
+  "normalize": true,
+  "rounds": null,
+  "max_years": 10,
+  "curve_name": "gamma"
+}
