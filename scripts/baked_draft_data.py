@@ -92,45 +92,6 @@ STATHEAD_RAW_DIR = PROJECT_ROOT / "data" / "raw" / "stathead" / "annual_av"
 START_YEAR = 2000
 _NON_PARAMETRIC_MODELS = ["knn", "linear"]
 
-# Per-player position overrides for players Stathead records with a generalist
-# catch-all code ("OL", "DL") that the career-AV models do not recognise.
-# Keys are exact player names; values are the normalised position group to use.
-_POSITION_OVERRIDES: dict[str, str] = {
-    # 2024 draft
-    "Olumuyiwa Fashanu":"OT",
-    "Darius Robinson":"DE",
-    "Isaiah Adams":"OG",
-    "Kiran Amegadjie":"OT",
-    "Justin Eboigbe":"DE",
-    "Javon Foster":"OT",
-    "Sedrick Van Pran-Granger":"OC",
-    "Austin Booker":"DE",
-    "Hunter Nourzad":"OC",
-    "Christian Jones": "OT",
-    "Jacob Monk":"OC",
-    "Dylan McMahon":"OC",
-    "Christian Mahogany":"OG",
-    "Mekhi Wingo": "DT",
-    "Giovanni Manu": "OT",
-    "Levi Drake Rodriguez": "DT",
-    # 2023 draft
-    "Juice Scruggs": "OC",
-    "Jon Gaines": "OC",
-    "Cooper Hodges": "OG",
-    "Andrew Vorhees":"OG",
-    "Zach Harrison": "DE",
-    "Nick Saldiveri": "OT",
-    "Colby Wooden": "DE",
-    "Colby Sorsdal": "OT",
-    "Jordan McFadden": "OG",
-    "Asim Richards": "OT",
-    "Robert Beal": "DE",
-    "Karl Brooks": "DT",
-    "Jovaughn Gwyn": "OG",
-    "Jordon Riley": "DT",
-    "Spencer Anderson": "OG",
-}
-
 
 def get_gm_for_team_year(
     pfr_code: str,
@@ -211,7 +172,6 @@ def _build_model_block(
     draft_df: pl.DataFrame,
     model_name: str,
     models_dir: Path,
-    position_overrides: dict[str, str] | None = None,
     curve_name: str | None = None,
 ) -> dict:
     """Run one model projection and return its players + class_summary."""
@@ -221,7 +181,7 @@ def _build_model_block(
     else:
         load_path = models_dir / model_name
     model.load(load_path)
-    players_df = aggregate_model_av(draft_df, model, position_overrides)
+    players_df = aggregate_model_av(draft_df, model)
     results = compute_surplus_av(players_df)
     players = [player_row_to_dict(r, is_projected_class=True) for r in results.iter_rows(named=True)]
     return {
@@ -242,7 +202,7 @@ def build_team_entry(
     gm = get_gm_for_team_year(pfr_code, year, executives_dir)
 
     try:
-        draft_df = load_team_draft_class(stathead_code, year, position_overrides=_POSITION_OVERRIDES)
+        draft_df = load_team_draft_class(stathead_code, year)
     except ValueError as exc:
         warnings.warn(f"No valid draft data for {stathead_code} {year}: {exc}")
         return {"gm": gm, "fully_observed": None, "players": [], "class_summary": None}
@@ -252,7 +212,7 @@ def build_team_entry(
     fully_observed = (STATHEAD_RAW_DIR / f"draft{year}_season{year + 3}.parquet").exists()
 
     if not fully_observed:
-        # Warn about players whose generalist position was not resolved by _POSITION_OVERRIDES.
+        # Warn about players whose generalist position was not resolved by PLAYER_POSITION_OVERRIDES.
         # Their observed AV is still included, but yr2/yr3 will be projected as 0.
         _GENERALIST_SET = frozenset(["OL", "DL"])
         unresolved = (
@@ -263,8 +223,8 @@ def build_team_entry(
         for row in unresolved.iter_rows(named=True):
             warnings.warn(
                 f"{stathead_code} {year}: '{row['Player']}' (pick {row['Pick']}) has "
-                f"generalist position '{row['Pos']}' not in _POSITION_OVERRIDES — "
-                "yr2/yr3 projected as 0 AV. Add to _POSITION_OVERRIDES to enable projection."
+                f"generalist position '{row['Pos']}' not in PLAYER_POSITION_OVERRIDES — "
+                "yr2/yr3 projected as 0 AV. Add to src/positions.py to enable projection."
             )
 
     if fully_observed:
@@ -284,14 +244,14 @@ def build_team_entry(
         if parametric_curves:
             model_results["parametric"] = {
                 curve: _build_model_block(
-                    draft_df, "parametric", models_dir, _POSITION_OVERRIDES, curve_name=curve
+                    draft_df, "parametric", models_dir, curve_name=curve
                 )
                 for curve in parametric_curves
             }
 
         for model_name in _NON_PARAMETRIC_MODELS:
             model_results[model_name] = _build_model_block(
-                draft_df, model_name, models_dir, _POSITION_OVERRIDES
+                draft_df, model_name, models_dir
             )
 
         return {

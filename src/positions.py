@@ -22,6 +22,49 @@ _GENERALIST: list[str] = ['DL', 'OL']
 
 _POSITION_ORDER: list[str] = ["QB", "WR", "TE", "RB", "OC", "OG", "OT", "DE", "DT", "LB", "CB", "S"]
 
+# Per-player position overrides for players Stathead records with a generalist
+# catch-all code ("OL", "DL") that the career-AV models do not recognise.
+# Keys are exact player names as they appear in Stathead data; values are the
+# normalised position group to use instead.
+#
+# To find players that still need an entry here, run baked_draft_data.py —
+# it warns for every partially-observed player whose position remains generalist.
+PLAYER_POSITION_OVERRIDES: dict[str, str] = {
+    # 2024 draft
+    "Olumuyiwa Fashanu": "OT",
+    "Darius Robinson": "DE",
+    "Isaiah Adams": "OG",
+    "Kiran Amegadjie": "OT",
+    "Justin Eboigbe": "DE",
+    "Javon Foster": "OT",
+    "Sedrick Van Pran-Granger": "OC",
+    "Austin Booker": "DE",
+    "Hunter Nourzad": "OC",
+    "Christian Jones": "OT",
+    "Jacob Monk": "OC",
+    "Dylan McMahon": "OC",
+    "Christian Mahogany": "OG",
+    "Mekhi Wingo": "DT",
+    "Giovanni Manu": "OT",
+    "Levi Drake Rodriguez": "DT",
+    # 2023 draft
+    "Juice Scruggs": "OC",
+    "Jon Gaines": "OC",
+    "Cooper Hodges": "OG",
+    "Andrew Vorhees": "OG",
+    "Zach Harrison": "DE",
+    "Nick Saldiveri": "OT",
+    "Colby Wooden": "DE",
+    "Colby Sorsdal": "OT",
+    "Jordan McFadden": "OG",
+    "Asim Richards": "OT",
+    "Robert Beal": "DE",
+    "Karl Brooks": "DT",
+    "Jovaughn Gwyn": "OG",
+    "Jordon Riley": "DT",
+    "Spencer Anderson": "OG",
+}
+
 
 def normalize_pos(
     player: str,

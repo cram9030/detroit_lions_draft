@@ -27,6 +27,7 @@ from pathlib import Path
 
 import polars as pl
 
+from src.positions import PLAYER_POSITION_OVERRIDES as _DEFAULT_OVERRIDES
 from src.positions import _GENERALIST as _GENERALIST_LIST
 from src.positions import canonicalize_positions, normalize_pos
 
@@ -70,6 +71,9 @@ def load_team_draft_class(
             season stats were finalized).
     """
     raw_dir = raw_dir or _DEFAULT_RAW_DIR
+    # Merge caller overrides on top of the module-level defaults so callers can
+    # extend or override individual entries without losing the baseline corrections.
+    _overrides = {**_DEFAULT_OVERRIDES, **(position_overrides or {})}
 
     # --- 1. File existence check for required seasons ----------------------
     for season in [year, year + 1]:
@@ -130,7 +134,7 @@ def load_team_draft_class(
     prepared = prepared.with_columns(
         pl.struct(["Player", "Pos"])
         .map_elements(
-            lambda s: _normalize_pos(s["Player"], s["Pos"], position_overrides),
+            lambda s: _normalize_pos(s["Player"], s["Pos"], _overrides),
             return_dtype=pl.String,
         )
         .alias("Pos")
@@ -266,6 +270,8 @@ def aggregate_model_av(
         ``proj_yr2`` is the model's yr2 contribution (0.0 when yr2 is observed).
         ``proj_yr3`` is always the model's yr3 prediction (yr3 has not been played).
     """
+    _overrides = {**_DEFAULT_OVERRIDES, **(position_overrides or {})}
+
     observed_years = sorted(draft_class_df["years_from_draft"].unique().to_list())
 
     wide = draft_class_df.pivot(
@@ -300,7 +306,7 @@ def aggregate_model_av(
         if yr2_obs is not None:
             obs_av.append(yr2_obs)
 
-        proj = project_player_seasons(model, player, pos, obs_av, position_overrides, pick=int(pick) if pick is not None else None)
+        proj = project_player_seasons(model, player, pos, obs_av, _overrides, pick=int(pick) if pick is not None else None)
         proj_yr2 = proj[0] if proj else 0.0
         proj_yr3 = proj[1] if proj else 0.0
 
