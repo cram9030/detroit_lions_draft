@@ -41,6 +41,9 @@ def canonicalize_positions(df: pl.DataFrame) -> pl.DataFrame:
     """Resolve each player to a single canonical position across all seasons."""
     _generalist_set: frozenset[str] = frozenset(_GENERALIST)
 
+    # All unique players — used as the spine so players with no yr0 row are not dropped.
+    all_players = df.select(["Player", "Pick", "Draft Year"]).unique()
+
     yr0_pos = (
         df.filter(pl.col("years_from_draft") == 0)
         .select(["Player", "Pick", "Draft Year", "Pos"])
@@ -54,7 +57,11 @@ def canonicalize_positions(df: pl.DataFrame) -> pl.DataFrame:
     )
 
     if pos_counts.is_empty():
-        canonical = yr0_pos.rename({"yr0_pos": "canonical_pos"})
+        canonical = (
+            all_players
+            .join(yr0_pos, on=["Player", "Pick", "Draft Year"], how="left")
+            .rename({"yr0_pos": "canonical_pos"})
+        )
     else:
         best = (
             pos_counts
@@ -74,17 +81,19 @@ def canonicalize_positions(df: pl.DataFrame) -> pl.DataFrame:
             .select(["Player", "Pick", "Draft Year", pl.col("Pos").alias("canonical_pos")])
         )
         canonical = (
-            yr0_pos
+            all_players
             .join(best, on=["Player", "Pick", "Draft Year"], how="left")
+            .join(yr0_pos, on=["Player", "Pick", "Draft Year"], how="left")
             .with_columns(
                 pl.coalesce(["canonical_pos", "yr0_pos"]).alias("canonical_pos")
             )
             .select(["Player", "Pick", "Draft Year", "canonical_pos"])
         )
 
+    # Left join so players absent from canonical (only-generalist, no yr0) keep their Pos.
     return (
         df
-        .join(canonical, on=["Player", "Pick", "Draft Year"])
-        .with_columns(pl.col("canonical_pos").alias("Pos"))
+        .join(canonical, on=["Player", "Pick", "Draft Year"], how="left")
+        .with_columns(pl.coalesce(["canonical_pos", "Pos"]).alias("Pos"))
         .drop("canonical_pos")
     )

@@ -44,6 +44,7 @@ def load_team_draft_class(
     team: str,
     year: int,
     raw_dir: Path | None = None,
+    position_overrides: dict[str, str] | None = None,
 ) -> pl.DataFrame:
     """Load a team's draft class for a given year with all available observed AV.
 
@@ -129,7 +130,7 @@ def load_team_draft_class(
     prepared = prepared.with_columns(
         pl.struct(["Player", "Pos"])
         .map_elements(
-            lambda s: _normalize_pos(s["Player"], s["Pos"]),
+            lambda s: _normalize_pos(s["Player"], s["Pos"], position_overrides),
             return_dtype=pl.String,
         )
         .alias("Pos")
@@ -413,7 +414,7 @@ def aggregate_drafts(
 
     for year in years:
         try:
-            draft_df = load_team_draft_class(team, year, raw_dir)
+            draft_df = load_team_draft_class(team, year, raw_dir, position_overrides=position_overrides)
         except (ValueError, FileNotFoundError):
             continue
 

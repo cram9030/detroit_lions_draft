@@ -8,6 +8,7 @@ from typing import Any
 import polars as pl
 import pytest
 
+from src.positions import canonicalize_positions
 from src.surplus_av import (
     _normalize_pos,
     aggregate_model_av,
@@ -619,6 +620,59 @@ class TestPositionCanonicalization:
         assert hutch_rows.shape[0] == hutch_rows.n_unique(subset=["Player", "years_from_draft"])
 
 
+class TestCanonicalizePositionsBug:
+    """Regression tests for the canonicalize_positions inner-join bug.
+
+    Before the fix, canonicalize_positions built its lookup table exclusively
+    from year-0 rows and used an inner join, silently dropping any player
+    absent from the yr0 parquet (e.g. a player who earned 0 AV in their
+    rookie year and was therefore omitted by Stathead).
+    """
+
+    def _make_df(self, rows: list[dict]) -> pl.DataFrame:
+        schema = {
+            "Player": pl.String,
+            "Pos": pl.String,
+            "Pick": pl.Int64,
+            "Draft Year": pl.Int64,
+            "years_from_draft": pl.Int64,
+            "AV.1": pl.Float64,
+        }
+        return pl.DataFrame(rows, schema=schema)
+
+    def test_player_with_no_yr0_row_is_not_dropped(self):
+        """Bug: inner join on yr0_pos silently dropped players with no yr0 data."""
+        df = self._make_df([
+            # Anchor player present in yr0 — ensures yr0_pos is non-empty
+            {"Player": "Anchor", "Pos": "QB", "Pick": 10, "Draft Year": 2022,
+             "years_from_draft": 0, "AV.1": 5.0},
+            # Manu-like player: only a yr1 row, no yr0 row at all
+            {"Player": "Manu-Like", "Pos": "OT", "Pick": 126, "Draft Year": 2022,
+             "years_from_draft": 1, "AV.1": 1.0},
+        ])
+        result = canonicalize_positions(df)
+        assert "Manu-Like" in result["Player"].to_list(), (
+            "canonicalize_positions dropped a player with no yr0 row (inner-join bug)"
+        )
+
+    def test_player_with_no_yr0_and_generalist_pos_is_not_dropped(self):
+        """Bug: generalist Pos (OL) also excluded from pos_counts, compounding the inner-join drop."""
+        df = self._make_df([
+            {"Player": "Anchor", "Pos": "QB", "Pick": 10, "Draft Year": 2022,
+             "years_from_draft": 0, "AV.1": 5.0},
+            # OL is generalist — excluded from pos_counts AND absent from yr0_pos
+            {"Player": "Manu-Like", "Pos": "OL", "Pick": 126, "Draft Year": 2022,
+             "years_from_draft": 1, "AV.1": 1.0},
+        ])
+        result = canonicalize_positions(df)
+        assert "Manu-Like" in result["Player"].to_list(), (
+            "canonicalize_positions dropped a no-yr0 generalist player (double-exclusion bug)"
+        )
+        # Falls back to the generalist code when no specific position is available
+        manu_pos = result.filter(pl.col("Player") == "Manu-Like")["Pos"][0]
+        assert manu_pos == "OL"
+
+
 class TestNullAvHandling:
     def test_null_av_rows_excluded(self, tmp_path):
         """Players with null AV.1 in a season have no row for that season."""
@@ -683,3 +737,68 @@ class TestNullAvHandling:
         # Should have yr0 only — no yr1 row with AV.1 == 0.0
         assert 0.0 not in alice_rows["AV.1"].to_list()
         assert 1 not in alice_rows["years_from_draft"].to_list()
+
+
+class TestMissingYr0Player:
+    """Players absent from yr0 (0 AV in rookie season) must not be dropped."""
+
+    def test_player_absent_from_yr0_is_retained(self, tmp_path):
+        """Player with 0 AV in yr0 (absent from yr0 parquet) appears in output via yr1 row."""
+        raw_dir = tmp_path / "raw"
+        # Anchor player — ensures yr0 validation passes
+        _make_draft_parquet(raw_dir, 2022, 2022, [
+            {"Player": "Anchor", "Draft Team": "DET", "Pick": "10",
+             "Draft Year": "2022", "Season": "2022", "AV.1": "5", "Pos": "QB"},
+        ])
+        # Manu-like player: totally absent from yr0 parquet, only appears in yr1
+        _make_draft_parquet(raw_dir, 2022, 2023, [
+            {"Player": "Anchor", "Draft Team": "DET", "Pick": "10",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "6", "Pos": "QB"},
+            {"Player": "Rookie", "Draft Team": "DET", "Pick": "126",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "1", "Pos": "OT"},
+        ])
+
+        df = load_team_draft_class("DET", 2022, raw_dir=raw_dir)
+        rookie_rows = df.filter(pl.col("Player") == "Rookie")
+        assert rookie_rows.shape[0] == 1
+        assert rookie_rows["years_from_draft"][0] == 1
+        assert rookie_rows["AV.1"][0] == pytest.approx(1.0)
+
+    def test_generalist_only_no_yr0_uses_generalist_pos(self, tmp_path):
+        """Player absent from yr0, only has generalist Pos in yr1 — retained with generalist pos."""
+        raw_dir = tmp_path / "raw"
+        _make_draft_parquet(raw_dir, 2022, 2022, [
+            {"Player": "Anchor", "Draft Team": "DET", "Pick": "10",
+             "Draft Year": "2022", "Season": "2022", "AV.1": "5", "Pos": "QB"},
+        ])
+        _make_draft_parquet(raw_dir, 2022, 2023, [
+            {"Player": "Anchor", "Draft Team": "DET", "Pick": "10",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "6", "Pos": "QB"},
+            {"Player": "Lineman", "Draft Team": "DET", "Pick": "126",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "1", "Pos": "OL"},
+        ])
+
+        df = load_team_draft_class("DET", 2022, raw_dir=raw_dir)
+        lineman_rows = df.filter(pl.col("Player") == "Lineman")
+        assert lineman_rows.shape[0] == 1
+        assert lineman_rows["Pos"][0] == "OL"
+
+    def test_position_override_applied_at_load_time(self, tmp_path):
+        """position_overrides resolve generalist codes before canonicalization."""
+        raw_dir = tmp_path / "raw"
+        _make_draft_parquet(raw_dir, 2022, 2022, [
+            {"Player": "Anchor", "Draft Team": "DET", "Pick": "10",
+             "Draft Year": "2022", "Season": "2022", "AV.1": "5", "Pos": "QB"},
+        ])
+        _make_draft_parquet(raw_dir, 2022, 2023, [
+            {"Player": "Anchor", "Draft Team": "DET", "Pick": "10",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "6", "Pos": "QB"},
+            {"Player": "Giovanni Manu", "Draft Team": "DET", "Pick": "126",
+             "Draft Year": "2022", "Season": "2023", "AV.1": "1", "Pos": "OL"},
+        ])
+
+        overrides = {"Giovanni Manu": "OT"}
+        df = load_team_draft_class("DET", 2022, raw_dir=raw_dir, position_overrides=overrides)
+        manu_rows = df.filter(pl.col("Player") == "Giovanni Manu")
+        assert manu_rows.shape[0] == 1
+        assert manu_rows["Pos"][0] == "OT"

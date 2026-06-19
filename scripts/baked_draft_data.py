@@ -226,7 +226,7 @@ def build_team_entry(
     gm = get_gm_for_team_year(pfr_code, year, executives_dir)
 
     try:
-        draft_df = load_team_draft_class(stathead_code, year)
+        draft_df = load_team_draft_class(stathead_code, year, position_overrides=_POSITION_OVERRIDES)
     except ValueError as exc:
         warnings.warn(f"No valid draft data for {stathead_code} {year}: {exc}")
         return {"gm": gm, "fully_observed": None, "players": [], "class_summary": None}

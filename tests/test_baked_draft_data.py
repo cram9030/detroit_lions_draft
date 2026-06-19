@@ -12,7 +12,7 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _SCRIPT = _REPO_ROOT / "scripts" / "baked_draft_data.py"
-_BAKED_DIR = _REPO_ROOT / "data" / "baked"
+_BAKED_DIR = _REPO_ROOT / "data" / "processed" / "baked"
 
 sys.path.insert(0, str(_REPO_ROOT))
 
@@ -379,7 +379,7 @@ class TestBakedDraftDataIntegration:
 
     def test_metadata_models_list(self):
         data = _load_year(2020)
-        assert set(data["metadata"]["models"]) == {"parametric", "knn", "ridge"}
+        assert set(data["metadata"]["models"]) == {"parametric", "knn", "linear"}
 
     def test_all_32_teams_per_year(self):
         for year in range(2010, 2025):
@@ -416,15 +416,20 @@ class TestBakedDraftDataIntegration:
         data = _load_year(2024)
         entry = data["teams"]["DET"]
         assert "models" in entry
-        assert set(entry["models"].keys()) == {"parametric", "knn", "ridge"}
+        assert set(entry["models"].keys()) == {"parametric", "knn", "linear"}
         assert "players" not in entry
 
     def test_each_model_has_players_and_summary(self):
         data = _load_year(2024)
-        for model_name in ("parametric", "knn", "ridge"):
-            model_data = data["teams"]["DET"]["models"][model_name]
-            assert "players" in model_data, f"{model_name} missing players"
-            assert "class_summary" in model_data, f"{model_name} missing class_summary"
+        models = data["teams"]["DET"]["models"]
+        # Non-parametric models are flat: {players, class_summary}
+        for model_name in ("knn", "linear"):
+            assert "players" in models[model_name], f"{model_name} missing players"
+            assert "class_summary" in models[model_name], f"{model_name} missing class_summary"
+        # Parametric is nested by curve: {curve_name: {players, class_summary}}
+        for curve_name, curve_block in models["parametric"].items():
+            assert "players" in curve_block, f"parametric/{curve_name} missing players"
+            assert "class_summary" in curve_block, f"parametric/{curve_name} missing class_summary"
 
     def test_gm_spot_check_det_2010(self):
         data = _load_year(2010)
@@ -448,14 +453,22 @@ class TestBakedDraftDataIntegration:
 
     def test_class_surplus_equals_sum_of_player_surpluses_projected(self):
         data = _load_year(2024)
-        for model_name in ("parametric", "knn", "ridge"):
-            model_data = data["teams"]["DET"]["models"][model_name]
+        models = data["teams"]["DET"]["models"]
+        # Flatten parametric curves alongside non-parametric models
+        blocks: list[tuple[str, dict]] = []
+        for name, block in models.items():
+            if name == "parametric":
+                for curve, cb in block.items():
+                    blocks.append((f"parametric/{curve}", cb))
+            else:
+                blocks.append((name, block))
+        for label, model_data in blocks:
             player_sum = sum(
                 p["surplus_av"] for p in model_data["players"] if p["surplus_av"] is not None
             )
             summary_surplus = model_data["class_summary"]["class_surplus"]
             assert summary_surplus == pytest.approx(player_sum, abs=0.5), (
-                f"{model_name} class_surplus {summary_surplus} != player sum {player_sum}"
+                f"{label} class_surplus {summary_surplus} != player sum {player_sum}"
             )
 
     def test_player_keys_fully_observed(self):
@@ -468,7 +481,8 @@ class TestBakedDraftDataIntegration:
 
     def test_player_keys_projected(self):
         data = _load_year(2024)
-        player = data["teams"]["DET"]["models"]["parametric"]["players"][0]
+        # knn is a flat block; use it to check projected player keys
+        player = data["teams"]["DET"]["models"]["knn"]["players"][0]
         for key in ("player", "pos", "pick", "obs_yr0", "obs_yr1",
                     "total_4yr_av", "eavar", "surplus_av", "proj_yr2", "proj_yr3", "is_projected"):
             assert key in player, f"projected player missing key: {key}"
@@ -506,12 +520,45 @@ class TestBakedDraftDataIntegration:
 
     def test_2023_has_n_projected_in_summary(self):
         data = _load_year(2023)
-        entry = data["teams"]["DET"]
-        for model_name in ("parametric", "knn", "ridge"):
-            summary = entry["models"][model_name]["class_summary"]
+        models = data["teams"]["DET"]["models"]
+        for model_name in ("knn", "linear"):
+            summary = models[model_name]["class_summary"]
             assert "n_projected" in summary, f"{model_name} summary missing n_projected"
+        for curve_name, curve_block in models["parametric"].items():
+            summary = curve_block["class_summary"]
+            assert "n_projected" in summary, f"parametric/{curve_name} summary missing n_projected"
 
     def test_2010_no_n_projected_in_summary(self):
         data = _load_year(2010)
         summary = data["teams"]["DET"]["class_summary"]
         assert "n_projected" not in summary
+
+    def test_giovanni_manu_present_in_det_2024(self):
+        """Regression: Giovanni Manu (pick 126) earned 0 AV in yr0 and was absent from the
+        yr0 Stathead parquet.  canonicalize_positions previously dropped him via an inner join
+        on yr0 rows only; _POSITION_OVERRIDES was not forwarded to load_team_draft_class so his
+        generalist OL code was never resolved to OT before canonicalization.  Both bugs together
+        caused him to be silently omitted from all model outputs for DET 2024."""
+        data = _load_year(2024)
+        det = data["teams"]["DET"]
+        assert not det["fully_observed"]
+        # Flatten parametric curves alongside non-parametric models for uniform checking
+        blocks: list[tuple[str, dict]] = []
+        for model_name, model_block in det["models"].items():
+            if model_name == "parametric":
+                for curve, cb in model_block.items():
+                    blocks.append((f"parametric/{curve}", cb))
+            else:
+                blocks.append((model_name, model_block))
+        for label, block in blocks:
+            players = block["players"]
+            names = [p["player"] for p in players]
+            assert "Giovanni Manu" in names, (
+                f"Giovanni Manu missing from DET 2024 {label} players"
+            )
+            manu = next(p for p in players if p["player"] == "Giovanni Manu")
+            assert manu["pick"] == 126
+            assert manu["pos"] == "OT", (
+                f"Expected OT (from _POSITION_OVERRIDES) but got {manu['pos']} "
+                f"in {label} — position override not applied at load time"
+            )
