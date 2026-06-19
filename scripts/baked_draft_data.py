@@ -97,11 +97,27 @@ _NON_PARAMETRIC_MODELS = ["knn", "linear"]
 # Keys are exact player names; values are the normalised position group to use.
 _POSITION_OVERRIDES: dict[str, str] = {
     # 2024 draft
-    "Christian Mahogany": "OG",
+    "Olumuyiwa Fashanu":"OT",
+    "Darius Robinson":"DE",
+    "Isaiah Adams":"OG",
+    "Kiran Amegadjie":"OT",
+    "Justin Eboigbe":"DE",
+    "Javon Foster":"OT",
+    "Sedrick Van Pran-Granger":"OC",
+    "Austin Booker":"DE",
+    "Hunter Nourzad":"OC",
+    "Christian Jones": "OT",
+    "Jacob Monk":"OC",
+    "Dylan McMahon":"OC",
+    "Christian Mahogany":"OG",
     "Mekhi Wingo": "DT",
     "Giovanni Manu": "OT",
+    "Levi Drake Rodriguez": "DT",
     # 2023 draft
     "Juice Scruggs": "OC",
+    "Jon Gaines": "OC",
+    "Cooper Hodges": "OG",
+    "Andrew Vorhees":"OG",
     "Zach Harrison": "DE",
     "Nick Saldiveri": "OT",
     "Colby Wooden": "DE",
@@ -234,6 +250,22 @@ def build_team_entry(
     # A class is fully observed when the yr3 season file exists on disk — even if
     # this team's players all had 0 AV that year (and thus have no rows in it).
     fully_observed = (STATHEAD_RAW_DIR / f"draft{year}_season{year + 3}.parquet").exists()
+
+    if not fully_observed:
+        # Warn about players whose generalist position was not resolved by _POSITION_OVERRIDES.
+        # Their observed AV is still included, but yr2/yr3 will be projected as 0.
+        _GENERALIST_SET = frozenset(["OL", "DL"])
+        unresolved = (
+            draft_df
+            .unique("Player")
+            .filter(pl.col("Pos").is_in(list(_GENERALIST_SET)))
+        )
+        for row in unresolved.iter_rows(named=True):
+            warnings.warn(
+                f"{stathead_code} {year}: '{row['Player']}' (pick {row['Pick']}) has "
+                f"generalist position '{row['Pos']}' not in _POSITION_OVERRIDES — "
+                "yr2/yr3 projected as 0 AV. Add to _POSITION_OVERRIDES to enable projection."
+            )
 
     if fully_observed:
         players_df = aggregate_observed_av(draft_df)
