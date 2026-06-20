@@ -96,7 +96,12 @@ def load_team_draft_class(
         raw_dir / f"draft{year}_season{year + 1}.parquet",
     ] + [p for p in optional if p.exists()]
 
-    frames = [pl.read_parquet(p).filter(pl.col("Draft Team") == team) for p in paths]
+    frames = [
+        pl.read_parquet(p)
+        .filter(pl.col("Draft Team") == team)
+        .filter(pl.col("Team").str.split(",").list.contains(team))
+        for p in paths
+    ]
     raw = pl.concat(frames)
 
     # --- 3. Type cast — AV.1 left nullable (no fill_null) ------------------
@@ -104,6 +109,7 @@ def load_team_draft_class(
         raw.with_columns(
             [
                 pl.col("Pick").cast(pl.Int64, strict=False),
+                pl.col("Round").cast(pl.Int64, strict=False),
                 pl.col("Season").cast(pl.Int64, strict=False),
                 pl.col("Draft Year").cast(pl.Int64, strict=False),
                 pl.col("AV.1").cast(pl.Float64, strict=False),
@@ -149,12 +155,12 @@ def load_team_draft_class(
     # --- 8. One row per (player, season) after position merging ------------
     prepared = (
         prepared
-        .group_by(["Player", "Pos", "Pick", "Draft Year", "years_from_draft"])
+        .group_by(["Player", "Pos", "Pick", "Round", "Draft Year", "years_from_draft"])
         .agg(pl.sum("AV.1"))
     )
 
     return prepared.select(
-        ["Player", "Pos", "Pick", "Draft Year", "years_from_draft", "AV.1"]
+        ["Player", "Pos", "Pick", "Round", "Draft Year", "years_from_draft", "AV.1"]
     )
 
 
@@ -219,7 +225,7 @@ def aggregate_observed_av(draft_class_df: pl.DataFrame) -> pl.DataFrame:
     observed_years = sorted(draft_class_df["years_from_draft"].unique().to_list())
 
     wide = draft_class_df.pivot(
-        index=["Player", "Pos", "Pick", "Draft Year"],
+        index=["Player", "Pos", "Pick", "Round", "Draft Year"],
         on="years_from_draft",
         values="AV.1",
     ).rename({str(yr): f"obs_yr{yr}" for yr in observed_years})
@@ -238,7 +244,7 @@ def aggregate_observed_av(draft_class_df: pl.DataFrame) -> pl.DataFrame:
             .alias("total_4yr_av")
         )
         .sort("Pick")
-        .select(["Player", "Pos", "Pick", "Draft Year", "obs_yr0", "obs_yr1", "obs_yr2", "obs_yr3", "total_4yr_av"])
+        .select(["Player", "Pos", "Pick", "Round", "Draft Year", "obs_yr0", "obs_yr1", "obs_yr2", "obs_yr3", "total_4yr_av"])
     )
 
 
@@ -275,7 +281,7 @@ def aggregate_model_av(
     observed_years = sorted(draft_class_df["years_from_draft"].unique().to_list())
 
     wide = draft_class_df.pivot(
-        index=["Player", "Pos", "Pick", "Draft Year"],
+        index=["Player", "Pos", "Pick", "Round", "Draft Year"],
         on="years_from_draft",
         values="AV.1",
     ).rename({str(yr): f"obs_yr{yr}" for yr in observed_years})
@@ -297,6 +303,7 @@ def aggregate_model_av(
         player = row["Player"]
         pos = row["Pos"]
         pick = row["Pick"]
+        pick_round = row["Round"]
         draft_year = row["Draft Year"]
         yr0 = row["obs_yr0"]
         yr1 = row["obs_yr1"]
@@ -321,6 +328,7 @@ def aggregate_model_av(
                 "Player": player,
                 "Pos": pos,
                 "Pick": pick,
+                "Round": pick_round,
                 "Draft Year": draft_year,
                 "obs_yr0": round(yr0, 1),
                 "obs_yr1": round(yr1, 1),

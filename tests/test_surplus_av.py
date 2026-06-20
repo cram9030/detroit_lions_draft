@@ -142,7 +142,7 @@ class TestLoadTeamDraftClass:
 
         df = load_team_draft_class("DET", 2022, raw_dir=raw_dir)
 
-        assert set(df.columns) == {"Player", "Pos", "Pick", "Draft Year", "years_from_draft", "AV.1"}
+        assert set(df.columns) == {"Player", "Pos", "Pick", "Round", "Draft Year", "years_from_draft", "AV.1"}
         assert df["Player"].to_list().count("Carol") == 0  # GB player excluded
         assert set(df["Player"].unique().to_list()) == {"Alice", "Bob"}
 
@@ -150,7 +150,7 @@ class TestLoadTeamDraftClass:
         rows = [
             {"Player": "Alice", "Draft Team": "DET", "Pick": "5",
              "Draft Year": "2022", "Season": "2022", "AV.1": "8", "Pos": "WR"},
-            {"Player": "Bob", "Draft Team": "GB", "Pick": "10",
+            {"Player": "Bob", "Draft Team": "GB", "Team": "GB", "Pick": "10",
              "Draft Year": "2022", "Season": "2022", "AV.1": "5", "Pos": "QB"},
         ]
         raw_dir = tmp_path / "raw"
@@ -158,7 +158,7 @@ class TestLoadTeamDraftClass:
         _make_draft_parquet(raw_dir, 2022, 2023, [
             {"Player": "Alice", "Draft Team": "DET", "Pick": "5",
              "Draft Year": "2022", "Season": "2023", "AV.1": "9", "Pos": "WR"},
-            {"Player": "Bob", "Draft Team": "GB", "Pick": "10",
+            {"Player": "Bob", "Draft Team": "GB", "Team": "GB", "Pick": "10",
              "Draft Year": "2022", "Season": "2023", "AV.1": "4", "Pos": "QB"},
         ])
 
@@ -225,6 +225,41 @@ class TestLoadTeamDraftClass:
 
         df = load_team_draft_class("DET", 2022, raw_dir=raw_dir)
         assert sorted(df["years_from_draft"].to_list()) == [0, 1]
+
+    def test_player_on_different_team_excluded_from_draft_class(self, tmp_path):
+        raw_dir = tmp_path / "raw"
+        _make_draft_parquet(raw_dir, 2022, 2022, [
+            {"Player": "J. Houston", "Draft Team": "DET", "Team": "DET",
+             "Pick": "6", "Draft Year": "2022", "Season": "2022", "AV.1": "5", "Pos": "LB"},
+            {"Player": "Alice", "Draft Team": "DET", "Team": "DET",
+             "Pick": "10", "Draft Year": "2022", "Season": "2022", "AV.1": "8", "Pos": "WR"},
+        ])
+        # yr1: Houston cut by DET, signs with DAL — AV earned for DAL must not count
+        _make_draft_parquet(raw_dir, 2022, 2023, [
+            {"Player": "J. Houston", "Draft Team": "DET", "Team": "DAL",
+             "Pick": "6", "Draft Year": "2022", "Season": "2023", "AV.1": "1", "Pos": "LB"},
+            {"Player": "Alice", "Draft Team": "DET", "Team": "DET",
+             "Pick": "10", "Draft Year": "2022", "Season": "2023", "AV.1": "9", "Pos": "WR"},
+        ])
+        df = load_team_draft_class("DET", 2022, raw_dir=raw_dir)
+        yr1_players = df.filter(pl.col("years_from_draft") == 1)["Player"].to_list()
+        assert "J. Houston" not in yr1_players
+
+    def test_mid_season_trade_away_from_draft_team_included(self, tmp_path):
+        raw_dir = tmp_path / "raw"
+        _make_draft_parquet(raw_dir, 2022, 2022, [
+            {"Player": "Alice", "Draft Team": "DET", "Team": "DET",
+             "Pick": "5", "Draft Year": "2022", "Season": "2022", "AV.1": "8", "Pos": "WR"},
+        ])
+        # yr1: traded mid-season (DET,DAL) — row should be kept because DET is present
+        _make_draft_parquet(raw_dir, 2022, 2023, [
+            {"Player": "Alice", "Draft Team": "DET", "Team": "DET,DAL",
+             "Pick": "5", "Draft Year": "2022", "Season": "2023", "AV.1": "6", "Pos": "WR"},
+        ])
+        df = load_team_draft_class("DET", 2022, raw_dir=raw_dir)
+        yr1 = df.filter(pl.col("years_from_draft") == 1)
+        assert not yr1.is_empty()
+        assert yr1["AV.1"][0] == pytest.approx(6.0)
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +342,7 @@ def _make_draft_df(players: list[dict]) -> pl.DataFrame:
                     "Player": p["name"],
                     "Pos": p["pos"],
                     "Pick": p["pick"],
+                    "Round": p.get("round", 1),
                     "Draft Year": 2022,
                     "years_from_draft": yr,
                     "AV.1": float(av),
@@ -355,7 +391,7 @@ class TestAggregateObservedAv:
             {"name": "Alice", "pos": "WR", "pick": 5, "av": [8.0, 10.0, 7.0, 5.0]}
         ])
         result = aggregate_observed_av(df)
-        expected = {"Player", "Pos", "Pick", "Draft Year", "obs_yr0", "obs_yr1", "obs_yr2", "obs_yr3", "total_4yr_av"}
+        expected = {"Player", "Pos", "Pick", "Round", "Draft Year", "obs_yr0", "obs_yr1", "obs_yr2", "obs_yr3", "total_4yr_av"}
         assert set(result.columns) == expected
         for col in ("proj_yr2", "proj_yr3", "is_projected"):
             assert col not in result.columns
@@ -409,7 +445,7 @@ class TestAggregateModelAv:
         df = _make_draft_df([{"name": "Alice", "pos": "WR", "pick": 5, "av": [8.0, 10.0]}])
         result = aggregate_model_av(df, MockModel())
         required = {
-            "Player", "Pos", "Pick", "Draft Year",
+            "Player", "Pos", "Pick", "Round", "Draft Year",
             "obs_yr0", "obs_yr1", "obs_yr2", "obs_yr3",
             "proj_yr2", "proj_yr3", "total_4yr_av", "is_projected",
         }

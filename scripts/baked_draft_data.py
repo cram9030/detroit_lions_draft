@@ -122,6 +122,7 @@ def player_row_to_dict(row: dict, is_projected_class: bool) -> dict:
     out: dict = {
         "player": str(row["Player"]),
         "pos": str(row["Pos"]),
+        "round": int(row["Round"]),
         "pick": int(row["Pick"]),
         "obs_yr0": _f(row["obs_yr0"]),
         "obs_yr1": _f(row["obs_yr1"]),
