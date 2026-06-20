@@ -235,7 +235,6 @@ def find_overlapping_gms(
             "gm_to": pl.Int64,
             "overlap_from": pl.Int64,
             "overlap_to": pl.Int64,
-            "effective_to": pl.Int64,
         })
 
     return pl.DataFrame(rows)
@@ -251,7 +250,7 @@ def get_surplus_value(
 ) -> pl.DataFrame:
     """Add surplus AV aggregation columns to gm_records_df.
 
-    Calls ``aggregate_drafts`` for each row's (stathead_code, gm_from..gm_to).
+    Calls ``aggregate_drafts`` for each row's (stathead_code, overlap_from..overlap_to).
 
     Args:
         gm_records_df: Output of :func:`find_overlapping_gms`.
@@ -272,7 +271,7 @@ def get_surplus_value(
     avg_surplus_list: list[float] = []
 
     for row in gm_records_df.iter_rows(named=True):
-        years = list(range(int(row["gm_from"]), int(row["gm_to"]) + 1))
+        years = list(range(int(row["overlap_from"]), int(row["overlap_to"]) + 1))
         agg = aggregate_drafts(
             team=row["stathead_code"],
             years=years,
@@ -334,7 +333,7 @@ def get_trade_value(
     avg_trade_list: list[float] = []
 
     for row in gm_records_df.iter_rows(named=True):
-        years = list(range(int(row["gm_from"]), int(row["gm_to"]) + 1))
+        years = list(range(int(row["overlap_from"]), int(row["overlap_to"]) + 1))
         agg = aggregate_trade_value(
             team=STATHEAD_TO_NFLREADPY[row["stathead_code"]],
             years=years,

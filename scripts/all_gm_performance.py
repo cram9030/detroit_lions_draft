@@ -84,23 +84,24 @@ def main() -> None:
         help="Last draft year with ≥2 completed seasons (default: 2024)",
     )
     parser.add_argument(
-        "--data-start-year", type=int, default=2010,
-        help="First year of available Stathead data — floor of each GM's assessed window (default: 2010)",
+        "--data-start-year", type=int, default=None,
+        help="Floor year for each GM's assessed window (default: same as --from-year)",
     )
     args = parser.parse_args()
 
     from_year = args.from_year
     to_year = args.to_year
+    data_start_year = args.data_start_year if args.data_start_year is not None else from_year
 
     # 1. Find all GMs whose tenure overlaps the requested window
     print(f"Finding all GMs overlapping {from_year}–{to_year} "
-          f"(data window: {args.data_start_year}–{args.data_end_year})...")
+          f"(data window: {data_start_year}–{args.data_end_year})...")
     gm_df = find_overlapping_gms(
         from_year,
         to_year,
         _EXECUTIVES_DIR,
         years_cap=args.data_end_year,
-        data_start_year=args.data_start_year,
+        data_start_year=data_start_year,
     )
     print(f"  {len(gm_df)} GM entries across {gm_df['pfr_code'].n_unique()} franchises")
 
