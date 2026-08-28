@@ -156,8 +156,19 @@ e.g. `data/raw/pfr/my_table/det_my_table.parquet`
 All Plotly figures across every script must use:
 - `template="plotly_white"` — white background, matching `src/plot_av.py`
 - No explicit `height` or `width` — let Plotly use its responsive defaults
+- The **Viridis colorscale** for every data series (colorblind-friendly and perceptually uniform) — see below
 
 Do not set `height=` or `width=` on `fig.update_layout()` calls; do not omit `template`. This applies to inline figures in scripts (`draft_class_surplus_av.py`, `draft_class_model_projection.py`, `example_lions_2024.py`, etc.) as well as any new plotting code added in `scripts/` or `src/`.
+
+#### Color palette
+
+All series colors must come from Plotly's `Viridis` colorscale (`plotly.express.colors.sequential.Viridis`, or `px.colors.sample_colorscale("Viridis", ...)` for N evenly-spaced colors) — never hand-picked qualitative palettes (e.g. a red/orange/green/blue list). Viridis is colorblind-safe and monotonically perceptually uniform; ad hoc qualitative palettes routinely pair colors (red/green in particular) that are indistinguishable under the common forms of color vision deficiency.
+
+- `src/plot_av.py` sets the pattern: `_VIRIDIS = px.colors.sequential.Viridis`, dark purple (`_VIRIDIS[0]`, `#440154`) for the primary line, mid-teal (`_VIRIDIS[5]`, `#21908c`) for shaded/secondary bands. New plotting code should reuse this pattern rather than inventing another one.
+- The **bright yellow end of the scale is not used** (roughly the last 1-2 stops of the 10-stop `_VIRIDIS` list, or values above ~0.85 when sampling continuously) — it reads poorly against the white `plotly_white` background.
+- When a figure needs a reserved "anchor" color (e.g. one fixed series like a target/actual value) plus a variable number of comparison series, reserve one end of the usable Viridis range (e.g. `_VIRIDIS[0]`) for the anchor and sample the comparison series from a distinct sub-range (e.g. `px.colors.sample_colorscale("Viridis", points)` with `points` restricted to roughly `[0.25, 0.85]`) so the anchor color is never repeated by a comparison series.
+- `black` (or another neutral gray) is reserved for non-data reference marks — a threshold/replacement-level line (see `plot_eavar`'s `add_hline`), a single highlighted annotation point — not for an additional data series. Don't reach for black as a way to add "one more color" to a Viridis set.
+- Never rely on color alone to distinguish series that also differ in kind (e.g. observed vs. projected, or a full trajectory vs. a single-point highlight) — pair the color with a distinct `line.dash` (`"solid"`/`"dash"`/`"dot"`) or `marker.symbol` (e.g. `"circle"`/`"diamond"`/`"star"`) so the distinction survives grayscale printing too.
 
 ### nflreadr vs Stathead AV
 

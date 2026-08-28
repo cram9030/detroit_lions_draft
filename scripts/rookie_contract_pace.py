@@ -52,6 +52,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+import plotly.express as px
 import plotly.graph_objects as go
 import polars as pl
 
@@ -71,13 +72,28 @@ FIGURES_DIR = PROJECT_ROOT / "outputs/figures"
 
 DEFAULT_LOOKBACK_YEARS = 20
 
-# Target player stays a fixed dark blue; comps use a separate palette (no
-# purple anywhere in it) so the target color is never echoed by a comp line.
-_TARGET_COLOR = "#1f77b4"
-_COMP_COLORS = ["#f28e2b", "#59a14f", "#e15759", "#76b7b2", "#edc949"]
-_NEXT_YEAR_COLOR = "#000000"  # distinct from every comp color regardless of --n-neighbors
+# Viridis colorscale throughout — colorblind-safe and perceptually uniform;
+# see CLAUDE.md "Plot style convention" > Color palette. The target player is
+# anchored at the dark-purple end (matching src/plot_av.py's _LINE_COLOR
+# convention); comps are sampled from a disjoint mid-scale range so they never
+# repeat the target's color, and the bright-yellow tail is avoided entirely.
+_VIRIDIS = px.colors.sequential.Viridis
+_TARGET_COLOR = _VIRIDIS[0]  # dark purple, #440154
+_COMP_RANGE = (0.25, 0.85)  # excludes the target's end and the low-contrast yellow tail
+_NEXT_YEAR_COLOR = "black"  # neutral highlight mark, not an additional data series
 _COMP_DASH = "dot"
 _LEGEND_FONT_SIZE = 16
+
+
+def _comp_colors(n: int) -> list[str]:
+    """Sample n colorblind-safe Viridis colors for comp lines, distinct from the target color."""
+    if n <= 0:
+        return []
+    if n == 1:
+        return [px.colors.sample_colorscale("Viridis", [sum(_COMP_RANGE) / 2])[0]]
+    lo, hi = _COMP_RANGE
+    points = [lo + i * (hi - lo) / (n - 1) for i in range(n)]
+    return px.colors.sample_colorscale("Viridis", points)
 
 
 def parse_args() -> argparse.Namespace:
@@ -158,8 +174,8 @@ def plot_pace_comparison(
             )
         )
 
-    for i, row in enumerate(comps_df.iter_rows(named=True)):
-        color = _COMP_COLORS[i % len(_COMP_COLORS)]
+    comp_colors = _comp_colors(len(comps_df))
+    for color, row in zip(comp_colors, comps_df.iter_rows(named=True)):
         y_vals = [row[f"yr{y}"] for y in years]
         dist = row["distance"]
         fig.add_trace(
