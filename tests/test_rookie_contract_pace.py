@@ -273,6 +273,44 @@ class TestComputePaceRequirements:
             assert row[f"yr{y}_type"] == "required"
         assert sum(row[f"yr{y}_av"] for y in range(4)) == pytest.approx(row["required_av_remaining"], abs=0.05)
 
+    def test_pick_missing_from_stathead_added_with_zero_av(self, tmp_path, mocker):
+        """Stathead omits picks with 0 AV in every observed season entirely (see
+        zero-av-players) — such a pick must still appear in the pace table
+        rather than silently vanishing."""
+        raw_dir = tmp_path / "raw"
+        _make_draft_parquet(raw_dir, 2025, 2025, [
+            {"Player": "Alice", "Draft Team": "DET", "Pick": "5",
+             "Draft Year": "2025", "Season": "2025", "AV.1": "8", "Pos": "WR"},
+        ])
+        eavar_path = tmp_path / "eavar.csv"
+        _make_eavar_csv(eavar_path)
+        pos_stats = _pos_stats(
+            [{"Pos": "WR", "years_from_draft": y, "mean": 8.0 - y} for y in range(4)]
+            + [{"Pos": "S", "years_from_draft": y, "mean": 8.0 - y} for y in range(4)]
+        )
+
+        roster_df = pl.DataFrame({
+            "Draft Year": [2025, 2025],
+            "Pick": [5, 9],
+            "Player": ["Alice", "Ghost"],
+            "dr_av": [8.0, None],
+            "team": ["DET", "DET"],
+            "round": [1, 1],
+            "position": ["WR", "SAF"],
+        })
+        mocker.patch("src.data_ingest.load_nflreadr_draft_picks", return_value=roster_df)
+
+        pace_df = compute_pace_requirements(
+            "DET", 2025, raw_dir=raw_dir, eavar_path=eavar_path, pos_stats=pos_stats
+        )
+        players = pace_df["Player"].to_list()
+        assert "Ghost" in players
+        row = pace_df.filter(pl.col("Player") == "Ghost").row(0, named=True)
+        assert row["Pos"] == "S"
+        assert row["yr0_type"] == "observed"
+        assert row["yr0_av"] == pytest.approx(0.0)
+        assert row["total_observed_av"] == pytest.approx(0.0)
+
     def test_already_exceeded_target_gets_zero_required(self, tmp_path):
         raw_dir = tmp_path / "raw"
         _make_draft_parquet(raw_dir, 2023, 2023, [

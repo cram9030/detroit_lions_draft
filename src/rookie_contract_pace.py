@@ -181,9 +181,59 @@ def _load_lenient_draft_class(
         prepared.group_by(["Player", "Pos", "Pick", "Round", "Draft Year", "years_from_draft"])
         .agg(pl.sum("AV.1"))
     )
+    prepared = _fill_missing_picks_with_zero_av(prepared, team, year, available_years, overrides)
     return prepared.select(
         ["Player", "Pos", "Pick", "Round", "Draft Year", "years_from_draft", "AV.1"]
     )
+
+
+def _fill_missing_picks_with_zero_av(
+    prepared: pl.DataFrame,
+    team: str,
+    year: int,
+    available_years: list[int],
+    overrides: dict[str, str],
+) -> pl.DataFrame:
+    """Backfill picks Stathead omits entirely (0 AV in every observed season) as explicit 0.0 rows.
+
+    Stathead drops a player-season from the parquet completely rather than
+    writing an ``AV.1=0`` row when a player produced no AV that season (see
+    the zero-av-players issue) — so a pick that has never produced AV in
+    *any* year on disk yet never appears in ``prepared`` at all and silently
+    drops out of the pace table. The full class roster (nflreadpy) is the
+    only local source that lists every pick regardless of AV produced, so
+    it's used to detect and backfill the gap. Falls back to ``prepared``
+    unchanged if nflreadpy has no data (e.g. no network access).
+    """
+    from src.data_ingest import load_nflreadr_draft_picks
+
+    try:
+        roster = load_nflreadr_draft_picks([year]).filter(pl.col("team") == team)
+    except Exception:
+        return prepared
+    if roster.is_empty():
+        return prepared
+
+    known_picks = set(prepared["Pick"].to_list())
+    missing = roster.filter(~pl.col("Pick").is_in(list(known_picks)))
+    if missing.is_empty():
+        return prepared
+
+    fill_rows = [
+        {
+            "Player": row["Player"],
+            "Pos": normalize_pos(row["Player"], row.get("position"), overrides),
+            "Pick": int(row["Pick"]),
+            "Round": int(row["round"]) if row.get("round") is not None else None,
+            "Draft Year": int(row["Draft Year"]),
+            "years_from_draft": y,
+            "AV.1": 0.0,
+        }
+        for row in missing.iter_rows(named=True)
+        for y in available_years
+    ]
+    fill_df = pl.DataFrame(fill_rows).select(prepared.columns)
+    return pl.concat([prepared, fill_df])
 
 
 def _load_roster_via_nflreadr(team: str, year: int, overrides: dict[str, str]) -> pl.DataFrame:
