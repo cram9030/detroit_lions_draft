@@ -13,7 +13,7 @@ _POSITION_GROUPS: dict[str, str] = {
     "LG": "OG", "RG": "OG", "LT": "OT", "RT": "OT", "T":"OT", "G":"OG", "C":"OC",
     "LCB": "CB", "RCB": "CB",
     "LILB": "LB", "RILB": "LB", "LOLB": "LB", "ROLB": "LB", "LLB": "LB", "ILB":"LB", "OLB":"LB", "RLB":"LB","MLB":"LB",
-    "FS": "S", "SS": "S", "DB": "S",
+    "FS": "S", "SS": "S", "DB": "S", "SAF": "S",
 }
 
 _SPECALIST: list[str] = ['K', 'KR', 'P', 'PR', 'LS']
