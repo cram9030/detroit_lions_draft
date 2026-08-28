@@ -5,18 +5,26 @@ For a team/draft-year whose rookie contracts have **not** all completed
 still produce to close the gap to their pick's Expected AV Above Replacement
 (EAVAR) — i.e. to reach ``surplus_av == 0`` — using the position-based
 career-year AV shape (``pos_stats_norm``) to weight how that gap is spread
-across the remaining years. It then finds the 3 historical players at the
-same position whose actual, fully-realized rookie-contract trajectory most
-closely matches the generated (observed + required) profile, and plots each
-player against their comps.
+across the remaining years. This is scaled directly from that position curve,
+not a trained projection model, so it works from as little as a single
+observed rookie-contract season (or even zero, via an nflreadpy fallback for
+classes with no Stathead season data downloaded yet).
+
+It then finds the 3 historical players (drafted within the last
+``--lookback-years``) at the same position whose actual, fully-realized
+rookie-contract trajectory most closely matches the generated (observed +
+required) profile, plus one additional comp matched specifically to next
+year's required number, and plots each player against their comps.
 
 Prerequisites
 -------------
-1. **Draft data** — the raw store must contain at least 2 completed seasons
-   (and fewer than 4, or there's nothing to project)::
+1. **Draft data** — ideally the raw store contains at least 1 completed
+   season (fewer than 4, or there's nothing to project)::
 
        data/raw/stathead/annual_av/draft{YEAR}_season{YEAR}.parquet
-       data/raw/stathead/annual_av/draft{YEAR}_season{YEAR+1}.parquet
+
+   With zero season files, the class roster is bootstrapped from nflreadpy
+   draft-pick data instead (requires network access).
 
 2. **Processed EAVAR** — ``data/processed/expected_av_above_replacement.csv``::
 
@@ -38,12 +46,12 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-import plotly.express as px
 import plotly.graph_objects as go
 import polars as pl
 
@@ -54,14 +62,22 @@ from src.rookie_contract_pace import (
     build_position_reference_trajectories,
     compute_pace_requirements,
     find_closest_career_comps,
+    find_next_year_comp,
 )
 
 RAW_DIR = PROJECT_ROOT / "data/raw/stathead/annual_av"
 EAVAR_PATH = PROJECT_ROOT / "data/processed/expected_av_above_replacement.csv"
 FIGURES_DIR = PROJECT_ROOT / "outputs/figures"
 
-_TARGET_COLOR = "#440154"  # Viridis dark purple — matches src/plot_av.py convention
+DEFAULT_LOOKBACK_YEARS = 20
+
+# Target player stays a fixed dark blue; comps use a separate palette (no
+# purple anywhere in it) so the target color is never echoed by a comp line.
+_TARGET_COLOR = "#1f77b4"
+_COMP_COLORS = ["#f28e2b", "#59a14f", "#e15759", "#76b7b2", "#edc949"]
+_NEXT_YEAR_COLOR = "#000000"  # distinct from every comp color regardless of --n-neighbors
 _COMP_DASH = "dot"
+_LEGEND_FONT_SIZE = 16
 
 
 def parse_args() -> argparse.Namespace:
@@ -73,7 +89,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--raw-dir", type=Path, default=None, help="Directory of annual AV parquets")
     p.add_argument("--eavar-path", type=Path, default=None, help="Path to expected_av_above_replacement.csv")
     p.add_argument("--output-dir", type=Path, default=None, help="Directory to write HTML charts")
-    p.add_argument("--n-neighbors", type=int, default=3, help="Number of closest career comps per player")
+    p.add_argument("--n-neighbors", type=int, default=3, help="Number of closest full-profile career comps per player")
+    p.add_argument(
+        "--lookback-years",
+        type=int,
+        default=DEFAULT_LOOKBACK_YEARS,
+        help=f"Restrict career comps to players drafted in the last N years (default: {DEFAULT_LOOKBACK_YEARS})",
+    )
     p.add_argument(
         "--close-tolerance",
         type=float,
@@ -95,6 +117,8 @@ def plot_pace_comparison(
     year_types: list[str],
     target_profile: list[float],
     comps_df: pl.DataFrame,
+    next_year: int | None,
+    next_year_comp: pl.DataFrame | None,
     export_path: Path,
 ) -> go.Figure:
     """Plot a player's required pace profile against their closest career comps."""
@@ -134,11 +158,8 @@ def plot_pace_comparison(
             )
         )
 
-    n_comps = len(comps_df)
-    comp_colors = (
-        px.colors.sample_colorscale("Viridis", n_comps) if n_comps > 1 else ["#21908c"]
-    )
-    for color, row in zip(comp_colors, comps_df.iter_rows(named=True)):
+    for i, row in enumerate(comps_df.iter_rows(named=True)):
+        color = _COMP_COLORS[i % len(_COMP_COLORS)]
         y_vals = [row[f"yr{y}"] for y in years]
         dist = row["distance"]
         fig.add_trace(
@@ -155,12 +176,31 @@ def plot_pace_comparison(
             )
         )
 
+    if next_year is not None and next_year_comp is not None and len(next_year_comp) > 0:
+        comp_row = next_year_comp.row(0, named=True)
+        comp_av = comp_row[f"yr{next_year}"]
+        fig.add_trace(
+            go.Scatter(
+                x=[next_year],
+                y=[comp_av],
+                mode="markers",
+                marker=dict(color=_NEXT_YEAR_COLOR, size=14, symbol="star"),
+                name=(
+                    f"Next-year comp (yr{next_year}): {comp_row['Player']} "
+                    f"({comp_row['Draft Team']} {comp_row['Draft Year']}) — {comp_av:.1f} AV"
+                ),
+            )
+        )
+
     fig.update_layout(
         title=f"{player} ({position}, {team} {draft_year}) — Required Pace vs. Closest Career Comps",
         xaxis=dict(title="Years from Draft", dtick=1),
         yaxis_title="Annual AV",
         template="plotly_white",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+            font=dict(size=_LEGEND_FONT_SIZE),
+        ),
     )
 
     export_path.parent.mkdir(parents=True, exist_ok=True)
@@ -183,6 +223,7 @@ def main() -> None:
         print(f"{team} {year} has completed all 4 rookie-contract seasons — no pace projection needed.")
         return
     remaining_years = [y for y in ROOKIE_CONTRACT_YEARS if y not in available_years]
+    next_year = min(remaining_years)
     print(f"  Observed years:  {available_years}")
     print(f"  Remaining years: {remaining_years}")
 
@@ -205,8 +246,12 @@ def main() -> None:
     with pl.Config(tbl_width_chars=220, tbl_cols=-1):
         print(pace_df.select(display_cols))
 
-    print("\nBuilding historical position reference trajectories (fully-realized rookie contracts)...")
-    reference_df = build_position_reference_trajectories(raw_dir=raw_dir)
+    min_draft_year = date.today().year - args.lookback_years
+    print(
+        f"\nBuilding historical position reference trajectories "
+        f"(fully-realized rookie contracts, drafted {min_draft_year}+)..."
+    )
+    reference_df = build_position_reference_trajectories(raw_dir=raw_dir, min_draft_year=min_draft_year)
     class_players = set(pace_df["Player"].to_list())
 
     print(f"\nFinding closest career comps (top {args.n_neighbors}) and generating plots...\n")
@@ -230,14 +275,35 @@ def main() -> None:
             print(f"  {player} ({position}): no historical comps found at this position — skipping plot.")
             continue
 
+        next_year_required = row[f"yr{next_year}_av"]
+        next_year_comp = find_next_year_comp(
+            next_year_required,
+            next_year,
+            position,
+            team,
+            reference_df,
+            close_tolerance=args.close_tolerance,
+            exclude_players=class_players,
+        )
+
         comp_names = ", ".join(comps_df["Player"].to_list())
         print(
             f"  {player} ({position}, pick {row['Pick']}): needs {row['required_av_remaining']:+.1f} AV "
             f"over years {remaining_years} -> comps: {comp_names}"
         )
+        if not next_year_comp.is_empty():
+            comp_row = next_year_comp.row(0, named=True)
+            print(
+                f"    Next-year (yr{next_year}, needs {next_year_required:.1f} AV) comp: "
+                f"{comp_row['Player']} ({comp_row['Draft Team']} {comp_row['Draft Year']}) "
+                f"put up {comp_row[f'yr{next_year}']:.1f} AV in year {next_year}"
+            )
 
         export_path = output_dir / f"{team}_{year}_{_slugify(player)}_pace_comparison.html"
-        plot_pace_comparison(player, position, team, year, year_types, target_profile, comps_df, export_path)
+        plot_pace_comparison(
+            player, position, team, year, year_types, target_profile,
+            comps_df, next_year, next_year_comp, export_path,
+        )
         print(f"    Saved {export_path.name}")
 
     print("\nDone.")

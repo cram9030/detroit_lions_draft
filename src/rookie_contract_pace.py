@@ -38,7 +38,7 @@ from src.annual_av_analysis import prepare_av_data
 from src.data_ingest import load_parquets_from_dir
 from src.positions import PLAYER_POSITION_OVERRIDES as _DEFAULT_OVERRIDES
 from src.positions import canonicalize_positions, normalize_pos
-from src.surplus_av import compute_surplus_av, load_team_draft_class
+from src.surplus_av import compute_surplus_av
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_RAW_DIR = _PROJECT_ROOT / "data/raw/stathead/annual_av"
@@ -112,12 +112,121 @@ def allocate_required_av(
 
 
 def available_rookie_years(year: int, raw_dir: Path) -> list[int]:
-    """Return the ``years_from_draft`` values whose season data already exists on disk."""
-    available = [0, 1]
-    for offset in (2, 3):
-        if (raw_dir / f"draft{year}_season{year + offset}.parquet").exists():
-            available.append(offset)
-    return available
+    """Return the ``years_from_draft`` values whose season parquet already exists on disk.
+
+    Checks every one of the 4 rookie-contract season files individually —
+    including years 0 and 1 — since a very recent draft class may not yet
+    have *any* season file downloaded (e.g. the draft just happened).
+    """
+    return [
+        y for y in ROOKIE_CONTRACT_YEARS
+        if (raw_dir / f"draft{year}_season{year + y}.parquet").exists()
+    ]
+
+
+def _load_lenient_draft_class(
+    team: str,
+    year: int,
+    available_years: list[int],
+    raw_dir: Path,
+    overrides: dict[str, str],
+) -> pl.DataFrame:
+    """Load whichever rookie-contract season files already exist — no minimum-seasons floor.
+
+    Mirrors :func:`src.surplus_av.load_team_draft_class`'s parsing and
+    position-normalization steps, but — unlike that function, which exists to
+    feed trained projection models and requires at least 2 completed seasons
+    — this pace projection is scaled directly from position-level AV shape,
+    so it only needs whatever real season data already exists (as few as 1
+    year).
+
+    Returns:
+        DataFrame with columns
+        ``[Player, Pos, Pick, Round, Draft Year, years_from_draft, AV.1]``.
+    """
+    paths = [raw_dir / f"draft{year}_season{year + y}.parquet" for y in available_years]
+    frames = [
+        pl.read_parquet(p)
+        .filter(pl.col("Draft Team") == team)
+        .filter(pl.col("Team").str.split(",").list.contains(team))
+        for p in paths
+    ]
+    raw = pl.concat(frames)
+
+    prepared = (
+        raw.with_columns(
+            [
+                pl.col("Pick").cast(pl.Int64, strict=False),
+                pl.col("Round").cast(pl.Int64, strict=False),
+                pl.col("Season").cast(pl.Int64, strict=False),
+                pl.col("Draft Year").cast(pl.Int64, strict=False),
+                pl.col("AV.1").cast(pl.Float64, strict=False),
+                pl.col("Pos").str.strip_chars(),
+            ]
+        )
+        .with_columns((pl.col("Season") - pl.col("Draft Year")).alias("years_from_draft"))
+        .filter(pl.col("years_from_draft").is_in(available_years))
+    )
+    prepared = prepared.with_columns(
+        pl.struct(["Player", "Pos"])
+        .map_elements(
+            lambda s: normalize_pos(s["Player"], s["Pos"], overrides),
+            return_dtype=pl.String,
+        )
+        .alias("Pos")
+    )
+    prepared = canonicalize_positions(prepared)
+    prepared = prepared.filter(pl.col("AV.1").is_not_null())
+    prepared = (
+        prepared.group_by(["Player", "Pos", "Pick", "Round", "Draft Year", "years_from_draft"])
+        .agg(pl.sum("AV.1"))
+    )
+    return prepared.select(
+        ["Player", "Pos", "Pick", "Round", "Draft Year", "years_from_draft", "AV.1"]
+    )
+
+
+def _load_roster_via_nflreadr(team: str, year: int, overrides: dict[str, str]) -> pl.DataFrame:
+    """Bootstrap a draft class roster from nflreadpy when no Stathead season file exists yet.
+
+    Used only when a class has zero completed rookie-contract seasons on
+    disk (e.g. the draft just happened and no Stathead data has been
+    downloaded). ``dr_av`` — AV the player has produced for the drafting
+    team so far, career-to-date — stands in for AV produced so far; since
+    no per-season breakdown is available yet, every rookie-contract year is
+    left for :func:`compute_pace_requirements` to allocate as "remaining".
+
+    Returns:
+        DataFrame with columns
+        ``[Player, Pos, Pick, Round, Draft Year, total_4yr_av]``.
+
+    Raises:
+        ValueError: If nflreadpy has no draft-pick rows for ``team``/``year``
+            either (e.g. the draft hasn't happened yet).
+    """
+    from src.data_ingest import load_nflreadr_draft_picks
+
+    df = load_nflreadr_draft_picks([year]).filter(pl.col("team") == team)
+    if df.is_empty():
+        raise ValueError(
+            f"No draft-pick data found for {team} {year} — checked Stathead season "
+            "parquets (none exist yet) and the nflreadpy draft-picks fallback (empty)."
+        )
+
+    rows = []
+    for row in df.iter_rows(named=True):
+        player = row["Player"]
+        rows.append(
+            {
+                "Player": player,
+                "Pos": normalize_pos(player, row.get("position"), overrides),
+                "Pick": int(row["Pick"]),
+                "Round": int(row["round"]) if row.get("round") is not None else None,
+                "Draft Year": int(row["Draft Year"]),
+                "total_4yr_av": float(row["dr_av"]) if row.get("dr_av") is not None else 0.0,
+            }
+        )
+    return pl.DataFrame(rows)
 
 
 def compute_pace_requirements(
@@ -144,8 +253,7 @@ def compute_pace_requirements(
         pos_stats: Position/career-year AV table (``pos_stats_norm``). If
             ``None``, computed via
             ``src.career_av.position_career_stats(raw_dir, normalize=True)``.
-        position_overrides: Optional per-player position overrides, forwarded
-            to :func:`src.surplus_av.load_team_draft_class`.
+        position_overrides: Optional per-player position overrides.
 
     Returns:
         DataFrame with one row per player and columns
@@ -161,6 +269,7 @@ def compute_pace_requirements(
     """
     raw_dir = raw_dir or _DEFAULT_RAW_DIR
     eavar_path = eavar_path or _DEFAULT_EAVAR_PATH
+    overrides = {**_DEFAULT_OVERRIDES, **(position_overrides or {})}
 
     available_years = available_rookie_years(year, raw_dir)
     if len(available_years) >= len(ROOKIE_CONTRACT_YEARS):
@@ -175,23 +284,31 @@ def compute_pace_requirements(
 
         pos_stats = position_career_stats(raw_dir, normalize=True)
 
-    draft_df = load_team_draft_class(team, year, raw_dir, position_overrides=position_overrides)
+    if available_years:
+        # This is scaled from position-level AV shape, not a trained model, so
+        # (unlike src.surplus_av.load_team_draft_class) it has no 2-season floor —
+        # whatever real season data already exists (as little as year 0) is enough.
+        draft_df = _load_lenient_draft_class(team, year, available_years, raw_dir, overrides)
 
-    wide = draft_df.pivot(
-        index=["Player", "Pos", "Pick", "Round", "Draft Year"],
-        on="years_from_draft",
-        values="AV.1",
-    )
-    for y in available_years:
-        col = str(y)
-        if col not in wide.columns:
-            wide = wide.with_columns(pl.lit(0.0).alias(col))
-        else:
-            wide = wide.with_columns(pl.col(col).fill_null(0.0))
-    wide = wide.rename({str(y): f"obs_yr{y}" for y in available_years})
-    wide = wide.with_columns(
-        pl.sum_horizontal([pl.col(f"obs_yr{y}") for y in available_years]).alias("total_4yr_av")
-    ).sort("Pick")
+        wide = draft_df.pivot(
+            index=["Player", "Pos", "Pick", "Round", "Draft Year"],
+            on="years_from_draft",
+            values="AV.1",
+        )
+        for y in available_years:
+            col = str(y)
+            if col not in wide.columns:
+                wide = wide.with_columns(pl.lit(0.0).alias(col))
+            else:
+                wide = wide.with_columns(pl.col(col).fill_null(0.0))
+        wide = wide.rename({str(y): f"obs_yr{y}" for y in available_years})
+        wide = wide.with_columns(
+            pl.sum_horizontal([pl.col(f"obs_yr{y}") for y in available_years]).alias("total_4yr_av")
+        ).sort("Pick")
+    else:
+        # No Stathead season file exists yet (e.g. draft just happened) — bootstrap
+        # the roster from nflreadpy instead; every year is "remaining" from here.
+        wide = _load_roster_via_nflreadr(team, year, overrides).sort("Pick")
 
     scored = compute_surplus_av(wide, eavar_path=eavar_path)
 
@@ -230,6 +347,7 @@ def build_position_reference_trajectories(
     raw_dir: Path | None = None,
     position_overrides: dict[str, str] | None = None,
     max_years: int = 4,
+    min_draft_year: int | None = None,
 ) -> pl.DataFrame:
     """Build one row per player with a fully-realized rookie-contract AV trajectory.
 
@@ -244,6 +362,9 @@ def build_position_reference_trajectories(
             ``data/raw/stathead/annual_av``.
         position_overrides: Optional per-player position overrides.
         max_years: Number of rookie-contract years to build (default 4).
+        min_draft_year: If given, excludes players drafted before this year —
+            e.g. ``date.today().year - 20`` to restrict comps to the last 20
+            years, keeping matches to a comparable era of the league.
 
     Returns:
         DataFrame with columns
@@ -281,6 +402,8 @@ def build_position_reference_trajectories(
 
     max_season = int(df["Season"].max())
     df = df.filter(pl.col("Draft Year") + (max_years - 1) <= max_season)
+    if min_draft_year is not None:
+        df = df.filter(pl.col("Draft Year") >= min_draft_year)
     if df.is_empty():
         return df
 
@@ -306,6 +429,42 @@ def build_position_reference_trajectories(
     return wide.sort(["Pos", "Draft Year", "Pick"])
 
 
+def _rank_by_distance(
+    pos_ref: pl.DataFrame,
+    dists: np.ndarray,
+    team: str,
+    n_neighbors: int,
+    close_tolerance: float,
+) -> pl.DataFrame:
+    """Rank ``pos_ref`` by precomputed ``dists``, preferring same-team/recent among close ties.
+
+    Among candidates within ``close_tolerance`` of the single closest match —
+    i.e. when there are many similarly-close profiles — prefers players
+    drafted by ``team``, then the most recently drafted, before falling back
+    to the next-nearest candidates by plain distance to fill out ``n_neighbors``.
+    """
+    pos_ref = pos_ref.with_columns(pl.Series("distance", dists))
+    min_dist = float(dists.min())
+    pos_ref = pos_ref.with_columns(
+        [
+            (pl.col("Draft Team") == team).alias("_same_team"),
+            (pl.col("distance") <= min_dist + close_tolerance).alias("_is_close"),
+        ]
+    )
+
+    close = pos_ref.filter(pl.col("_is_close")).sort(
+        ["_same_team", "Draft Year", "distance"], descending=[True, True, False]
+    )
+    selected = close.head(n_neighbors)
+    if len(selected) < n_neighbors:
+        rest = (
+            pos_ref.filter(~pl.col("_is_close")).sort("distance").head(n_neighbors - len(selected))
+        )
+        selected = pl.concat([selected, rest])
+
+    return selected.drop(["_same_team", "_is_close"]).sort("distance")
+
+
 def find_closest_career_comps(
     target_profile: list[float],
     position: str,
@@ -318,11 +477,8 @@ def find_closest_career_comps(
     """Find historical players at ``position`` whose actual trajectory best matches ``target_profile``.
 
     Ranks candidates by Euclidean distance to ``target_profile`` over the
-    same career years. Among candidates within ``close_tolerance`` AV of the
-    single closest match — i.e. when there are many similarly-close
-    profiles — prefers players drafted by ``team``, then the most recently
-    drafted, before falling back to the next-nearest candidates by plain
-    distance to fill out ``n_neighbors``.
+    same career years — see :func:`_rank_by_distance` for the tie-break rule
+    among similarly-close profiles.
 
     Args:
         target_profile: Required/observed AV per rookie-contract year,
@@ -354,23 +510,49 @@ def find_closest_career_comps(
     target = np.array(target_profile, dtype=float)
     dists = np.linalg.norm(matrix - target, axis=1)
 
-    pos_ref = pos_ref.with_columns(pl.Series("distance", dists))
-    min_dist = float(dists.min())
-    pos_ref = pos_ref.with_columns(
-        [
-            (pl.col("Draft Team") == team).alias("_same_team"),
-            (pl.col("distance") <= min_dist + close_tolerance).alias("_is_close"),
-        ]
-    )
+    return _rank_by_distance(pos_ref, dists, team, n_neighbors, close_tolerance)
 
-    close = pos_ref.filter(pl.col("_is_close")).sort(
-        ["_same_team", "Draft Year", "distance"], descending=[True, True, False]
-    )
-    selected = close.head(n_neighbors)
-    if len(selected) < n_neighbors:
-        rest = (
-            pos_ref.filter(~pl.col("_is_close")).sort("distance").head(n_neighbors - len(selected))
-        )
-        selected = pl.concat([selected, rest])
 
-    return selected.drop(["_same_team", "_is_close"]).sort("distance")
+def find_next_year_comp(
+    required_av: float,
+    year: int,
+    position: str,
+    team: str,
+    reference_df: pl.DataFrame,
+    close_tolerance: float = 1.0,
+    exclude_players: set[str] | None = None,
+) -> pl.DataFrame:
+    """Find the single historical player whose actual AV in ``year`` best matches ``required_av``.
+
+    Unlike :func:`find_closest_career_comps` (which matches the whole 4-year
+    profile), this looks at one specific rookie-contract year in isolation —
+    it anchors "what does hitting next year's required number actually look
+    like" to one real player-season, including that player's own AV in the
+    same year.
+
+    Args:
+        required_av: The AV required in ``year`` (e.g. the next not-yet-played
+            rookie-contract year).
+        year: The ``years_from_draft`` value to match on (e.g. ``2``).
+        position: Normalized position group to search within.
+        team: Team code used to break ties among "close" candidates.
+        reference_df: Output of :func:`build_position_reference_trajectories`.
+        close_tolerance: AV distance from the closest match within which a
+            candidate counts as part of the "many close profiles" tie-break
+            group.
+        exclude_players: Player names to exclude.
+
+    Returns:
+        A single-row DataFrame with columns from ``reference_df`` plus
+        ``distance`` (the row's ``yr{year}`` value is that comp's actual AV
+        for the matched year). Empty (with a ``distance`` column) if no
+        historical players are available at ``position``.
+    """
+    pos_ref = reference_df.filter(pl.col("Pos") == position)
+    if exclude_players:
+        pos_ref = pos_ref.filter(~pl.col("Player").is_in(list(exclude_players)))
+    if pos_ref.is_empty():
+        return pos_ref.with_columns(pl.lit(None).cast(pl.Float64).alias("distance"))
+
+    dists = np.abs(pos_ref[f"yr{year}"].to_numpy().astype(float) - float(required_av))
+    return _rank_by_distance(pos_ref, dists, team, n_neighbors=1, close_tolerance=close_tolerance)
