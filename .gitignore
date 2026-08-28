@@ -59,12 +59,7 @@ cookies.json
 models/**/*.joblib
 
 # Outputs
-outputs/figures/*.png
-outputs/figures/*.jpg
-outputs/figures/*.svg
-outputs/figures/*.html
-outputs/reports/*.html
-outputs/reports/*.pdf
+outputs/
 
 # Troubleshooting
 *.log
