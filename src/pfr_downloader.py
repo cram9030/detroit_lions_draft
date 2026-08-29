@@ -209,6 +209,164 @@ def is_pfr_blocked(html: str) -> bool:
 
 
 # =============================================================================
+# PER-PLAYER CAREER STATS
+# =============================================================================
+#
+# Unlike the config-driven bulk downloader above (one URL template iterated
+# over a static team/year list), this fetches a single player's PFR page —
+# the URL is derived from their pfr_id, and the relevant stat table's id
+# depends on their position rather than being fixed in a config file.
+#
+# Every one of PFR's per-position season tables (passing, rushing_and_receiving,
+# receiving_and_rushing, defense, kicking, punting, returns) carries `games`/
+# `games_started` columns regardless of position — including offensive line,
+# which gets no rushing/receiving/defensive stats but still shows up on
+# `receiving_and_rushing` with real G/GS. That makes G/GS reliable straight
+# from this table for every position, unlike nflreadpy's advanced-stats
+# endpoint, which only covers 2018+ and never includes offensive linemen at all.
+
+_DEFAULT_PLAYER_STATS_DIR = PROJECT_ROOT / "data/raw/pfr/player_career_stats"
+
+# Ordered by which table id a position's players actually appear under first;
+# a player can appear on more than one (e.g. a QB with a garbage-time tackle
+# shows up on "defense" too), so order determines which one wins.
+_CAREER_TABLE_PRIORITY: dict[str, list[str]] = {
+    "QB": ["passing", "rushing_and_receiving", "receiving_and_rushing"],
+    "RB": ["rushing_and_receiving", "receiving_and_rushing"],
+    "WR": ["receiving_and_rushing", "rushing_and_receiving"],
+    "TE": ["receiving_and_rushing", "rushing_and_receiving"],
+    "DE": ["defense"], "DT": ["defense"], "LB": ["defense"], "CB": ["defense"], "S": ["defense"],
+    "OT": ["receiving_and_rushing", "rushing_and_receiving", "defense", "games_played"],
+    "OG": ["receiving_and_rushing", "rushing_and_receiving", "defense", "games_played"],
+    "OC": ["receiving_and_rushing", "rushing_and_receiving", "defense", "games_played"],
+    "K": ["kicking"], "P": ["punting"],
+}
+# Fallback search order when a position is unmapped or its preferred table is absent.
+# "games_played" is PFR's bare-bones fallback for a player with literally no
+# recorded stat category (a backup lineman who never touched the ball on
+# offense/defense/special teams) — last resort, since it has no positional
+# stats at all, only games/started.
+_ALL_CAREER_TABLE_IDS: list[str] = [
+    "passing", "rushing_and_receiving", "receiving_and_rushing", "defense",
+    "kicking", "punting", "returns", "games_played",
+]
+
+# "games_played" uses different data-stat names ("g"/"gs"/"team") than every
+# other career table ("games"/"games_started"/"team_name_abbr") — normalize
+# so downstream code can rely on one consistent set of column names.
+_GAMES_PLAYED_COLUMN_ALIASES: dict[str, str] = {"g": "games", "gs": "games_started", "team": "team_name_abbr"}
+
+
+def player_page_url(pfr_id: str) -> str:
+    """Build a PFR player page URL from their pfr_id, e.g. ``DeckTa00`` -> .../players/D/DeckTa00.htm."""
+    return f"https://www.pro-football-reference.com/players/{pfr_id[0].upper()}/{pfr_id}.htm"
+
+
+def _parse_table_by_data_stat(html: str, table_id: str) -> pd.DataFrame | None:
+    """Extract a PFR table's ``tbody`` rows keyed by each cell's ``data-stat`` attribute.
+
+    PFR's season-stat tables use a two-row header (a grouping row like
+    "Receiving"/"Rushing" over the real column labels) — ``pandas.read_html``
+    (used by :func:`parse_pfr_table`) takes the first row as the header and
+    mangles the real column names into ``Unnamed: N`` / group-name-suffixed
+    columns. Each ``<td>``/``<th>``'s ``data-stat`` attribute is a stable
+    machine name (``games``, ``games_started``, ``pass_yds``, ...) independent
+    of the visible header layout, so read from that instead.
+    """
+    html = unwrap_pfr_comments(html)
+    soup = BeautifulSoup(html, "html.parser")
+    table = soup.find("table", id=table_id)
+    if table is None or table.find("tbody") is None:
+        return None
+
+    rows = []
+    for tr in table.find("tbody").find_all("tr"):
+        classes = tr.get("class") or []
+        if "thead" in classes:  # mid-table repeated header row, not a data row
+            continue
+        row = {
+            c.get("data-stat"): c.get_text(strip=True)
+            for c in tr.find_all(["th", "td"])
+            if c.get("data-stat")
+        }
+        if row:
+            rows.append(row)
+
+    if not rows:
+        return None
+    return pd.DataFrame(rows)
+
+
+def parse_player_career_stats(html: str, position: str | None = None) -> pd.DataFrame | None:
+    """Extract the season-by-season games/positional-stat table from a PFR player page.
+
+    Tries table ids in the order appropriate for ``position`` first (see
+    ``_CAREER_TABLE_PRIORITY``), then falls back to every known table id, so
+    an unmapped or unexpected position still finds whatever table exists.
+    Returns ``None`` if the player has no recognized career-stats table.
+    """
+    order = list(_CAREER_TABLE_PRIORITY.get(position or "", []))
+    order += [t for t in _ALL_CAREER_TABLE_IDS if t not in order]
+
+    for table_id in order:
+        df = _parse_table_by_data_stat(html, table_id)
+        if df is not None:
+            if table_id == "games_played":
+                df = df.rename(columns=_GAMES_PLAYED_COLUMN_ALIASES)
+            df["_pfr_table"] = table_id
+            return df
+    return None
+
+
+def fetch_player_career_stats(
+    session,
+    pfr_id: str,
+    position: str | None = None,
+    cache_dir: Path | None = None,
+    sleep_sec: float = 3.0,
+    max_retries: int = 3,
+    retry_backoff: float = 10.0,
+) -> pd.DataFrame | None:
+    """Fetch one player's season-by-season PFR career-stats table, caching to Parquet.
+
+    A cache hit costs no network request at all. On a miss, fetches the
+    player's page, extracts the table, and writes the cache before returning
+    — so repeated calls (e.g. the same historical comp appearing across
+    multiple pace-comparison plots) only ever hit the network once per player.
+
+    Returns:
+        DataFrame with one row per season plus a ``_pfr_table`` column
+        naming which PFR table it came from, or ``None`` if the page
+        couldn't be fetched or had no recognized stats table.
+    """
+    cache_dir = cache_dir or _DEFAULT_PLAYER_STATS_DIR
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_path = cache_dir / f"{pfr_id}.parquet"
+    if cache_path.exists():
+        return pd.read_parquet(cache_path)
+
+    url = player_page_url(pfr_id)
+    html = fetch_page(session, url, max_retries=max_retries, retry_backoff=retry_backoff)
+    if html is None:
+        log.warning("No response fetching player page for %s", pfr_id)
+        return None
+    if is_pfr_blocked(html):
+        log.error(
+            "BLOCKED RESPONSE fetching %s — cookies may have expired or you are rate-limited.", pfr_id
+        )
+        return None
+
+    df = parse_player_career_stats(html, position=position)
+    time.sleep(sleep_sec)
+    if df is None:
+        log.warning("No recognized career-stats table found for %s", pfr_id)
+        return None
+
+    df.to_parquet(cache_path, index=False)
+    return df
+
+
+# =============================================================================
 # OUTPUT PATHS
 # =============================================================================
 

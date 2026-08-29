@@ -65,6 +65,7 @@ from src.rookie_contract_pace import (
     find_closest_career_comps,
     find_next_year_comp,
 )
+from src.season_stats import load_season_counting_stats
 
 RAW_DIR = PROJECT_ROOT / "data/raw/stathead/annual_av"
 EAVAR_PATH = PROJECT_ROOT / "data/processed/expected_av_above_replacement.csv"
@@ -82,7 +83,8 @@ _TARGET_COLOR = _VIRIDIS[0]  # dark purple, #440154
 _COMP_RANGE = (0.25, 0.85)  # excludes the target's end and the low-contrast yellow tail
 _NEXT_YEAR_COLOR = "black"  # neutral highlight mark, not an additional data series
 _COMP_DASH = "dot"
-_LEGEND_FONT_SIZE = 16
+_LEGEND_FONT_SIZE = 12
+_TITLE_FONT_SIZE = 18
 
 
 def _comp_colors(n: int) -> list[str]:
@@ -125,11 +127,72 @@ def _slugify(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
 
 
+def _hover_extra(g: int | None, gs: int | None, stat_line: str) -> str:
+    """Format a player-season's games/started/positional-stat line for a hover tooltip."""
+    if g is None:
+        return "No PFR game data for this season"
+    line = f"G: {g}, GS: {gs if gs is not None else '—'}"
+    if stat_line:
+        line += f"<br>{stat_line}"
+    return line
+
+
+def _stats_lookup(
+    player: str,
+    position: str,
+    pick: int,
+    draft_year: int,
+    obs_years: list[int],
+    comps_df: pl.DataFrame,
+    next_year: int | None,
+    next_year_comp: pl.DataFrame | None,
+) -> dict[tuple[str, int, int], tuple[int | None, int | None, str]]:
+    """Fetch PFR games/started/positional-stat lines for every real player-season shown in the plot.
+
+    Keyed by ``(Player, Draft Year, season)`` — sufficient here since a given
+    player/draft-year pair maps to one pick.
+    """
+    rows = [
+        {"Player": player, "Pos": position, "Pick": pick, "Draft Year": draft_year, "season": draft_year + y}
+        for y in obs_years
+    ]
+    for comp in comps_df.iter_rows(named=True):
+        rows.extend(
+            {
+                "Player": comp["Player"],
+                "Pos": position,
+                "Pick": comp["Pick"],
+                "Draft Year": comp["Draft Year"],
+                "season": comp["Draft Year"] + y,
+            }
+            for y in range(4)
+        )
+    if next_year is not None and next_year_comp is not None and len(next_year_comp) > 0:
+        comp_row = next_year_comp.row(0, named=True)
+        rows.append(
+            {
+                "Player": comp_row["Player"],
+                "Pos": position,
+                "Pick": comp_row["Pick"],
+                "Draft Year": comp_row["Draft Year"],
+                "season": comp_row["Draft Year"] + next_year,
+            }
+        )
+
+    players_needed = pl.DataFrame(rows).unique()
+    stats = load_season_counting_stats(players_needed)
+    return {
+        (row["Player"], row["Draft Year"], row["season"]): (row["G"], row["GS"], row["stat_line"])
+        for row in stats.iter_rows(named=True)
+    }
+
+
 def plot_pace_comparison(
     player: str,
     position: str,
     team: str,
     draft_year: int,
+    pick: int,
     year_types: list[str],
     target_profile: list[float],
     comps_df: pl.DataFrame,
@@ -149,9 +212,18 @@ def plot_pace_comparison(
         req_years = [obs_years[-1]] + req_years
         req_vals = [target_profile[obs_years[-1]]] + req_vals
 
+    stats = _stats_lookup(
+        player, position, pick, draft_year, obs_years, comps_df, next_year, next_year_comp
+    )
+    hovertemplate = "Year %{x}: %{y:.1f} AV<br>%{customdata}<extra>%{fullData.name}</extra>"
+
     fig = go.Figure()
 
     if obs_years:
+        obs_customdata = [
+            _hover_extra(*stats.get((player, draft_year, draft_year + y), (None, None, "")))
+            for y in obs_years
+        ]
         fig.add_trace(
             go.Scatter(
                 x=obs_years,
@@ -160,9 +232,19 @@ def plot_pace_comparison(
                 line=dict(color=_TARGET_COLOR, width=3),
                 marker=dict(size=8),
                 name=f"{player} — observed",
+                customdata=obs_customdata,
+                hovertemplate=hovertemplate,
             )
         )
     if req_years:
+        # The bridge point (first entry, duplicated from the last observed year) has real
+        # stats; genuinely future/unplayed years don't, since no season has happened yet.
+        req_customdata = [
+            _hover_extra(*stats.get((player, draft_year, draft_year + y), (None, None, "")))
+            if y in obs_years
+            else "Required pace — season not yet played"
+            for y in req_years
+        ]
         fig.add_trace(
             go.Scatter(
                 x=req_years,
@@ -171,6 +253,8 @@ def plot_pace_comparison(
                 line=dict(color=_TARGET_COLOR, width=3, dash="dash"),
                 marker=dict(size=9, symbol="diamond"),
                 name=f"{player} — required pace",
+                customdata=req_customdata,
+                hovertemplate=hovertemplate,
             )
         )
 
@@ -178,6 +262,10 @@ def plot_pace_comparison(
     for color, row in zip(comp_colors, comps_df.iter_rows(named=True)):
         y_vals = [row[f"yr{y}"] for y in years]
         dist = row["distance"]
+        comp_customdata = [
+            _hover_extra(*stats.get((row["Player"], row["Draft Year"], row["Draft Year"] + y), (None, None, "")))
+            for y in years
+        ]
         fig.add_trace(
             go.Scatter(
                 x=years,
@@ -189,12 +277,22 @@ def plot_pace_comparison(
                     f"{row['Player']} ({row['Draft Team']} {row['Draft Year']}) "
                     f"— dist {dist:.1f}"
                 ),
+                customdata=comp_customdata,
+                hovertemplate=hovertemplate,
             )
         )
 
     if next_year is not None and next_year_comp is not None and len(next_year_comp) > 0:
         comp_row = next_year_comp.row(0, named=True)
         comp_av = comp_row[f"yr{next_year}"]
+        next_year_customdata = [
+            _hover_extra(
+                *stats.get(
+                    (comp_row["Player"], comp_row["Draft Year"], comp_row["Draft Year"] + next_year),
+                    (None, None, ""),
+                )
+            )
+        ]
         fig.add_trace(
             go.Scatter(
                 x=[next_year],
@@ -205,22 +303,40 @@ def plot_pace_comparison(
                     f"Next-year comp (yr{next_year}): {comp_row['Player']} "
                     f"({comp_row['Draft Team']} {comp_row['Draft Year']}) — {comp_av:.1f} AV"
                 ),
+                customdata=next_year_customdata,
+                hovertemplate=hovertemplate,
             )
         )
 
+    # Legend lives below the plot area (not stacked above it alongside the
+    # title) so a wrapping, multi-entry horizontal legend never collides with
+    # the title on narrow/embedded viewports — the two no longer compete for
+    # the same horizontal band.
     fig.update_layout(
-        title=f"{player} ({position}, {team} {draft_year}) — Required Pace vs. Closest Career Comps",
+        title=dict(
+            text=f"{player} ({position}, {team} {draft_year})",
+            x=0.5,
+            xanchor="center",
+            font=dict(size=_TITLE_FONT_SIZE),
+        ),
         xaxis=dict(title="Years from Draft", dtick=1),
         yaxis_title="Annual AV",
         template="plotly_white",
+        autosize=True,
         legend=dict(
-            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+            orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5,
             font=dict(size=_LEGEND_FONT_SIZE),
         ),
+        margin=dict(t=70, b=140),
+        # Trace names (e.g. "Jermar Jefferson (DET 2021) — dist 5.3") exceed
+        # Plotly's default 15-char hoverlabel.namelength, which otherwise
+        # truncates them with "..." — disable truncation so the full name is
+        # legible in the tooltip.
+        hoverlabel=dict(namelength=-1),
     )
 
     export_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.write_html(str(export_path))
+    fig.write_html(str(export_path), config={"responsive": True})
     return fig
 
 
@@ -317,7 +433,7 @@ def main() -> None:
 
         export_path = output_dir / f"{team}_{year}_{_slugify(player)}_pace_comparison.html"
         plot_pace_comparison(
-            player, position, team, year, year_types, target_profile,
+            player, position, team, year, row["Pick"], year_types, target_profile,
             comps_df, next_year, next_year_comp, export_path,
         )
         print(f"    Saved {export_path.name}")
